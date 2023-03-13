@@ -12,14 +12,14 @@ from multiprocessing import Pool
 
 from math import *
 
-from spring.uniprot_api import *
-from spring.functions import *
+from sponge.uniprot_api import *
+from sponge.functions import *
 
 ### Class definition ###
-class Spring:
+class Sponge:
     def __init__(
         self,
-        temp_folder = '.spring_temp/'
+        temp_folder = '.sponge_temp/'
     ):
 
         self.temp_folder = temp_folder
@@ -47,8 +47,8 @@ class Spring:
         else:
             print (f'File {file_name} not found in directory {temp_folder}')
             key = None
-            positive = ['y', 'yes']
-            negative = ['n', 'no']
+            positive = ['y', 'yes', 'hell yeah']
+            negative = ['n', 'no', 'nope']
             while key is None or key.lower() not in positive + negative:
                 if key is not None:
                     print (f'Input not recognised: {key}')
