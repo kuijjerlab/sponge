@@ -25,52 +25,6 @@ class Sponge:
         self.temp_folder = temp_folder
 
 
-    def retrieve_file(
-        self,
-        description,
-        temp_folder
-    ):
-        
-        # TODO: Promoter file needs modifications
-        # TODO: No reason this should be an instance function
-        
-        if description not in file_df.index:
-            print (f'File description not recognised: {description}')
-            return
-        if not os.path.exists(temp_folder):
-            os.mkdir(temp_folder)
-        file_name = file_df.loc[description, 'name']
-        file_path = os.path.join(temp_folder, file_name)
-        if os.path.exists(file_path):
-            print (f'Using cached file {file_path}')
-            print ()
-        else:
-            print (f'File {file_name} not found in directory {temp_folder}')
-            key = None
-            positive = ['y', 'yes', 'hell yeah']
-            negative = ['n', 'no', 'nope']
-            while key is None or key.lower() not in positive + negative:
-                if key is not None:
-                    print (f'Input not recognised: {key}')
-                print ('Do you want to download it? Y/N')
-                key = input()
-                print (key)
-            print ()
-            if key.lower() in negative:
-                return None
-            r = requests.get(file_df.loc[description, 'url'])
-            mode = file_df.loc[description, 'mode']
-            if mode == 'w':
-                data = r.text
-            else:
-                data = r.content
-            print (f'Downloading data into {file_path}...')
-            open(file_path, mode).write(data)
-            print ()     
-
-        return file_path
-
-
     def select_tfs(
         self
     ):
@@ -123,6 +77,54 @@ class Sponge:
         print ('Motifs without heterodimers:', len(motifs_nohd))
 
         self.motifs = motifs_nohd
+
+
+    def retrieve_file(
+        self,
+        description,
+        temp_folder
+    ):
+            
+        # TODO: Promoter file needs modifications
+        
+        if description not in file_df.index:
+            print (f'File description not recognised: {description}')
+            return
+        if not os.path.exists(temp_folder):
+            os.mkdir(temp_folder)
+        file_name = file_df.loc[description, 'name']
+        file_path = os.path.join(temp_folder, file_name)
+        if os.path.exists(file_path):
+            print (f'Using cached file {file_path}')
+            print ()
+        else:
+            print (f'File {file_name} not found in directory {temp_folder}')
+            key = None
+            positive = ['y', 'yes', 'hell yeah']
+            negative = ['n', 'no', 'nope']
+            while key is None or key.lower() not in positive + negative:
+                if key is not None:
+                    print (f'Input not recognised: {key}')
+                print ('Do you want to download it? Y/N')
+                key = input()
+                print (key)
+            print ()
+            if key.lower() in negative:
+                return None
+            to_request = file_df.loc[description, 'url']
+            if description == 'jaspar_bigbed':
+                to_request.format(year=self.release[-4:])
+            r = requests.get(to_request)
+            mode = file_df.loc[description, 'mode']
+            if mode == 'w':
+                data = r.text
+            else:
+                data = r.content
+            print (f'Downloading data into {file_path}...')
+            open(file_path, mode).write(data)
+            print ()     
+
+        return file_path
 
 
     def find_human_homologs(
@@ -254,7 +256,6 @@ class Sponge:
         n_processes=1
     ):
         
-        # TODO: Implement defaults and downloads
         if promoter_file is None:
             promoter_file = self.retrieve_file('promoter', self.temp_folder)
             if promoter_file is None:
