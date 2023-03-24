@@ -8,16 +8,15 @@ from pyjaspar import jaspardb
 
 from multiprocessing import Pool
 
-from math import *
+from math import ceil, sqrt
 
-# from sponge.uniprot_api import *
 from sponge.functions import *
 
 ### Class definition ###
 class Sponge:
     def __init__(
         self,
-        temp_folder = '.sponge_temp/'
+        temp_folder: str = '.sponge_temp/'
     ):
         """
         Usual order of operations:
@@ -35,15 +34,14 @@ class Sponge:
         temp_folder : str, optional
             _description_, by default '.sponge_temp/'
         """
-
-
+        
         self.temp_folder = temp_folder
 
 
     def select_tfs(
         self,
-        drop_heterodimers = True
-    ):
+        drop_heterodimers: bool = True
+    ) -> None:
 
         # Database object
         jdb_obj = jaspardb()
@@ -99,9 +97,9 @@ class Sponge:
 
     def find_human_homologs(
         self, 
-        homologene_file = None,
-        prompt = True
-    ):
+        homologene_file: Optional[str] = None,
+        prompt: bool = True
+    ) -> None:
         
         if homologene_file is None:
             homologene_file = retrieve_file('homologene', 
@@ -123,10 +121,10 @@ class Sponge:
         # Get the non-human motif names
         non_human_motif_names = [i.name for i in non_human_motifs]
         # Compare against homologene
-        found_names = hg_df[hg_df['Gene Symbol'].isin([adjust_name(i) for i in 
+        found_names = hg_df[hg_df['Gene Symbol'].isin([adjust_gene_name(i) for i in 
             non_human_motif_names])]['Gene Symbol'].unique()
         # Find the missing ones
-        missing = (set([adjust_name(i) for i in non_human_motif_names]) - 
+        missing = (set([adjust_gene_name(i) for i in non_human_motif_names]) - 
             set(found_names))
         print ()
         print ('Names missing from the homologene database:')
@@ -159,7 +157,7 @@ class Sponge:
         # Create a DataFrame of corresponding names
         corr_df = pd.DataFrame(non_human_motif_names, 
             columns=['Original Name'])
-        corr_df['Adjusted Name'] = corr_df['Original Name'].apply(adjust_name)
+        corr_df['Adjusted Name'] = corr_df['Original Name'].apply(adjust_gene_name)
         corr_df['Group ID'] = corr_df['Adjusted Name'].apply(corresponding_id)
         corr_df['Group ID'] = corr_df['Group ID'].apply(lambda x: 
             x[0] if len(x) > 0 else np.nan)
@@ -204,8 +202,6 @@ class Sponge:
         for animal_name, human_name in zip(corr_df_final['Original Name'], 
             corr_df_final['Human Name']):
             animal_to_human[animal_name] = human_name
-        # animal_to_human = {i: j for i,j in zip(corr_df_final['Original Name'], 
-        #     corr_df_final['Human Name'])}
         print ()
         print ('Final number of IDs which will be replaced by human homologs:', 
                len(animal_to_human))
@@ -220,11 +216,11 @@ class Sponge:
 
     def filter_matches(
         self, 
-        promoter_file = None, 
-        bigbed_file = None,
-        n_processes = 1,
-        prompt = True
-    ):
+        promoter_file: Optional[str] = None, 
+        bigbed_file: Optional[str] = None,
+        n_processes: int = 1,
+        prompt: bool = True
+    ) -> None:
         
         if promoter_file is None:
             promoter_file = retrieve_file('promoter', self.temp_folder, 

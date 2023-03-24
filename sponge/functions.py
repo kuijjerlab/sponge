@@ -5,7 +5,9 @@ import requests
 import os
 import time
 
-from typing import Optional, Union, Iterable, Mapping
+from Bio.motifs.jaspar import Motif
+
+from typing import Optional, Union, Iterable, Tuple
 
 from biomart import BiomartServer
 
@@ -35,13 +37,14 @@ FILE_DF = pd.DataFrame(
 ).set_index('description')
 
 ENSEMBL_URL = 'http://www.ensembl.org/biomart'
+MAPPING_URL = 'https://rest.uniprot.org/idmapping/'
 
 ### Functions ###
 def download_with_progress(
     url: Union[str, requests.models.Response],
     file_path: Optional[str] = None,
     desc: str = 'response'
-):
+) -> Optional[BytesIO]:
     
     if type(url) == str:
         request = requests.get(url, stream=True)
@@ -68,9 +71,8 @@ def get_uniprot_mapping(
     to_db: str,
     ids: Union[str, Iterable[str]],
     **kwargs
-):
+) -> pd.DataFrame:
     
-    MAPPING_URL = 'https://rest.uniprot.org/idmapping/'
     data = {'ids': ids, 'from': from_db, 'to': to_db}
     data.update(kwargs)
     uniprot_request = requests.post(MAPPING_URL + 'run', data)
@@ -95,19 +97,19 @@ def get_uniprot_mapping(
 
 
 def process_ensemble_df(
-    df
-):
+    df: pd.DataFrame
+) -> None:
 
     pass
 
 
 def load_promoters_from_biomart(
-    file_path,
+    file_path: str,
     filter_basic: bool = True,
     chromosomes: Iterable[str] = [str(i) for i in range(1,23)] + 
         ['MT', 'X', 'Y'],
     save_ensemble: bool = True
-):
+) -> None:
 
     bm_server = BiomartServer(ENSEMBL_URL)
     ensembl = bm_server.datasets['hsapiens_gene_ensembl']
@@ -149,18 +151,18 @@ def load_promoters_from_biomart(
 
 
 def load_ensemble_from_biomart(
-    file_path
-):
+    file_path: str
+) -> None:
     
     pass
 
 
 def retrieve_file(
-    description,
-    temp_folder,
-    prompt = True,
-    jaspar_release = None
-):
+    description: str,
+    temp_folder: str,
+    prompt: bool = True,
+    jaspar_release: Optional[str] = None
+) -> str:
 
     
     if description not in FILE_DF.index:
@@ -207,14 +209,14 @@ def retrieve_file(
 
 
 def filter_edges(
-    bb_ref, 
-    bed_df, 
-    motif_list, 
-    chrom, 
-    start_ind, 
-    final_ind, 
-    score_threshold=400
-):
+    bb_ref: str, 
+    bed_df: pd.DataFrame, 
+    motif_list: Iterable[str], 
+    chrom: str, 
+    start_ind: int, 
+    final_ind: int, 
+    score_threshold: float = 400
+) -> pd.DataFrame:
     
     df = pd.DataFrame()
     for transcript in bed_df.index[start_ind:final_ind]:
@@ -230,15 +232,15 @@ def filter_edges(
 
 
 def filter_edges_helper(
-    input_tuple
-):
+    input_tuple: Tuple[str, pd.DataFrame, Iterable[str], str, int, int]
+) -> pd.DataFrame:
 
     return filter_edges(*input_tuple)
 
 
 def plogp(
-    x
-):   
+    x: float
+) -> float:   
     """
     Returns x*log2(x) for a number, handles the 0 case properly.
     """
@@ -250,8 +252,8 @@ def plogp(
 
 
 def calculate_ic(
-    motif
-):
+    motif: Motif
+) -> float:
     """
     Calculates the information content for a given motif, assumes equal 
     ACGT distribution.
@@ -264,7 +266,8 @@ def calculate_ic(
     return df['IC'].sum()
 
 
-def adjust_name(
-    i
-):
-    return i[:-2] + i[-2:].lower()
+def adjust_gene_name(
+    gene: str
+) -> str:
+    
+    return gene[:-2] + gene[-2:].lower()
