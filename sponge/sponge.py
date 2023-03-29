@@ -37,6 +37,8 @@ class Sponge:
 
         self.temp_folder = temp_folder
         self.ensembl = None
+        self.ppi_frame = None
+        self.motif_frame = None
 
 
     def select_tfs(
@@ -325,9 +327,9 @@ class Sponge:
             (motif.name in human_motif_names or motif.name in animal_to_human)]
         print ('Final number of total matrix IDs:', len(matrix_ids))
 
+        self.animal_to_human = animal_to_human
         self.matrix_ids = matrix_ids
         self.tf_names = human_motif_names + list(animal_to_human.keys())
-        self.human_names = human_motif_names + list(animal_to_human.values())
 
 
     def filter_matches(
@@ -335,6 +337,7 @@ class Sponge:
         promoter_file: Optional[str] = None, 
         bigbed_file: Optional[str] = None,
         n_processes: int = 1,
+        score_threshold: float = 400,
         prompt: bool = True
     ) -> None:
         
@@ -380,7 +383,7 @@ class Sponge:
             chunk_size = ceil(sqrt(len(df_chrom) / n_processes))
             chunk_divisions = [i for i in range(0, len(df_chrom), chunk_size)]
             input_tuples = [(bigbed_file, df_chrom, self.tf_names, chrom, i, 
-                i+chunk_size) for i in chunk_divisions]
+                i+chunk_size, score_threshold) for i in chunk_divisions]
             result = p.map_async(filter_edges_helper, input_tuples, 
                 chunksize=n_processes)
             edges_chrom_list = result.get()
@@ -396,18 +399,29 @@ class Sponge:
         self.all_edges = pd.concat(results_list, ignore_index=True)
 
     
+    def load_matches(
+        self,
+        file_path: str
+    ):
+        
+        self.all_edges = pd.read_csv(file_path, sep='\t')
+
+
     def retrieve_ppi(
         self
     ) -> None:
         
-        query_string = '%0d'.join(self.human_names)
+        filtered_tfs = self.all_edges['TFName'].unique()
+        humanised_tfs = [self.animal_to_human[x] if x in self.animal_to_human 
+            else x for x in filtered_tfs]
+        query_string = '%0d'.join(humanised_tfs)
 
         print ('Retrieving mapping from STRING...')
         mapping_request = requests.get(f'{STRING_URL}get_string_ids?'
             f'identifiers={query_string}&species=9606')
         mapping_df = pd.read_csv(BytesIO(mapping_request.content), sep='\t')
         mapping_df['queryName'] = mapping_df['queryIndex'].apply(
-            lambda i: self.human_names[i])
+            lambda i: humanised_tfs[i])
         diff_df = mapping_df[mapping_df['queryName'] != 
             mapping_df['preferredName']]
         ids_to_check = np.concatenate((diff_df['queryName'], 
@@ -452,8 +466,14 @@ class Sponge:
     def write_ppi_prior(
         self,
         output_path: str = 'ppi_prior.tsv',
-        weighted: bool = False
+        weighted: bool = False,
+        weight_range: Optional[Tuple[float, float]] = None
     ) -> None:
+        
+        if self.ppi_frame is None:
+            print ('No motif prior has been generated yet, please run '
+                'retrieve_ppi() first')
+            return
         
         if weighted:
             self.ppi_frame[['tf1', 'tf2', 'score']].to_csv(output_path, 
@@ -468,7 +488,8 @@ class Sponge:
         self,
         ensembl_file: Optional[str] = None,
         prompt: bool = True,
-        use_gene_names: bool = True
+        use_gene_names: bool = True,
+        protein_coding_only: bool = False
     ) -> None:
         
         if self.ensembl is None or ensembl_file is not None:
@@ -481,14 +502,63 @@ class Sponge:
                     return
             self.ensembl = pd.read_csv(ensembl_file, sep='\t')
         
+        motif_df = self.all_edges.join(other=self.ensembl.set_index(
+            'Transcript stable ID'), on='transcript')
+        if protein_coding_only:
+            motif_df = motif_df[motif_df['Gene type'] == 
+                'protein_coding'].copy()
+        motif_df.drop(columns=['Gene type', 'name'], inplace=True)
+        motif_df['TFName'] = motif_df['TFName'].apply(lambda x: 
+            self.animal_to_human[x] if x in self.animal_to_human else x)
+        motif_df.dropna(subset=['Gene stable ID'], inplace=True)
+        motif_df.sort_values('score', ascending=False, inplace=True)
+        motif_df.drop_duplicates(subset=['TFName', 'Gene stable ID'],
+            inplace=True)
+        if use_gene_names:
+            motif_df['Gene name'] = motif_df.apply(lambda x: x['Gene name'] if 
+                type(x['Gene name']) == str else x['Gene stable ID'], axis=1)
+            name_id_matching = motif_df.groupby(
+                ['Gene name', 'Gene stable ID'])['Gene name'].count()
+            id_to_name = {i[1]: i[0] for i in name_id_matching.groupby(
+                level=0).idxmax().values}
+            motif_df['Gene name'] = motif_df['Gene stable ID'].apply(
+                lambda x: id_to_name[x] if x in id_to_name else np.nan)
+            motif_df.dropna(subset='Gene name', inplace=True)
         
-
+        self.motif_frame = motif_df
+        self.use_gene_names = use_gene_names
+    
 
     def write_motif_prior(
-        self
+        self,
+        output_path: str = 'motif_prior.tsv',
+        use_gene_names: Optional[bool] = None,
+        weighted: bool = False,
+        weight_range: Optional[Tuple[float, float]] = None
     ) -> None:
         
-        pass
+        if self.motif_frame is None:
+            print ('No motif prior has been generated yet, please run '
+                'aggregate_matches() first')
+            return
+        
+        if use_gene_names is None:
+            use_gene_names = self.use_gene_names
+        if use_gene_names:
+            column = 'Gene name'
+        else:
+            column = 'Gene stable ID'
+
+        self.motif_frame.sort_values(by=['TFName', column], inplace=True)
+
+        if weighted:
+            self.motif_frame['weight'] = self.motif_frame['score'] / 100
+            self.motif_frame[['TFName', column, 'weight']].to_csv(
+                output_path, sep='\t', index=False, header=False)
+        else:
+            self.motif_frame['edge'] = 1
+            self.motif_frame[['TFName', column, 'edge']].to_csv(
+                output_path, sep='\t', index=False, header=False)
 
 
     def clear_cache(

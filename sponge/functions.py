@@ -121,7 +121,7 @@ def filter_edges(
 
 
 def filter_edges_helper(
-    input_tuple: Tuple[str, pd.DataFrame, Iterable[str], str, int, int]
+    input_tuple: Tuple[str, pd.DataFrame, Iterable[str], str, int, int, float]
 ) -> pd.DataFrame:
 
     return filter_edges(*input_tuple)
