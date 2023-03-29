@@ -38,6 +38,7 @@ FILE_DF = pd.DataFrame(
 
 ENSEMBL_URL = 'http://www.ensembl.org/biomart'
 MAPPING_URL = 'https://rest.uniprot.org/idmapping/'
+STRING_URL = 'https://string-db.org/api/tsv/'
 
 ### Functions ###
 def download_with_progress(
@@ -94,118 +95,6 @@ def get_uniprot_mapping(
     results_df = pd.DataFrame(uniprot_results.json()['results'])
     results_df.drop_duplicates(subset='from', inplace=True)
     return results_df
-
-
-def process_ensemble_df(
-    df: pd.DataFrame
-) -> None:
-
-    pass
-
-
-def load_promoters_from_biomart(
-    file_path: str,
-    filter_basic: bool = True,
-    chromosomes: Iterable[str] = [str(i) for i in range(1,23)] + 
-        ['MT', 'X', 'Y'],
-    save_ensemble: bool = True
-) -> None:
-
-    bm_server = BiomartServer(ENSEMBL_URL)
-    ensembl = bm_server.datasets['hsapiens_gene_ensembl']
-    attributes = ['ensembl_transcript_id', 'transcript_gencode_basic', 
-        'chromosome_name', 'transcription_start_site', 'strand']
-    if save_ensemble:
-        attributes += ['ensembl_gene_id', 'external_gene_name', 'gene_biotype']
-    print ('Retrieving response to query...')
-    dtype_dict = defaultdict(lambda: str)
-    dtype_dict['Transcription start site (TSS)'] = int
-    dtype_dict['Strand'] = int
-    response = ensembl.search({'attributes': attributes}, header=1)
-    buffer = download_with_progress(response)
-    df = pd.read_csv(buffer, sep='\t', dtype=dtype_dict)
-    print ('Filtering and modifying dataframe...')
-    if filter_basic:
-        df = df[df['GENCODE basic annotation'] == 'GENCODE basic'].copy()
-        df.drop(columns='GENCODE basic annotation', inplace=True)
-    if chromosomes is not None:
-        df = df[df['Chromosome/scaffold name'].isin(chromosomes)]
-    df['Chromosome'] = df['Chromosome/scaffold name'].apply(lambda x: 'chrM' 
-        if x == 'MT' else f'chr{x}')
-    df['Strand'] = df['Strand'].apply(lambda x: '+' if x > 0 else '-')
-    df['Start'] = df.apply(lambda row: 
-        row['Transcription start site (TSS)'] - 750 if row['Strand'] == '+' 
-        else row['Transcription start site (TSS)'] - 250, axis=1)
-    df['End'] = df['Start'] + 1000
-    df['Score'] = 0
-    df.sort_values(['Chromosome', 'Start'], inplace=True)
-    columns = ['Chromosome', 'Start', 'End', 'Transcript stable ID', 'Score', 
-        'Strand']
-    print (f'Saving data to {file_path}...')
-    df[columns].to_csv(file_path, sep='\t', header=False, index=False)
-    print ()
-    if save_ensemble:
-        columns = ['Gene stable ID', 'Transcript stable ID', 'Gene name', 
-            'Gene type']
-        process_ensemble_df(df[columns])
-
-
-def load_ensemble_from_biomart(
-    file_path: str
-) -> None:
-    
-    pass
-
-
-def retrieve_file(
-    description: str,
-    temp_folder: str,
-    prompt: bool = True,
-    jaspar_release: Optional[str] = None
-) -> str:
-
-    
-    if description not in FILE_DF.index:
-        print (f'File description not recognised: {description}')
-        return
-    if not os.path.exists(temp_folder):
-        os.mkdir(temp_folder)
-    file_name = FILE_DF.loc[description, 'name']
-    file_path = os.path.join(temp_folder, file_name)
-    if os.path.exists(file_path):
-        print (f'Using cached file {file_path}')
-        print ()
-    else:
-        print (f'File {file_name} not found in directory {temp_folder}')
-        if prompt:
-            key = None
-            positive = ['y', 'yes', 'hell yeah']
-            negative = ['n', 'no', 'nope']
-            while key is None or key.lower() not in positive + negative:
-                if key is not None:
-                    print (f'Input not recognised: {key}')
-                print ('Do you want to download it? Y/N', flush=True)
-                key = input()
-                print (key)
-            print ()
-            if key.lower() in negative:
-                return None
-        to_request = FILE_DF.loc[description, 'url']
-        if to_request is None:
-            # These options are not unused: they are passed to the
-            # evaluated function call as kwargs
-            options = {'file_path': file_path}
-            eval(FILE_DF.loc[description, 'eval'])
-        else:
-            if description == 'jaspar_bigbed':
-                if jaspar_release is None:
-                    raise ValueError('The release of jaspar has to be '
-                        'specified in order to retrieve the bigbed file')
-                to_request = to_request.format(year=jaspar_release[-4:])
-            print (f'Downloading data into {file_path}...')
-            download_with_progress(to_request, file_path)    
-
-    return file_path
 
 
 def filter_edges(
