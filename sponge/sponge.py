@@ -36,7 +36,7 @@ class Sponge:
         """
 
         self.temp_folder = temp_folder
-        self.transcripts = None
+        self.ensembl = None
 
 
     def select_tfs(
@@ -102,14 +102,14 @@ class Sponge:
         filter_basic: bool = True,
         chromosomes: Iterable[str] = [str(i) for i in range(1,23)] + 
             ['MT', 'X', 'Y'],
-        keep_ensemble: bool = True
+        keep_ensembl: bool = True
     ) -> None:
 
         bm_server = BiomartServer(ENSEMBL_URL)
         ensembl = bm_server.datasets['hsapiens_gene_ensembl']
         attributes = ['ensembl_transcript_id', 'transcript_gencode_basic', 
             'chromosome_name', 'transcription_start_site', 'strand']
-        if keep_ensemble:
+        if keep_ensembl:
             attributes += ['ensembl_gene_id', 'external_gene_name', 'gene_biotype']
         print ('Retrieving response to query...')
         response = ensembl.search({'attributes': attributes}, header=1)
@@ -138,13 +138,12 @@ class Sponge:
         print (f'Saving data to {file_path}...')
         df[columns].to_csv(file_path, sep='\t', header=False, index=False)
         print ()
-
-        if keep_ensemble:
-            self.transcripts = df[['Gene stable ID', 'Transcript stable ID', 
+        if keep_ensembl:
+            self.ensembl = df[['Gene stable ID', 'Transcript stable ID', 
                 'Gene name', 'Gene type']]
 
 
-    def load_ensemble_from_biomart(
+    def load_ensembl_from_biomart(
         self,
         file_path: str
     ) -> None:
@@ -156,10 +155,9 @@ class Sponge:
         print ('Retrieving response to query...')
         response = ensembl.search({'attributes': attributes}, header=1)
         buffer = download_with_progress(response)
-        df = pd.read_csv(buffer, sep='\t')
-        
+        df = pd.read_csv(buffer, sep='\t')     
         df.to_csv(file_path, sep='\t', index=False)
-        self.transcripts = df
+        self.ensembl = df
 
 
     def retrieve_file(
@@ -346,6 +344,7 @@ class Sponge:
             if promoter_file is None:
                 print ('Unable to find or retrieve the promoter file, exiting')
                 return
+        
         if bigbed_file is None:
             bigbed_file = self.retrieve_file('jaspar_bigbed', self.temp_folder, 
                 prompt=prompt, jaspar_release=self.release)
@@ -402,6 +401,7 @@ class Sponge:
     ) -> None:
         
         query_string = '%0d'.join(self.human_names)
+
         print ('Retrieving mapping from STRING...')
         mapping_request = requests.get(f'{STRING_URL}get_string_ids?'
             f'identifiers={query_string}&species=9606')
@@ -412,6 +412,7 @@ class Sponge:
             mapping_df['preferredName']]
         ids_to_check = np.concatenate((diff_df['queryName'], 
             diff_df['preferredName']))
+        
         print ('Checking the conflicts in the UniProt database...')
         uniprot_df = get_uniprot_mapping('Gene_Name', 'UniProtKB', 
             ids_to_check).set_index('from')
@@ -424,10 +425,12 @@ class Sponge:
                 or uniprot_df.loc[p, 'to'] == uniprot_df.loc[q, 'to']):
                 matching_ids.append(p)
         query_string_filt = '%0d'.join(matching_ids)
+
         print ('Retrieving the network from STRING...')
         request = requests.get(f'{STRING_URL}network?'
             f'identifiers={query_string_filt}&species=9606')
         ppi_df = pd.read_csv(BytesIO(request.content), sep='\t')
+
         print ('Processing the results...')
         ppi_df.drop(['stringId_A', 'stringId_B', 'ncbiTaxonId', 'nscore', 
             'fscore', 'pscore', 'ascore', 'escore', 'dscore', 'tscore'], 
@@ -437,6 +440,7 @@ class Sponge:
         ppi_df['tf1'].replace(p_to_q, inplace=True)
         ppi_df['tf2'].replace(p_to_q, inplace=True)
         ppi_df.sort_values(by=['tf1', 'tf2'], inplace=True)
+
         print ()
         print ('Final number of TFs in the PPI network: '
             f'{len(set(ppi_df["tf1"]).union(set(ppi_df["tf2"])))}')
@@ -461,10 +465,23 @@ class Sponge:
             
 
     def aggregate_matches(
-        self
+        self,
+        ensembl_file: Optional[str] = None,
+        prompt: bool = True,
+        use_gene_names: bool = True
     ) -> None:
         
-        pass
+        if self.ensembl is None or ensembl_file is not None:
+            if ensembl_file is None:
+                ensembl_file = self.retrieve_file('ensembl', 
+                    self.temp_folder, prompt=prompt)
+                if ensembl_file is None:
+                    print ('Unable to find or retrieve the ensembl file, ' 
+                        'exiting')
+                    return
+            self.ensembl = pd.read_csv(ensembl_file, sep='\t')
+        
+        
 
 
     def write_motif_prior(

@@ -23,8 +23,8 @@ from io import BytesIO
 
 ### Data ###
 FILE_DF = pd.DataFrame(
-    {'description': ['homologene', 'promoter', 'jaspar_bigbed', 'ensemble'],
-     'name': ['homologene.tsv', 'promoters.bed', 'JASPAR.bb', 'ensemble.tsv'],
+    {'description': ['homologene', 'promoter', 'jaspar_bigbed', 'ensembl'],
+     'name': ['homologene.tsv', 'promoters.bed', 'JASPAR.bb', 'ensembl.tsv'],
      'url': ['https://ftp.ncbi.nih.gov/pub/HomoloGene/current/homologene.data',
              None,
              'http://expdata.cmmt.ubc.ca/JASPAR/downloads/UCSC_tracks/{year}'
@@ -33,7 +33,7 @@ FILE_DF = pd.DataFrame(
      'eval': [None,
               'self.load_promoters_from_biomart(**options)',
               None,
-              'self.load_ensemble_from_biomart(**options)']}
+              'self.load_ensembl_from_biomart(**options)']}
 ).set_index('description')
 
 ENSEMBL_URL = 'http://www.ensembl.org/biomart'
