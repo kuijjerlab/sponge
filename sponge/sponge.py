@@ -338,6 +338,8 @@ class Sponge:
         bigbed_file: Optional[str] = None,
         n_processes: int = 1,
         score_threshold: float = 400,
+        chromosomes: Iterable[str] = [f'chr{i}' for i in [j for j in 
+            range(1, 23)] + ['M', 'X', 'Y']],
         prompt: bool = True
     ) -> None:
         
@@ -362,15 +364,13 @@ class Sponge:
         df_full.drop(columns=['score', 'strand'], inplace=True)
         df_full.set_index('name', inplace=True)
 
-        chr_list = ['chr{}'.format(i) for i in [j for j in range(1,23)] + 
-            ['M', 'X', 'Y']]
         results_list = []
         p = Pool(n_processes)
 
         print ()
         print ('Iterating over the chromosomes...')
         start_time = time.time()
-        for chrom in chr_list:
+        for chrom in chromosomes:
             st_chr = time.time()
             df_chrom = df_full[df_full['chrom'] == chrom]
             if len(df_chrom) == 0:
