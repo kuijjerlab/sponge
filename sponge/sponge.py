@@ -3,6 +3,11 @@ import pandas as pd
 import numpy as np
 import bioframe
 import time
+import os
+
+from biomart import BiomartServer
+
+from collections import defaultdict
 
 from pyjaspar import jaspardb
 
@@ -14,25 +19,37 @@ from sponge.functions import *
 
 ### Class definition ###
 class Sponge:
+    """
+    Sponge class can process the data necessary for creating a prior
+    TF-gene regulatory network, along with a prior protein-protein 
+    interaction network. It also contains tools to download these data,
+    so that minimal input from the user is required. The networks are 
+    provided in a format compatible with PANDA/LIONESS.
+
+    Usual order of operations:
+    sponge_obj = Sponge()
+    sponge_obj.select_tfs()
+    sponge_obj.find_human_homologs()
+    sponge_obj.filter_matches()
+    sponge_obj.retrieve_ppi()
+    sponge_obj.write_ppi_prior()
+    sponge_obj.aggregate_matches()
+    sponge_obj.write_motif_prior()
+    """
+
     def __init__(
         self,
-        temp_folder: str = '.sponge_temp/'
+        temp_folder: str = '.sponge_temp/',
+        run_default: bool = False
     ):
         """
-        Usual order of operations:
-        sponge_obj = Sponge()
-        sponge_obj.select_tfs()
-        sponge_obj.find_human_homologs()
-        sponge_obj.filter_matches()
-        sponge_obj.retrieve_ppi()
-        sponge_obj.write_ppi_prior()
-        sponge_obj.aggregate_matches()    
-        sponge_obj.write_motif_prior()
+        Initialises an instance of the Sponge class.
 
         Parameters
         ----------
         temp_folder : str, optional
-            _description_, by default '.sponge_temp/'
+            The temporary folder for saving downloaded files, 
+            by default '.sponge_temp/'
         """
 
         self.temp_folder = temp_folder
@@ -40,11 +57,36 @@ class Sponge:
         self.ppi_frame = None
         self.motif_frame = None
 
+        if run_default:
+            self.run_default_workflow()
+
+
+    def run_default_workflow(
+        self
+    ) -> None:
+        
+        self.select_tfs()
+        self.find_human_homologs(prompt=False)
+        self.filter_matches(prompt=False)
+        self.retrieve_ppi()
+        self.write_ppi_prior()
+        self.aggregate_matches(prompt=False)
+        self.write_motif_prior()
+
 
     def select_tfs(
         self,
         drop_heterodimers: bool = True
     ) -> None:
+        """
+        Selects transcription factors from the newest version of the
+        JASPAR database and stores them in the class instance.
+
+        Parameters
+        ----------
+        drop_heterodimers : bool, optional
+            Whether to drop filter out heterodimers, by default True
+        """
 
         # Database object
         jdb_obj = jaspardb()
@@ -219,6 +261,18 @@ class Sponge:
         homologene_file: Optional[str] = None,
         prompt: bool = True
     ) -> None:
+        """
+        Attempts to map all initially selected non-human transcription
+        factors to their human homologs.
+
+        Parameters
+        ----------
+        homologene_file : Optional[str], optional
+            The path to a homologene file or None to use cache or
+            download it, by default None
+        prompt : bool, optional
+            Whether to prompt before downloading, by default True
+        """
         
         if homologene_file is None:
             homologene_file = self.retrieve_file('homologene', 
@@ -564,6 +618,10 @@ class Sponge:
     def clear_cache(
         self
     ) -> None:
+        """
+        Removes every file in the temporary folder and the folder 
+        itself. Will not work if subfolders are present in the folder.
+        """
         
         if os.path.exists(self.temp_folder):
             for file in os.listdir(self.temp_folder):
