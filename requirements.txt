@@ -1,2 +1,5 @@
 numpy
 pandas
+biomart
+pyjaspar
+tqdm

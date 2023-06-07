@@ -12,6 +12,9 @@ setup(
     install_requires=[
         'pandas',
         'numpy',
+        'biomart',
+        'pyjaspar',
+        'tqdm'
     ],
     zip_safe=False
 )
