@@ -265,7 +265,8 @@ class Sponge:
 
         Parameters
         ----------
-        homologene_file : Optional[Union[str, bytes, os.PathLike]], optional
+        homologene_file : Optional[Union[str, bytes, os.PathLike]], 
+            optional
             The path to a homologene file or None to use cache or
             download it, by default None
         prompt : bool, optional
@@ -456,6 +457,17 @@ class Sponge:
         self,
         file_path: Union[str, bytes, os.PathLike]
     ):
+        """
+        Loads the filtered matches from a file, allows the use of
+        the downstream SPONGE functions without running the steps up to 
+        and including filter_matches 
+
+        Parameters
+        ----------
+        file_path : Union[str, bytes, os.PathLike]
+            The path to a file that contains the filtered matches 
+            in a format compatible with what filter_matches generates
+        """
         
         self.all_edges = pd.read_csv(file_path, sep='\t')
 
