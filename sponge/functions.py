@@ -149,7 +149,7 @@ def filter_edges(
 
     Parameters
     ----------
-    bb_ref : str
+    bb_ref : Union[str, bytes, os.PathLike]
         The path to a bigbed file that stores all possible matches
     bed_df : pd.DataFrame
         A pandas DataFrame containing the regions of interest in the
