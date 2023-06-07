@@ -13,6 +13,7 @@ setup(
         'pandas',
         'numpy',
         'biomart',
+        'bioframe',
         'pyjaspar',
         'tqdm'
     ],
