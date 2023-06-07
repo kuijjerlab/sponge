@@ -90,8 +90,7 @@ The project is: _in progress_.
 
 ## Room for Improvement
 Room for improvement:
-- Add requirements.txt
-- Add tests
+- Add more and better tests
 
 To do:
 - Restructuring to download files in the beginning
@@ -111,7 +110,6 @@ This README is based on a template made by
 
 
 ## Contact
-
 Created by Ladislav Hovan (ladislav.hovan@ncmm.uio.no).
 Feel free to contact me!
 
