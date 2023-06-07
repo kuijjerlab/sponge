@@ -1,21 +1,14 @@
-name: SPONGE test
+name: SPONGE test on latest Ubuntu and Python 3.8
 
 on:
   push:
-    branches: [ master ]
+    branches: [ devel ]
   pull_request:
-    branches: [ master ]
+    branches: [ devel ]
 
 jobs:
-  os-python-compatibility:
-    strategy:
-      matrix:
-        os: [ 'ubuntu-latest', 'macos-latest', 'windows-latest' ]
-        python: [ '3.8', '3.9', '3.10' ]
-            
-      fail-fast:  false
-        
-    runs-on: ${{ matrix.os }}
+  os-python-compatibility:        
+    runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
@@ -24,7 +17,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: ${{ matrix.python }}
+        python-version: 3.8
 
     - name: Check Python version
       run: |
