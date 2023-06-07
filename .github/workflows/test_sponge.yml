@@ -1,43 +1,44 @@
 name: SPONGE test
 
 on:
-    push:
-        branches: [ master ]
-    pull_request:
-        branches: [ master ]
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
 
 jobs:
-    os-python-compatibility:
-        strategy:
-            matrix:
-                os: [ 'ubuntu-latest' ]
-                #, 'macos-latest', 'windows-latest' 
-                python: [ '3.8' ]
-                #, '3.9', '3.10' 
+  os-python-compatibility:
+    strategy:
+      matrix:
+        os: [ 'ubuntu-latest' ]
+        #, 'macos-latest', 'windows-latest' 
+        python: [ '3.8' ]
+        #, '3.9', '3.10' 
             
-            fail-fast:  false
+      fail-fast:  false
         
-        runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
 
-        steps:
-            - name: Checkout repository
-              uses: actions/checkout@v3
-      
-            - name: Setup Python
-              uses: actions/setup-python@v4
-              with:
-                python-version: ${{ matrix.python }}
-      
-            - name: Check Python version
-              run: |
-                which python3
-                python3 --version
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-            - name: Install dependencies
-              run: |
-                python -m pip install --upgrade pip
-                pip install pytest
-                pip install -r requirements.txt
-      
-            - name: Run the tests
-              run: pytest tests
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python }}
+
+    - name: Check Python version
+      run: |
+        which python3
+        python3 --version
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest
+        pip install -r requirements.txt
+        pip install -e .
+
+    - name: Run the tests
+      run: pytest tests

@@ -4,4 +4,4 @@ def test_functions_import():
 
 ### Integration tests ###
 def test_sponge_import():
-    from sponge.sponge import Sponge
+    from sponge import Sponge
