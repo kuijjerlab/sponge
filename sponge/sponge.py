@@ -1,9 +1,5 @@
 ### Imports ###
-import pandas as pd
 import numpy as np
-import bioframe
-import time
-import os
 
 from biomart import BiomartServer
 
@@ -39,7 +35,7 @@ class Sponge:
 
     def __init__(
         self,
-        temp_folder: str = '.sponge_temp/',
+        temp_folder: Union[str, bytes, os.PathLike] = '.sponge_temp/',
         run_default: bool = False
     ):
         """
@@ -47,7 +43,7 @@ class Sponge:
 
         Parameters
         ----------
-        temp_folder : str, optional
+        temp_folder : Union[str, bytes, os.PathLike], optional
             The temporary folder for saving downloaded files, 
             by default '.sponge_temp/'
         """
@@ -142,7 +138,7 @@ class Sponge:
 
     def load_promoters_from_biomart(
         self,
-        file_path: str,
+        file_path: Union[str, bytes, os.PathLike],
         filter_basic: bool = True,
         chromosomes: Iterable[str] = [str(i) for i in range(1,23)] + 
             ['MT', 'X', 'Y'],
@@ -154,7 +150,8 @@ class Sponge:
         attributes = ['ensembl_transcript_id', 'transcript_gencode_basic', 
             'chromosome_name', 'transcription_start_site', 'strand']
         if keep_ensembl:
-            attributes += ['ensembl_gene_id', 'external_gene_name', 'gene_biotype']
+            attributes += ['ensembl_gene_id', 'external_gene_name', 
+                'gene_biotype']
         print ('Retrieving response to query...')
         response = ensembl.search({'attributes': attributes}, header=1)
         buffer = download_with_progress(response)
@@ -168,8 +165,8 @@ class Sponge:
             df.drop(columns='GENCODE basic annotation', inplace=True)
         if chromosomes is not None:
             df = df[df['Chromosome/scaffold name'].isin(chromosomes)]
-        df['Chromosome'] = df['Chromosome/scaffold name'].apply(lambda x: 'chrM' 
-            if x == 'MT' else f'chr{x}')
+        df['Chromosome'] = df['Chromosome/scaffold name'].apply(lambda x: 
+            'chrM' if x == 'MT' else f'chr{x}')
         df['Strand'] = df['Strand'].apply(lambda x: '+' if x > 0 else '-')
         df['Start'] = df.apply(lambda row: 
             row['Transcription start site (TSS)'] - 750 if row['Strand'] == '+' 
@@ -177,8 +174,8 @@ class Sponge:
         df['End'] = df['Start'] + 1000
         df['Score'] = 0
         df.sort_values(['Chromosome', 'Start'], inplace=True)
-        columns = ['Chromosome', 'Start', 'End', 'Transcript stable ID', 'Score', 
-            'Strand']
+        columns = ['Chromosome', 'Start', 'End', 'Transcript stable ID', 
+            'Score', 'Strand']
         print (f'Saving data to {file_path}...')
         df[columns].to_csv(file_path, sep='\t', header=False, index=False)
         print ()
@@ -189,7 +186,7 @@ class Sponge:
 
     def load_ensembl_from_biomart(
         self,
-        file_path: str
+        file_path: Union[str, bytes, os.PathLike]
     ) -> None:
         
         bm_server = BiomartServer(ENSEMBL_URL)
@@ -203,11 +200,12 @@ class Sponge:
         df.to_csv(file_path, sep='\t', index=False)
         self.ensembl = df
 
-
+    # TODO: Since this is now part of the class, remove temp_folder
+    # and jaspar_release references
     def retrieve_file(
         self,
         description: str,
-        temp_folder: str,
+        temp_folder: Union[str, bytes, os.PathLike],
         prompt: bool = True,
         jaspar_release: Optional[str] = None
     ) -> str:
@@ -258,7 +256,7 @@ class Sponge:
 
     def find_human_homologs(
         self, 
-        homologene_file: Optional[str] = None,
+        homologene_file: Optional[Union[str, bytes, os.PathLike]] = None,
         prompt: bool = True
     ) -> None:
         """
@@ -267,7 +265,7 @@ class Sponge:
 
         Parameters
         ----------
-        homologene_file : Optional[str], optional
+        homologene_file : Optional[Union[str, bytes, os.PathLike]], optional
             The path to a homologene file or None to use cache or
             download it, by default None
         prompt : bool, optional
@@ -294,8 +292,8 @@ class Sponge:
         # Get the non-human motif names
         non_human_motif_names = [i.name for i in non_human_motifs]
         # Compare against homologene
-        found_names = hg_df[hg_df['Gene Symbol'].isin([adjust_gene_name(i) for i in 
-            non_human_motif_names])]['Gene Symbol'].unique()
+        found_names = hg_df[hg_df['Gene Symbol'].isin([adjust_gene_name(i) for 
+            i in non_human_motif_names])]['Gene Symbol'].unique()
         # Find the missing ones
         missing = (set([adjust_gene_name(i) for i in non_human_motif_names]) - 
             set(found_names))
@@ -330,7 +328,8 @@ class Sponge:
         # Create a DataFrame of corresponding names
         corr_df = pd.DataFrame(non_human_motif_names, 
             columns=['Original Name'])
-        corr_df['Adjusted Name'] = corr_df['Original Name'].apply(adjust_gene_name)
+        corr_df['Adjusted Name'] = corr_df['Original Name'].apply(
+            adjust_gene_name)
         corr_df['Group ID'] = corr_df['Adjusted Name'].apply(corresponding_id)
         corr_df['Group ID'] = corr_df['Group ID'].apply(lambda x: 
             x[0] if len(x) > 0 else np.nan)
@@ -388,8 +387,8 @@ class Sponge:
 
     def filter_matches(
         self, 
-        promoter_file: Optional[str] = None, 
-        bigbed_file: Optional[str] = None,
+        promoter_file: Optional[Union[str, bytes, os.PathLike]] = None, 
+        bigbed_file: Optional[Union[str, bytes, os.PathLike]] = None,
         n_processes: int = 1,
         score_threshold: float = 400,
         chromosomes: Iterable[str] = [f'chr{i}' for i in [j for j in 
@@ -455,7 +454,7 @@ class Sponge:
     
     def load_matches(
         self,
-        file_path: str
+        file_path: Union[str, bytes, os.PathLike]
     ):
         
         self.all_edges = pd.read_csv(file_path, sep='\t')
@@ -519,7 +518,7 @@ class Sponge:
 
     def write_ppi_prior(
         self,
-        output_path: str = 'ppi_prior.tsv',
+        output_path: Union[str, bytes, os.PathLike] = 'ppi_prior.tsv',
         weighted: bool = False,
         weight_range: Optional[Tuple[float, float]] = None
     ) -> None:
@@ -540,7 +539,7 @@ class Sponge:
 
     def aggregate_matches(
         self,
-        ensembl_file: Optional[str] = None,
+        ensembl_file: Optional[Union[str, bytes, os.PathLike]] = None,
         prompt: bool = True,
         use_gene_names: bool = True,
         protein_coding_only: bool = False
@@ -585,7 +584,7 @@ class Sponge:
 
     def write_motif_prior(
         self,
-        output_path: str = 'motif_prior.tsv',
+        output_path: Union[str, bytes, os.PathLike] = 'motif_prior.tsv',
         use_gene_names: Optional[bool] = None,
         weighted: bool = False,
         weight_range: Optional[Tuple[float, float]] = None

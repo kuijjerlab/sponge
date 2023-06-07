@@ -1,8 +1,8 @@
 ### Imports ###
-import pandas as pd
 import bioframe
 import requests
 import time
+import os
 
 from Bio.motifs.jaspar import Motif
 
@@ -16,34 +16,12 @@ from tqdm import tqdm
 
 from io import BytesIO
 
-# TODO: Potentially move the data section to a separate file, although small
-### Data ###
-# Contains the links for downloading files or alternatively the names of
-# functions that should be executed in order to retrieve them
-FILE_DF = pd.DataFrame(
-    {'description': ['homologene', 'promoter', 'jaspar_bigbed', 'ensembl'],
-     'name': ['homologene.tsv', 'promoters.bed', 'JASPAR.bb', 'ensembl.tsv'],
-     'url': ['https://ftp.ncbi.nih.gov/pub/HomoloGene/current/homologene.data',
-             None,
-             'http://expdata.cmmt.ubc.ca/JASPAR/downloads/UCSC_tracks/{year}'
-             '/JASPAR{year}_hg38.bb',
-             None],
-     'eval': [None,
-              'self.load_promoters_from_biomart(**options)',
-              None,
-              'self.load_ensembl_from_biomart(**options)']}
-).set_index('description')
-
-# URLs to websites for downloads, should only be provided here and referenced
-# by their variable names for ease of future updates
-ENSEMBL_URL = 'http://www.ensembl.org/biomart'
-MAPPING_URL = 'https://rest.uniprot.org/idmapping/'
-STRING_URL = 'https://string-db.org/api/tsv/'
+from sponge.data import *
 
 ### Functions ###
 def download_with_progress(
     url: Union[str, requests.models.Response],
-    file_path: Optional[str] = None,
+    file_path: Optional[Union[str, bytes, os.PathLike]] = None,
     desc: str = 'response'
 ) -> Optional[BytesIO]:
     """
@@ -54,7 +32,7 @@ def download_with_progress(
     ----------
     url : Union[str, requests.models.Response]
         The URL or response to be processed
-    file_path : Optional[str], optional
+    file_path : Optional[Union[str, bytes, os.PathLike]], optional
         The file path for saving or None to save into a BytesIO object,
         by default None
     desc : str, optional
@@ -156,7 +134,7 @@ def get_uniprot_mapping(
 
 
 def filter_edges(
-    bb_ref: str, 
+    bb_ref: Union[str, bytes, os.PathLike], 
     bed_df: pd.DataFrame, 
     motif_list: Iterable[str], 
     chrom: str, 

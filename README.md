@@ -90,7 +90,6 @@ The project is: _in progress_.
 
 ## Room for Improvement
 Room for improvement:
-- OS-independent handling of paths
 - Add requirements.txt
 - Add tests
 
