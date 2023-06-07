@@ -1,7 +1,7 @@
-### Generic tests ###
-def test_always_passes():
-    assert True
+### Unit tests ###
+def test_functions_import():
+    import sponge.functions as func
 
-def test_always_fails():
-    assert False
-
+### Integration tests ###
+def test_sponge_import():
+    from sponge.sponge import Sponge
