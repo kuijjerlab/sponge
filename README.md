@@ -13,7 +13,7 @@ The SPONGE package generates human prior gene regulatory networks.
   - [Room for Improvement](#room-for-improvement)
   - [Acknowledgements](#acknowledgements)
   - [Contact](#contact)
-<!-- - [License](#license) -->
+  - [License](#license)
 
 
 ## General Information
@@ -114,5 +114,6 @@ Created by Ladislav Hovan (ladislav.hovan@ncmm.uio.no).
 Feel free to contact me!
 
 
-<!-- ## License -->
-<!-- This project is open source and available under the [... License](). -->
+## License
+This project is open source and available under the 
+[GNU General Public License v3](LICENSE).

@@ -35,8 +35,10 @@ class Sponge:
 
     def __init__(
         self,
-        temp_folder: Union[str, bytes, os.PathLike] = '.sponge_temp/',
-        run_default: bool = False
+        temp_folder: Union[str, bytes, os.PathLike] = '.sponge_temp',
+        run_default: bool = False,
+        jaspar_release: Optional[str] = None,
+        n_processes: int = 1
     ):
         """
         Initialises an instance of the Sponge class.
@@ -45,22 +47,50 @@ class Sponge:
         ----------
         temp_folder : Union[str, bytes, os.PathLike], optional
             The temporary folder for saving downloaded files, 
-            by default '.sponge_temp/'
+            by default '.sponge_temp'
+        run_default : bool, optional
+            Whether to run the default pipeline automatically after
+            class creation, by default False
         """
 
         self.temp_folder = temp_folder
         self.ensembl = None
         self.ppi_frame = None
         self.motif_frame = None
+        self.n_processes = n_processes
 
-        if run_default:
+        self.jdb_obj = jaspardb()
+        if jaspar_release is None:
+            from pyjaspar import JASPAR_LATEST_RELEASE
+            self.jaspar_release = JASPAR_LATEST_RELEASE
+        else:
+            jaspar_available = self.jdb_obj.get_releases()
+            if jaspar_release in jaspar_available:
+                self.jaspar_release = jaspar_release
+                self.jdb_obj = jaspardb(self.jaspar_release)
+            elif 'JASPAR' + jaspar_release in jaspar_available:
+                print (f'Found {"JASPAR" + jaspar_release} in available '
+                    'releases, assuming this matches your choice')
+                self.jaspar_release = 'JASPAR' + jaspar_release
+                self.jdb_obj = jaspardb(self.jaspar_release)
+            else:
+                print ('The specified version of the JASPAR release '
+                    f'({jaspar_release}) is not available')
+                print ('Available versions:')
+                print (', '.join(jaspar_available))
+                print ('The downstream pipeline will not be run')
+                return
+
+        self.files_ready = self.prepare_files()
+
+        if run_default and self.files_ready:
             self.run_default_workflow()
 
 
-    def run_default_workflow(
+    def run_default_workflow(  
         self
     ) -> None:
-        
+
         self.select_tfs()
         self.find_human_homologs(prompt=False)
         self.filter_matches(prompt=False)
@@ -70,70 +100,118 @@ class Sponge:
         self.write_motif_prior()
 
 
-    def select_tfs(
-        self,
-        drop_heterodimers: bool = True
-    ) -> None:
-        """
-        Selects transcription factors from the newest version of the
-        JASPAR database and stores them in the class instance.
+    ### File retrieval functions ###
+    def prepare_files(
+        self
+    ) -> bool:      
 
-        Parameters
-        ----------
-        drop_heterodimers : bool, optional
-            Whether to drop filter out heterodimers, by default True
-        """
-
-        # Database object
-        jdb_obj = jaspardb()
-        self.release = jdb_obj.release
-        print ('Using:', self.release)
-
-        # All vertebrate motifs
-        motifs = jdb_obj.fetch_motifs(collection='CORE', 
-            tax_group='vertebrates', all_versions=True)
         print ()
-        print ('All motif versions:', len(motifs))
-        print ('Motif base IDs:', len(set([i.base_id for i in motifs])))
+        print ('--- Running prepare_files() ---')
 
-        # Select latest, preferring human ones
-        latest = {}
-        for i in motifs:
-            if i.base_id not in latest:
-                latest[i.base_id] = [i.matrix_id, i.species]
-            else:
-                # Replace with newer version if the new one is human or the old 
-                # one isn't       
-                if (('9606' in i.species) or 
-                    ('9606' not in latest[i.base_id][1])):
-                    # This could be added to the logical condition above but 
-                    # this is more readable
-                    if int(i.matrix_id[-1]) > int(latest[i.base_id][0][-1]):
-                        latest[i.base_id] = [i.matrix_id, i.species]
-        motifs_latest = [i for i in motifs if 
-            i.matrix_id == latest[i.base_id][0]]
+        to_retrieve = {}
+        for file in FILE_DF.index:
+            if not self.check_file_exists(file):
+                to_retrieve[file] = FILE_DF.loc[file, 'name']
         
-        # Keep only one motif per TF
-        # Consider dropping this requirement maybe
-        tf_to_motif = {}
-        for i in motifs_latest:
-            if i.name not in tf_to_motif:
-                tf_to_motif[i.name] = {i.matrix_id: calculate_ic(i)}
-            else:
-                tf_to_motif[i.name][i.matrix_id] = calculate_ic(i)
-        self.tf_to_motif = tf_to_motif
-        motifs_unique = [i for i in motifs_latest if 
-            (tf_to_motif[i.name][i.matrix_id] == 
-            max(tf_to_motif[i.name].values()))]
-        print ('Unique motifs:', len(motifs_unique))
-
-        # Drop heterodimers
-        if drop_heterodimers:
-            motifs_nohd = [i for i in motifs_unique if '::' not in i.name]
-            print ('Motifs without heterodimers:', len(motifs_nohd))
-            self.motifs = motifs_nohd
+        if len(to_retrieve) == 0:
+            print ('All the required files were located in the '
+                f'{self.temp_folder} directory')
+            return True
         else:
-            self.motifs = motifs_unique
+            print ('The following files were not found:')
+            print (', '.join(to_retrieve.values()))
+            reply = self.prompt_to_confirm('Do you want to download them '
+                'automatically?')
+            if reply:
+                for description in to_retrieve.keys():
+                    file_path = self.retrieve_file(description, prompt=False)
+                    # This shouldn't really happen as we're only using valid
+                    # descriptions, but better safe than sorry
+                    if file_path is None:
+                        print (f'File {to_retrieve[description]} could not be'
+                            'retrieved')
+                        return False
+            else:
+                return False
+            
+
+    def prompt_to_confirm(
+        self,
+        question: str
+    ) -> bool:
+        
+        key = None
+        positive = ['y', 'yes', 'hell yeah']
+        negative = ['n', 'no', 'nope']
+        while key is None or key.lower() not in positive + negative:
+            if key is not None:
+                print (f'Input not recognised: {key}')
+            print (f'{question} Y/N', flush=True)
+            key = input()
+            print (key)
+        print ()
+
+        return key.lower() in positive
+
+
+    def description_to_path(
+        self,
+        description: str
+    ) -> Optional[str]:
+
+        if description not in FILE_DF.index:
+            print (f'File description not recognised: {description}')
+            return None
+        file_name = FILE_DF.loc[description, 'name']
+        file_path = os.path.join(self.temp_folder, file_name)
+
+        return file_path
+
+
+    def check_file_exists(
+        self,
+        description: str
+    ) -> bool:
+        
+        return os.path.exists(self.description_to_path(description))
+
+
+    def retrieve_file(
+        self,
+        description: str,
+        prompt: bool = True
+    ) -> Optional[str]:
+        
+        file_path = self.description_to_path(description)
+        if not os.path.exists(self.temp_folder):
+            os.mkdir(self.temp_folder)
+        if os.path.exists(file_path):
+            print ('Using cached file ', file_path)
+            print ()
+        else:
+            print (f'File {FILE_DF.loc[description, "name"]} not found ' 
+                f'in directory {self.temp_folder}')
+            if prompt:
+                reply = self.prompt_to_confirm('Do you want to download it?')
+                if not reply:
+                    return None
+            to_request = FILE_DF.loc[description, 'url']
+            if to_request is None:
+                # These options are not unused: they are passed to the
+                # evaluated function call as kwargs
+                options = {'file_path': file_path}
+                eval(FILE_DF.loc[description, 'eval'])
+            else:
+                if description == 'jaspar_bigbed':
+                    if self.jaspar_release is None:
+                        raise ValueError('The release of jaspar has to be '
+                            'specified in order to retrieve the bigbed file')
+                    to_request = to_request.format(
+                        year=self.jaspar_release[-4:])
+                print (f'Downloading data into {file_path}...')
+                download_with_progress(to_request, file_path)    
+
+        return file_path
 
 
     def load_promoters_from_biomart(
@@ -200,58 +278,72 @@ class Sponge:
         df.to_csv(file_path, sep='\t', index=False)
         self.ensembl = df
 
-    # TODO: Since this is now part of the class, remove temp_folder
-    # and jaspar_release references
-    def retrieve_file(
+
+    ### Main workflow functions ###
+    def select_tfs(
         self,
-        description: str,
-        temp_folder: Union[str, bytes, os.PathLike],
-        prompt: bool = True,
+        drop_heterodimers: bool = True,
         jaspar_release: Optional[str] = None
-    ) -> str:
+    ) -> None:
+        """
+        Selects transcription factors from the newest version of the
+        JASPAR database and stores them in the class instance.
 
-        
-        if description not in FILE_DF.index:
-            print (f'File description not recognised: {description}')
-            return
-        if not os.path.exists(temp_folder):
-            os.mkdir(temp_folder)
-        file_name = FILE_DF.loc[description, 'name']
-        file_path = os.path.join(temp_folder, file_name)
-        if os.path.exists(file_path):
-            print (f'Using cached file {file_path}')
-            print ()
-        else:
-            print (f'File {file_name} not found in directory {temp_folder}')
-            if prompt:
-                key = None
-                positive = ['y', 'yes', 'hell yeah']
-                negative = ['n', 'no', 'nope']
-                while key is None or key.lower() not in positive + negative:
-                    if key is not None:
-                        print (f'Input not recognised: {key}')
-                    print ('Do you want to download it? Y/N', flush=True)
-                    key = input()
-                    print (key)
-                print ()
-                if key.lower() in negative:
-                    return None
-            to_request = FILE_DF.loc[description, 'url']
-            if to_request is None:
-                # These options are not unused: they are passed to the
-                # evaluated function call as kwargs
-                options = {'file_path': file_path}
-                eval(FILE_DF.loc[description, 'eval'])
+        Parameters
+        ----------
+        drop_heterodimers : bool, optional
+            Whether to drop filter out heterodimers, by default True
+        """
+
+        print ()
+        print ('--- Running select_tfs() ---')
+        print (f'Using: {self.jaspar_release}')
+
+        # All vertebrate motifs
+        motifs = self.jdb_obj.fetch_motifs(collection='CORE', 
+            tax_group='vertebrates', all_versions=True)
+        print ()
+        print ('All motif versions:', len(motifs))
+        print ('Motif base IDs:', len(set([i.base_id for i in motifs])))
+
+        # Select latest, preferring human ones
+        latest = {}
+        for i in motifs:
+            if i.base_id not in latest:
+                latest[i.base_id] = [i.matrix_id, i.species]
             else:
-                if description == 'jaspar_bigbed':
-                    if jaspar_release is None:
-                        raise ValueError('The release of jaspar has to be '
-                            'specified in order to retrieve the bigbed file')
-                    to_request = to_request.format(year=jaspar_release[-4:])
-                print (f'Downloading data into {file_path}...')
-                download_with_progress(to_request, file_path)    
+                # Replace with newer version if the new one is human or the old 
+                # one isn't       
+                if (('9606' in i.species) or 
+                    ('9606' not in latest[i.base_id][1])):
+                    # This could be added to the logical condition above but 
+                    # this is more readable
+                    if int(i.matrix_id[-1]) > int(latest[i.base_id][0][-1]):
+                        latest[i.base_id] = [i.matrix_id, i.species]
+        motifs_latest = [i for i in motifs if 
+            i.matrix_id == latest[i.base_id][0]]
+        
+        # Keep only one motif per TF
+        # Consider dropping this requirement maybe
+        tf_to_motif = {}
+        for i in motifs_latest:
+            if i.name not in tf_to_motif:
+                tf_to_motif[i.name] = {i.matrix_id: calculate_ic(i)}
+            else:
+                tf_to_motif[i.name][i.matrix_id] = calculate_ic(i)
+        self.tf_to_motif = tf_to_motif
+        motifs_unique = [i for i in motifs_latest if 
+            (tf_to_motif[i.name][i.matrix_id] == 
+            max(tf_to_motif[i.name].values()))]
+        print ('Unique motifs:', len(motifs_unique))
 
-        return file_path
+        # Drop heterodimers
+        if drop_heterodimers:
+            motifs_nohd = [i for i in motifs_unique if '::' not in i.name]
+            print ('Motifs without heterodimers:', len(motifs_nohd))
+            self.motifs = motifs_nohd
+        else:
+            self.motifs = motifs_unique
 
 
     def find_human_homologs(
@@ -273,9 +365,11 @@ class Sponge:
             Whether to prompt before downloading, by default True
         """
         
+        print ()
+        print ('--- Running find_human_homologs() ---')
+
         if homologene_file is None:
-            homologene_file = self.retrieve_file('homologene', 
-                self.temp_folder, prompt=prompt)
+            homologene_file = self.retrieve_file('homologene', prompt=prompt)
             if homologene_file is None:
                 print ('Unable to find or retrieve the homologene file, ' 
                     'exiting')
@@ -390,23 +484,23 @@ class Sponge:
         self, 
         promoter_file: Optional[Union[str, bytes, os.PathLike]] = None, 
         bigbed_file: Optional[Union[str, bytes, os.PathLike]] = None,
-        n_processes: int = 1,
         score_threshold: float = 400,
         chromosomes: Iterable[str] = [f'chr{i}' for i in [j for j in 
             range(1, 23)] + ['M', 'X', 'Y']],
         prompt: bool = True
     ) -> None:
         
+        print ()
+        print ('--- Running filter_matches() ---')
+
         if promoter_file is None:
-            promoter_file = self.retrieve_file('promoter', self.temp_folder, 
-                prompt=prompt)
+            promoter_file = self.retrieve_file('promoter', prompt=prompt)
             if promoter_file is None:
                 print ('Unable to find or retrieve the promoter file, exiting')
                 return
         
         if bigbed_file is None:
-            bigbed_file = self.retrieve_file('jaspar_bigbed', self.temp_folder, 
-                prompt=prompt, jaspar_release=self.release)
+            bigbed_file = self.retrieve_file('jaspar_bigbed', prompt=prompt)
             if bigbed_file is None:
                 print ('Unable to find or retrieve the JASPAR bigbed file, '
                     'exiting')
@@ -419,7 +513,7 @@ class Sponge:
         df_full.set_index('name', inplace=True)
 
         results_list = []
-        p = Pool(n_processes)
+        p = Pool(self.n_processes)
 
         print ()
         print ('Iterating over the chromosomes...')
@@ -434,12 +528,12 @@ class Sponge:
             else:
                 suffix = f'{len(df_chrom)} transcripts'
             print (f'Chromosome {chrom[3:]} with ' + suffix)
-            chunk_size = ceil(sqrt(len(df_chrom) / n_processes))
+            chunk_size = ceil(sqrt(len(df_chrom) / self.n_processes))
             chunk_divisions = [i for i in range(0, len(df_chrom), chunk_size)]
             input_tuples = [(bigbed_file, df_chrom, self.tf_names, chrom, i, 
                 i+chunk_size, score_threshold) for i in chunk_divisions]
             result = p.map_async(filter_edges_helper, input_tuples, 
-                chunksize=n_processes)
+                chunksize=self.n_processes)
             edges_chrom_list = result.get()
             results_list += edges_chrom_list
             elapsed_chr = time.time() - st_chr
@@ -475,6 +569,9 @@ class Sponge:
     def retrieve_ppi(
         self
     ) -> None:
+        
+        print ()
+        print ('--- Running retrieve_ppi() ---')
         
         filtered_tfs = self.all_edges['TFName'].unique()
         humanised_tfs = [self.animal_to_human[x] if x in self.animal_to_human 
@@ -535,6 +632,9 @@ class Sponge:
         weight_range: Optional[Tuple[float, float]] = None
     ) -> None:
         
+        print ()
+        print ('--- Running write_ppi_prior() ---')
+        
         if self.ppi_frame is None:
             print ('No motif prior has been generated yet, please run '
                 'retrieve_ppi() first')
@@ -557,10 +657,12 @@ class Sponge:
         protein_coding_only: bool = False
     ) -> None:
         
+        print ()
+        print ('--- Running aggregate_matches() ---')
+
         if self.ensembl is None or ensembl_file is not None:
             if ensembl_file is None:
-                ensembl_file = self.retrieve_file('ensembl', 
-                    self.temp_folder, prompt=prompt)
+                ensembl_file = self.retrieve_file('ensembl', prompt=prompt)
                 if ensembl_file is None:
                     print ('Unable to find or retrieve the ensembl file, ' 
                         'exiting')
@@ -569,6 +671,7 @@ class Sponge:
         
         motif_df = self.all_edges.join(other=self.ensembl.set_index(
             'Transcript stable ID'), on='transcript')
+        print ('Number of TF - transcript edges: ', {len(motif_df)})
         if protein_coding_only:
             motif_df = motif_df[motif_df['Gene type'] == 
                 'protein_coding'].copy()
@@ -579,6 +682,7 @@ class Sponge:
         motif_df.sort_values('score', ascending=False, inplace=True)
         motif_df.drop_duplicates(subset=['TFName', 'Gene stable ID'],
             inplace=True)
+        print ('Number of TF - gene edges: ', len(motif_df))
         if use_gene_names:
             motif_df['Gene name'] = motif_df.apply(lambda x: x['Gene name'] if 
                 type(x['Gene name']) == str else x['Gene stable ID'], axis=1)
@@ -589,6 +693,8 @@ class Sponge:
             motif_df['Gene name'] = motif_df['Gene stable ID'].apply(
                 lambda x: id_to_name[x] if x in id_to_name else np.nan)
             motif_df.dropna(subset='Gene name', inplace=True)
+            print ('Number of TF - gene edges after name conversion: ',
+                len(motif_df))
         
         self.motif_frame = motif_df
         self.use_gene_names = use_gene_names
@@ -602,6 +708,9 @@ class Sponge:
         weight_range: Optional[Tuple[float, float]] = None
     ) -> None:
         
+        print ()
+        print ('--- Running write_motif_prior() ---')
+
         if self.motif_frame is None:
             print ('No motif prior has been generated yet, please run '
                 'aggregate_matches() first')
