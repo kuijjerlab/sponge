@@ -186,7 +186,7 @@ class Sponge:
         if not os.path.exists(self.temp_folder):
             os.mkdir(self.temp_folder)
         if os.path.exists(file_path):
-            print ('Using cached file ', file_path)
+            print ('Using cached file', file_path)
             print ()
         else:
             print (f'File {FILE_DF.loc[description, "name"]} not found ' 
@@ -671,7 +671,7 @@ class Sponge:
         
         motif_df = self.all_edges.join(other=self.ensembl.set_index(
             'Transcript stable ID'), on='transcript')
-        print ('Number of TF - transcript edges: ', {len(motif_df)})
+        print ('Number of TF - transcript edges:', len(motif_df))
         if protein_coding_only:
             motif_df = motif_df[motif_df['Gene type'] == 
                 'protein_coding'].copy()
@@ -682,7 +682,7 @@ class Sponge:
         motif_df.sort_values('score', ascending=False, inplace=True)
         motif_df.drop_duplicates(subset=['TFName', 'Gene stable ID'],
             inplace=True)
-        print ('Number of TF - gene edges: ', len(motif_df))
+        print ('Number of TF - gene edges:', len(motif_df))
         if use_gene_names:
             motif_df['Gene name'] = motif_df.apply(lambda x: x['Gene name'] if 
                 type(x['Gene name']) == str else x['Gene stable ID'], axis=1)
