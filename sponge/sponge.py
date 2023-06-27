@@ -487,11 +487,15 @@ class Sponge:
         score_threshold: float = 400,
         chromosomes: Iterable[str] = [f'chr{i}' for i in [j for j in 
             range(1, 23)] + ['M', 'X', 'Y']],
+        n_processes: Optional[int] = None,
         prompt: bool = True
     ) -> None:
         
         print ()
         print ('--- Running filter_matches() ---')
+
+        if n_processes is None:
+            n_processes = self.n_processes
 
         if promoter_file is None:
             promoter_file = self.retrieve_file('promoter', prompt=prompt)
@@ -513,7 +517,7 @@ class Sponge:
         df_full.set_index('name', inplace=True)
 
         results_list = []
-        p = Pool(self.n_processes)
+        p = Pool(n_processes)
 
         print ()
         print ('Iterating over the chromosomes...')
@@ -528,12 +532,12 @@ class Sponge:
             else:
                 suffix = f'{len(df_chrom)} transcripts'
             print (f'Chromosome {chrom[3:]} with ' + suffix)
-            chunk_size = ceil(sqrt(len(df_chrom) / self.n_processes))
+            chunk_size = ceil(sqrt(len(df_chrom) / n_processes))
             chunk_divisions = [i for i in range(0, len(df_chrom), chunk_size)]
             input_tuples = [(bigbed_file, df_chrom, self.tf_names, chrom, i, 
                 i+chunk_size, score_threshold) for i in chunk_divisions]
             result = p.map_async(filter_edges_helper, input_tuples, 
-                chunksize=self.n_processes)
+                chunksize=n_processes)
             edges_chrom_list = result.get()
             results_list += edges_chrom_list
             elapsed_chr = time.time() - st_chr
@@ -628,8 +632,7 @@ class Sponge:
     def write_ppi_prior(
         self,
         output_path: Union[str, bytes, os.PathLike] = 'ppi_prior.tsv',
-        weighted: bool = False,
-        weight_range: Optional[Tuple[float, float]] = None
+        weighted: bool = False
     ) -> None:
         
         print ()
@@ -704,8 +707,7 @@ class Sponge:
         self,
         output_path: Union[str, bytes, os.PathLike] = 'motif_prior.tsv',
         use_gene_names: Optional[bool] = None,
-        weighted: bool = False,
-        weight_range: Optional[Tuple[float, float]] = None
+        weighted: bool = False
     ) -> None:
         
         print ()
