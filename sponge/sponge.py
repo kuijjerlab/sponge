@@ -1,17 +1,23 @@
 ### Imports ###
 import numpy as np
 
+from datetime import datetime
+
 from biomart import BiomartServer
 
 from collections import defaultdict
 
 from pyjaspar import jaspardb
 
+from typing import Mapping
+
 from multiprocessing import Pool
 
 from math import ceil, sqrt
 
 from sponge.functions import *
+
+from shutil import rmtree
 
 ### Class definition ###
 class Sponge:
@@ -20,9 +26,16 @@ class Sponge:
     TF-gene regulatory network, along with a prior protein-protein 
     interaction network. It also contains tools to download these data,
     so that minimal input from the user is required. The networks are 
-    provided in a format compatible with PANDA/LIONESS.
+    provided in a format compatible with PANDA/LIONESS and other
+    NetZoo tools.
 
-    Usual order of operations:
+    The run_default option is implemented in the constructor which will
+    run the entire pipeline after class creation using the provided
+    options and defaults where appropriate.
+
+    Usage:
+    sponge_obj = Sponge(run_default=True)
+    OR
     sponge_obj = Sponge()
     sponge_obj.select_tfs()
     sponge_obj.find_human_homologs()
@@ -31,6 +44,10 @@ class Sponge:
     sponge_obj.write_ppi_prior()
     sponge_obj.aggregate_matches()
     sponge_obj.write_motif_prior()
+
+    Most functions have options which can usually also be provided 
+    to the constructor, for more details refer to the documentation of 
+    the individual functions.
     """
 
     def __init__(
@@ -38,7 +55,9 @@ class Sponge:
         temp_folder: Union[str, bytes, os.PathLike] = '.sponge_temp',
         run_default: bool = False,
         jaspar_release: Optional[str] = None,
-        n_processes: int = 1
+        n_processes: int = 1,
+        paths_to_files: Mapping[str, Union[str, bytes, os.PathLike]] = {},
+        prompt: bool = True
     ):
         """
         Initialises an instance of the Sponge class.
@@ -58,7 +77,12 @@ class Sponge:
         self.ppi_frame = None
         self.motif_frame = None
         self.n_processes = n_processes
+        self.fingerprint = defaultdict(dict)
+        self.provided_paths = paths_to_files
 
+        # JASPAR initialisation is done here to allow for straightforward
+        # early termination in case of unrecognised JASPAR release
+        # TODO: Move it to a function
         self.jdb_obj = jaspardb()
         if jaspar_release is None:
             from pyjaspar import JASPAR_LATEST_RELEASE
@@ -80,55 +104,64 @@ class Sponge:
                 print (', '.join(jaspar_available))
                 print ('The downstream pipeline will not be run')
                 return
+        self.log_fingerprint('JASPAR', self.jaspar_release)
 
-        self.files_ready = self.prepare_files()
+        self.files_ready = self.prepare_files(prompt)
 
         if run_default and self.files_ready:
             self.run_default_workflow()
 
 
-    def run_default_workflow(  
-        self
-    ) -> None:
-
-        self.select_tfs()
-        self.find_human_homologs(prompt=False)
-        self.filter_matches(prompt=False)
-        self.retrieve_ppi()
-        self.write_ppi_prior()
-        self.aggregate_matches(prompt=False)
-        self.write_motif_prior()
-
-
     ### File retrieval functions ###
     def prepare_files(
-        self
+        self,
+        prompt: bool = True
     ) -> bool:      
 
         print ()
         print ('--- Running prepare_files() ---')
 
+        provided = []
+        for k,v in self.provided_paths.items():
+            if k not in FILE_DF.index:
+                print (f'Unrecognised file type: {k}, ignoring provided path')
+                continue
+            if not os.path.exists(v):
+                print (f'The path provided for file type {k} ({v}) is invalid '
+                    'and will be ignored')
+            else:
+                provided.append(k)
+                self.log_fingerprint(k.upper(), '', provided=True)
+        self.provided_paths = {k: v for k,v in self.provided_paths.items()
+            if k in provided}
+
+        to_check = [file for file in FILE_DF.index if file not in provided]
         to_retrieve = {}
-        for file in FILE_DF.index:
+        for file in to_check:
             if not self.check_file_exists(file):
                 to_retrieve[file] = FILE_DF.loc[file, 'name']
+            else:
+                self.log_fingerprint(file.upper(), '', cached=True)
         
         if len(to_retrieve) == 0:
-            print ('All the required files were located in the '
+            print ('All the required files were provided or located in the '
                 f'{self.temp_folder} directory')
             return True
         else:
             print ('The following files were not found:')
             print (', '.join(to_retrieve.values()))
-            reply = self.prompt_to_confirm('Do you want to download them '
-                'automatically?')
-            if reply:
+            if prompt:
+                reply = self.prompt_to_confirm('Do you want to download them '
+                    'automatically?')
+            else:
+                print ('They will be downloaded automatically')
+            if not prompt or reply:
                 for description in to_retrieve.keys():
                     file_path = self.retrieve_file(description, prompt=False)
                     # This shouldn't really happen as we're only using valid
                     # descriptions, but better safe than sorry
                     if file_path is None:
-                        print (f'File {to_retrieve[description]} could not be'
+                        print (f'File {to_retrieve[description]} could not be '
                             'retrieved')
                         return False
             else:
@@ -182,6 +215,8 @@ class Sponge:
         prompt: bool = True
     ) -> Optional[str]:
         
+        if description in self.provided_paths:
+            return self.provided_paths[description]
         file_path = self.description_to_path(description)
         if not os.path.exists(self.temp_folder):
             os.mkdir(self.temp_folder)
@@ -209,7 +244,8 @@ class Sponge:
                     to_request = to_request.format(
                         year=self.jaspar_release[-4:])
                 print (f'Downloading data into {file_path}...')
-                download_with_progress(to_request, file_path)    
+                download_with_progress(to_request, file_path)
+                self.log_fingerprint(description.upper(), to_request)
 
         return file_path
 
@@ -233,6 +269,7 @@ class Sponge:
         print ('Retrieving response to query...')
         response = ensembl.search({'attributes': attributes}, header=1)
         buffer = download_with_progress(response)
+        self.log_fingerprint('PROMOTER', ensembl.display_name)
         dtype_dict = defaultdict(lambda: str)
         dtype_dict['Transcription start site (TSS)'] = int
         dtype_dict['Strand'] = int
@@ -274,12 +311,41 @@ class Sponge:
         print ('Retrieving response to query...')
         response = ensembl.search({'attributes': attributes}, header=1)
         buffer = download_with_progress(response)
+        self.log_fingerprint('ENSEMBL', ensembl.display_name)
         df = pd.read_csv(buffer, sep='\t')     
         df.to_csv(file_path, sep='\t', index=False)
         self.ensembl = df
 
 
+    def log_fingerprint(
+        self,
+        label: str,
+        version: str,
+        provided: bool = False,
+        cached: bool = False
+    ) -> None:
+        
+        self.fingerprint[label]['version'] = version
+        self.fingerprint[label]['datetime'] = datetime.fromtimestamp(
+            time.time())
+        self.fingerprint[label]['provided'] = provided
+        self.fingerprint[label]['cached'] = cached
+
+
     ### Main workflow functions ###
+    def run_default_workflow(  
+        self
+    ) -> None:
+
+        self.select_tfs()
+        self.find_human_homologs(prompt=False)
+        self.filter_matches(prompt=False)
+        self.retrieve_ppi()
+        self.write_ppi_prior()
+        self.aggregate_matches(prompt=False)
+        self.write_motif_prior()
+
+
     def select_tfs(
         self,
         drop_heterodimers: bool = True,
@@ -592,6 +658,9 @@ class Sponge:
             mapping_df['preferredName']]
         ids_to_check = np.concatenate((diff_df['queryName'], 
             diff_df['preferredName']))
+        version_request = requests.get(f'{STRING_URL}version')
+        version_df = pd.read_csv(BytesIO(version_request.content), sep='\t')
+        self.log_fingerprint('STRING', version_df['string_version'])
         
         print ('Checking the conflicts in the UniProt database...')
         uniprot_df = get_uniprot_mapping('Gene_Name', 'UniProtKB', 
@@ -737,15 +806,26 @@ class Sponge:
                 output_path, sep='\t', index=False, header=False)
 
 
+    def show_fingerprint(
+        self
+    ) -> None:
+        
+        for k,v in self.fingerprint.items():
+            if v['provided']:
+                print (f'{k}: provided by user')
+            elif v['cached']:
+                print (f'{k}: retrieved from cache')
+            else:
+                print (f'{k}: {v["version"]}, retrieved',
+                    v['datetime'].strftime('%d/%m/%Y, %H:%M:%S'))
+
+
     def clear_cache(
         self
     ) -> None:
         """
-        Removes every file in the temporary folder and the folder 
-        itself. Will not work if subfolders are present in the folder.
+        Removes the temporary folder and everything in it.
         """
         
         if os.path.exists(self.temp_folder):
-            for file in os.listdir(self.temp_folder):
-                os.remove(os.path.join(self.temp_folder, file))
-            os.rmdir(self.temp_folder)
+            rmtree(self.temp_folder)
