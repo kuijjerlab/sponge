@@ -1,4 +1,6 @@
 ### Imports ###
+import pickle
+
 import numpy as np
 
 from datetime import datetime
@@ -155,6 +157,7 @@ class Sponge:
                     'automatically?')
             else:
                 print ('They will be downloaded automatically')
+                print ()
             if not prompt or reply:
                 for description in to_retrieve.keys():
                     file_path = self.retrieve_file(description, prompt=False)
@@ -216,6 +219,8 @@ class Sponge:
     ) -> Optional[str]:
         
         if description in self.provided_paths:
+            print ('Using provided file', self.provided_paths[description])
+            print ()
             return self.provided_paths[description]
         file_path = self.description_to_path(description)
         if not os.path.exists(self.temp_folder):
@@ -243,9 +248,16 @@ class Sponge:
                             'specified in order to retrieve the bigbed file')
                     to_request = to_request.format(
                         year=self.jaspar_release[-4:])
+                    version = self.jaspar_release
+                elif description == 'homologene':
+                    version_url = '/'.join(to_request.split('/')[:-1] + 
+                        ['RELEASE_NUMBER'])
+                    version_request = requests.get(version_url, stream=True)
+                    version = version_request.text.strip()
                 print (f'Downloading data into {file_path}...')
                 download_with_progress(to_request, file_path)
-                self.log_fingerprint(description.upper(), to_request)
+                print ()
+                self.log_fingerprint(description.upper(), version)
 
         return file_path
 
@@ -331,6 +343,18 @@ class Sponge:
         self.fingerprint[label]['provided'] = provided
         self.fingerprint[label]['cached'] = cached
 
+        fingerprint_file = os.path.join(self.temp_folder, '.fingerprint')
+        if os.path.exists(fingerprint_file):
+            temp_fingerprint = pickle.load(open(fingerprint_file, 'rb'))
+        else:
+            temp_fingerprint = {}
+        if not provided and not cached:
+            temp_fingerprint[label] = self.fingerprint[label]
+            pickle.dump(temp_fingerprint, open(fingerprint_file, 'wb'))
+        if cached:
+            self.fingerprint[label] = temp_fingerprint[label]
+            self.fingerprint[label]['cached'] = True
+
 
     ### Main workflow functions ###
     def run_default_workflow(  
@@ -348,8 +372,7 @@ class Sponge:
 
     def select_tfs(
         self,
-        drop_heterodimers: bool = True,
-        jaspar_release: Optional[str] = None
+        drop_heterodimers: bool = True
     ) -> None:
         """
         Selects transcription factors from the newest version of the
@@ -814,7 +837,12 @@ class Sponge:
             if v['provided']:
                 print (f'{k}: provided by user')
             elif v['cached']:
-                print (f'{k}: retrieved from cache')
+                if v['version'] == '':
+                    print (f'{k}: retrieved from cache')
+                else:
+                    print (f'{k}: {v["version"]}, retrieved from cache,',
+                        'originally retrieved',
+                        v['datetime'].strftime('%d/%m/%Y, %H:%M:%S'))                      
             else:
                 print (f'{k}: {v["version"]}, retrieved',
                     v['datetime'].strftime('%d/%m/%Y, %H:%M:%S'))
