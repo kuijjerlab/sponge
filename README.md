@@ -100,7 +100,6 @@ Room for improvement:
 
 To do:
 - Automatic flow, addition of a command line script
-- Fingerprinting to show access date and version for the databases
 - Support for more species
 
 

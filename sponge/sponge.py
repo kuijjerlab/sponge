@@ -59,6 +59,7 @@ class Sponge:
         jaspar_release: Optional[str] = None,
         n_processes: int = 1,
         paths_to_files: Mapping[str, Union[str, bytes, os.PathLike]] = {},
+        tss_offset: Tuple[int, int] = (-750, 250),
         prompt: bool = True
     ):
         """
@@ -81,6 +82,7 @@ class Sponge:
         self.n_processes = n_processes
         self.fingerprint = defaultdict(dict)
         self.provided_paths = paths_to_files
+        self.tss_offset = tss_offset
 
         # JASPAR initialisation is done here to allow for straightforward
         # early termination in case of unrecognised JASPAR release
@@ -240,6 +242,8 @@ class Sponge:
                 # These options are not unused: they are passed to the
                 # evaluated function call as kwargs
                 options = {'file_path': file_path}
+                if description == 'promoter':
+                    options['tss_offset'] = self.tss_offset
                 eval(FILE_DF.loc[description, 'eval'])
             else:
                 if description == 'jaspar_bigbed':
@@ -268,6 +272,7 @@ class Sponge:
         filter_basic: bool = True,
         chromosomes: Iterable[str] = [str(i) for i in range(1,23)] + 
             ['MT', 'X', 'Y'],
+        tss_offset: Tuple[int, int] = (-750, 250),
         keep_ensembl: bool = True
     ) -> None:
 
@@ -296,9 +301,11 @@ class Sponge:
             'chrM' if x == 'MT' else f'chr{x}')
         df['Strand'] = df['Strand'].apply(lambda x: '+' if x > 0 else '-')
         df['Start'] = df.apply(lambda row: 
-            row['Transcription start site (TSS)'] - 750 if row['Strand'] == '+' 
-            else row['Transcription start site (TSS)'] - 250, axis=1)
-        df['End'] = df['Start'] + 1000
+            row['Transcription start site (TSS)'] + tss_offset[0] 
+            if row['Strand'] == '+' 
+            else row['Transcription start site (TSS)'] - tss_offset[1], 
+            axis=1)
+        df['End'] = df['Start'] + (tss_offset[1] - tss_offset[0])
         df['Score'] = 0
         df.sort_values(['Chromosome', 'Start'], inplace=True)
         columns = ['Chromosome', 'Start', 'End', 'Transcript stable ID', 
