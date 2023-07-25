@@ -17,7 +17,8 @@ from multiprocessing import Pool
 
 from math import ceil, sqrt
 
-from sponge.functions import *
+from sponge.file_retrieval import *
+from sponge.motif_functions import *
 
 from shutil import rmtree
 
@@ -83,6 +84,9 @@ class Sponge:
         self.fingerprint = defaultdict(dict)
         self.provided_paths = paths_to_files
         self.tss_offset = tss_offset
+
+        if not os.path.exists(self.temp_folder):
+            os.mkdir(self.temp_folder)
 
         # JASPAR initialisation is done here to allow for straightforward
         # early termination in case of unrecognised JASPAR release
@@ -795,7 +799,7 @@ class Sponge:
             motif_df['Gene name'] = motif_df['Gene stable ID'].apply(
                 lambda x: id_to_name[x] if x in id_to_name else np.nan)
             motif_df.dropna(subset='Gene name', inplace=True)
-            print ('Number of TF - gene edges after name conversion: ',
+            print ('Number of TF - gene edges after name conversion:',
                 len(motif_df))
         
         self.motif_frame = motif_df

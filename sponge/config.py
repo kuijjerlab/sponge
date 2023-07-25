@@ -1,8 +1,7 @@
 import pandas as pd
 
-### Data ###
-# Contains the links for downloading files or alternatively the names of
-# functions that should be executed in order to retrieve them
+# The links for downloading files or alternatively the names of functions that 
+# should be executed in order to retrieve them
 FILE_DF = pd.DataFrame(
     {'description': ['homologene', 'promoter', 'jaspar_bigbed', 'ensembl'],
      'name': ['homologene.tsv', 'promoters.bed', 'JASPAR.bb', 'ensembl.tsv'],
@@ -22,3 +21,5 @@ FILE_DF = pd.DataFrame(
 ENSEMBL_URL = 'http://www.ensembl.org/biomart'
 MAPPING_URL = 'https://rest.uniprot.org/idmapping/'
 STRING_URL = 'https://string-db.org/api/tsv/'
+
+# TODO: unipressed module to replace Uniprot calls?
