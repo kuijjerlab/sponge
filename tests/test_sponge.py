@@ -1,7 +1,8 @@
 ### Unit tests ###
 def test_functions_import():
     import sponge.file_retrieval as file_f
-    import sponge.helper_functions as motif_f
+    import sponge.helper_functions as helper_f
+    import sponge.filtering as filter_f
     
 
 def test_plogp():
