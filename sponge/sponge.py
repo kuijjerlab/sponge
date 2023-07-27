@@ -5,10 +5,6 @@ import numpy as np
 
 from datetime import datetime
 
-from biomart import BiomartServer
-
-from collections import defaultdict
-
 from pyjaspar import jaspardb
 
 from typing import Mapping
@@ -18,7 +14,8 @@ from multiprocessing import Pool
 from math import ceil, sqrt
 
 from sponge.file_retrieval import *
-from sponge.motif_functions import *
+from sponge.helper_functions import *
+from sponge.filtering import *
 
 from shutil import rmtree
 
@@ -84,13 +81,27 @@ class Sponge:
         self.fingerprint = defaultdict(dict)
         self.provided_paths = paths_to_files
         self.tss_offset = tss_offset
+        self.jaspar_release = None
 
         if not os.path.exists(self.temp_folder):
             os.mkdir(self.temp_folder)
 
-        # JASPAR initialisation is done here to allow for straightforward
-        # early termination in case of unrecognised JASPAR release
-        # TODO: Move it to a function
+        self.initialise_jaspar(jaspar_release)
+        if self.jaspar_release is None:
+            return
+        self.log_fingerprint('JASPAR', self.jaspar_release)
+
+        self.files_ready = self.prepare_files(prompt)
+
+        if run_default and self.files_ready:
+            self.run_default_workflow()
+
+
+    def initialise_jaspar(
+        self,
+        jaspar_release: Optional[str] = None
+    ) -> None:
+
         self.jdb_obj = jaspardb()
         if jaspar_release is None:
             from pyjaspar import JASPAR_LATEST_RELEASE
@@ -111,13 +122,6 @@ class Sponge:
                 print ('Available versions:')
                 print (', '.join(jaspar_available))
                 print ('The downstream pipeline will not be run')
-                return
-        self.log_fingerprint('JASPAR', self.jaspar_release)
-
-        self.files_ready = self.prepare_files(prompt)
-
-        if run_default and self.files_ready:
-            self.run_default_workflow()
 
 
     ### File retrieval functions ###
@@ -146,7 +150,7 @@ class Sponge:
         to_check = [file for file in FILE_DF.index if file not in provided]
         to_retrieve = {}
         for file in to_check:
-            if not self.check_file_exists(file):
+            if not check_file_exists(file):
                 to_retrieve[file] = FILE_DF.loc[file, 'name']
             else:
                 self.log_fingerprint(file.upper(), '', cached=True)
@@ -159,7 +163,7 @@ class Sponge:
             print ('The following files were not found:')
             print (', '.join(to_retrieve.values()))
             if prompt:
-                reply = self.prompt_to_confirm('Do you want to download them '
+                reply = prompt_to_confirm('Do you want to download them '
                     'automatically?')
             else:
                 print ('They will be downloaded automatically')
@@ -175,47 +179,6 @@ class Sponge:
                         return False
             else:
                 return False
-            
-
-    def prompt_to_confirm(
-        self,
-        question: str
-    ) -> bool:
-        
-        key = None
-        positive = ['y', 'yes', 'hell yeah']
-        negative = ['n', 'no', 'nope']
-        while key is None or key.lower() not in positive + negative:
-            if key is not None:
-                print (f'Input not recognised: {key}')
-            print (f'{question} Y/N', flush=True)
-            key = input()
-            print (key)
-        print ()
-
-        return key.lower() in positive
-
-
-    def description_to_path(
-        self,
-        description: str
-    ) -> Optional[str]:
-
-        if description not in FILE_DF.index:
-            print (f'File description not recognised: {description}')
-            return None
-        file_name = FILE_DF.loc[description, 'name']
-        file_path = os.path.join(self.temp_folder, file_name)
-
-        return file_path
-
-
-    def check_file_exists(
-        self,
-        description: str
-    ) -> bool:
-        
-        return os.path.exists(self.description_to_path(description))
 
 
     def retrieve_file(
@@ -228,7 +191,7 @@ class Sponge:
             print ('Using provided file', self.provided_paths[description])
             print ()
             return self.provided_paths[description]
-        file_path = self.description_to_path(description)
+        file_path = description_to_path(description, self.temp_folder)
         if not os.path.exists(self.temp_folder):
             os.mkdir(self.temp_folder)
         if os.path.exists(file_path):
@@ -238,7 +201,7 @@ class Sponge:
             print (f'File {FILE_DF.loc[description, "name"]} not found ' 
                 f'in directory {self.temp_folder}')
             if prompt:
-                reply = self.prompt_to_confirm('Do you want to download it?')
+                reply = prompt_to_confirm('Do you want to download it?')
                 if not reply:
                     return None
             to_request = FILE_DF.loc[description, 'url']
@@ -248,7 +211,10 @@ class Sponge:
                 options = {'file_path': file_path}
                 if description == 'promoter':
                     options['tss_offset'] = self.tss_offset
-                eval(FILE_DF.loc[description, 'eval'])
+                result = eval(FILE_DF.loc[description, 'eval'])
+                self.log_fingerprint(description.upper(), result['version'])
+                if 'ensembl' in result:
+                    self.ensembl = result['ensembl']
             else:
                 if description == 'jaspar_bigbed':
                     if self.jaspar_release is None:
@@ -270,74 +236,15 @@ class Sponge:
         return file_path
 
 
-    def load_promoters_from_biomart(
+    def update_label_in_cache(
         self,
-        file_path: Union[str, bytes, os.PathLike],
-        filter_basic: bool = True,
-        chromosomes: Iterable[str] = [str(i) for i in range(1,23)] + 
-            ['MT', 'X', 'Y'],
-        tss_offset: Tuple[int, int] = (-750, 250),
-        keep_ensembl: bool = True
+        temp_fingerprint: dict,
+        label: str
     ) -> None:
 
-        bm_server = BiomartServer(ENSEMBL_URL)
-        ensembl = bm_server.datasets['hsapiens_gene_ensembl']
-        attributes = ['ensembl_transcript_id', 'transcript_gencode_basic', 
-            'chromosome_name', 'transcription_start_site', 'strand']
-        if keep_ensembl:
-            attributes += ['ensembl_gene_id', 'external_gene_name', 
-                'gene_biotype']
-        print ('Retrieving response to query...')
-        response = ensembl.search({'attributes': attributes}, header=1)
-        buffer = download_with_progress(response)
-        self.log_fingerprint('PROMOTER', ensembl.display_name)
-        dtype_dict = defaultdict(lambda: str)
-        dtype_dict['Transcription start site (TSS)'] = int
-        dtype_dict['Strand'] = int
-        df = pd.read_csv(buffer, sep='\t', dtype=dtype_dict)
-        print ('Filtering and modifying dataframe...')
-        if filter_basic:
-            df = df[df['GENCODE basic annotation'] == 'GENCODE basic'].copy()
-            df.drop(columns='GENCODE basic annotation', inplace=True)
-        if chromosomes is not None:
-            df = df[df['Chromosome/scaffold name'].isin(chromosomes)]
-        df['Chromosome'] = df['Chromosome/scaffold name'].apply(lambda x: 
-            'chrM' if x == 'MT' else f'chr{x}')
-        df['Strand'] = df['Strand'].apply(lambda x: '+' if x > 0 else '-')
-        df['Start'] = df.apply(lambda row: 
-            row['Transcription start site (TSS)'] + tss_offset[0] 
-            if row['Strand'] == '+' 
-            else row['Transcription start site (TSS)'] - tss_offset[1], 
-            axis=1)
-        df['End'] = df['Start'] + (tss_offset[1] - tss_offset[0])
-        df['Score'] = 0
-        df.sort_values(['Chromosome', 'Start'], inplace=True)
-        columns = ['Chromosome', 'Start', 'End', 'Transcript stable ID', 
-            'Score', 'Strand']
-        print (f'Saving data to {file_path}...')
-        df[columns].to_csv(file_path, sep='\t', header=False, index=False)
-        print ()
-        if keep_ensembl:
-            self.ensembl = df[['Gene stable ID', 'Transcript stable ID', 
-                'Gene name', 'Gene type']]
-
-
-    def load_ensembl_from_biomart(
-        self,
-        file_path: Union[str, bytes, os.PathLike]
-    ) -> None:
-        
-        bm_server = BiomartServer(ENSEMBL_URL)
-        ensembl = bm_server.datasets['hsapiens_gene_ensembl']
-        attributes = ['ensembl_transcript_id', 'ensembl_gene_id', 
-            'external_gene_name', 'gene_biotype']
-        print ('Retrieving response to query...')
-        response = ensembl.search({'attributes': attributes}, header=1)
-        buffer = download_with_progress(response)
-        self.log_fingerprint('ENSEMBL', ensembl.display_name)
-        df = pd.read_csv(buffer, sep='\t')     
-        df.to_csv(file_path, sep='\t', index=False)
-        self.ensembl = df
+        fingerprint_file = os.path.join(self.temp_folder, '.fingerprint')
+        temp_fingerprint[label] = self.fingerprint[label]
+        pickle.dump(temp_fingerprint, open(fingerprint_file, 'wb'))
 
 
     def log_fingerprint(
@@ -360,11 +267,15 @@ class Sponge:
         else:
             temp_fingerprint = {}
         if not provided and not cached:
-            temp_fingerprint[label] = self.fingerprint[label]
-            pickle.dump(temp_fingerprint, open(fingerprint_file, 'wb'))
+            self.update_label_in_cache(temp_fingerprint, label)
         if cached:
-            self.fingerprint[label] = temp_fingerprint[label]
-            self.fingerprint[label]['cached'] = True
+            if label in temp_fingerprint:
+                self.fingerprint[label] = temp_fingerprint[label]
+                self.fingerprint[label]['cached'] = True
+            else:
+                self.fingerprint[label]['version'] = 'unknown version'
+                self.fingerprint[label]['datetime'] = 'at unknown time'
+                self.update_label_in_cache(temp_fingerprint, label)
 
 
     ### Main workflow functions ###
@@ -494,14 +405,14 @@ class Sponge:
             set(found_names))
         print ()
         print ('Names missing from the homologene database:')
-        for i in [(i.name,i.acc) for i in non_human_motifs if 
+        for i in [(i.name, i.acc) for i in non_human_motifs if 
             i.name in missing]:
             print (i[0], *i[1])
 
         # Get the missing IDs from Uniprot API
         print ()
         print ('Retrieving matches from UniProt...')
-        mapping = get_uniprot_mapping("UniProtKB_AC-ID", "RefSeq_Protein",
+        mapping = get_uniprot_mapping('UniProtKB_AC-ID', 'RefSeq_Protein',
             [i.acc[0] for i in non_human_motifs if i.name in missing])
         mapping.columns = ['Uniprot', 'Accession']
 
@@ -852,11 +763,11 @@ class Sponge:
                     print (f'{k}: retrieved from cache')
                 else:
                     print (f'{k}: {v["version"]}, retrieved from cache,',
-                        'originally retrieved',
-                        v['datetime'].strftime('%d/%m/%Y, %H:%M:%S'))                      
+                        'originally retrieved', 
+                        parse_datetime(v['datetime']))                      
             else:
                 print (f'{k}: {v["version"]}, retrieved',
-                    v['datetime'].strftime('%d/%m/%Y, %H:%M:%S'))
+                    parse_datetime(v['datetime']))
 
 
     def clear_cache(

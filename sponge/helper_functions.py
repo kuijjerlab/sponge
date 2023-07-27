@@ -5,6 +5,10 @@ from math import log2
 
 from Bio.motifs.jaspar import Motif
 
+from typing import Union
+
+from datetime import datetime
+
 ### Functions ###
 def plogp(
     x: float
@@ -75,3 +79,13 @@ def adjust_gene_name(
     """
     
     return gene[:-2] + gene[-2:].lower()
+
+
+def parse_datetime(
+    datetime: Union[str, datetime]
+) -> str:
+    
+    if type(datetime) == str:
+        return datetime
+    else:
+        return datetime.strftime('%d/%m/%Y, %H:%M:%S')

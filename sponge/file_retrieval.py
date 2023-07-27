@@ -1,20 +1,134 @@
 ### Imports ###
-import bioframe
 import requests
 import time
 import os
+
+from biomart import BiomartServer
 
 from typing import Optional, Union, Iterable, Tuple
 
 from io import BytesIO
 
+from collections import defaultdict
+
 from tqdm import tqdm
 
 from sponge.config import *
 
-# TODO: Move file related stuff into this file from Sponge if possible
-
 ### Functions ###
+def prompt_to_confirm(
+    question: str
+) -> bool:
+    
+    key = None
+    positive = ['y', 'yes', 'hell yeah']
+    negative = ['n', 'no', 'nope']
+    while key is None or key.lower() not in positive + negative:
+        if key is not None:
+            print (f'Input not recognised: {key}')
+        print (f'{question} Y/N', flush=True)
+        key = input()
+        print (key)
+    print ()
+
+    return key.lower() in positive
+
+
+def description_to_path(
+    description: str,
+    temp_folder: Union[str, bytes, os.PathLike]
+) -> Optional[str]:
+
+    if description not in FILE_DF.index:
+        print (f'File description not recognised: {description}')
+        return None
+    file_name = FILE_DF.loc[description, 'name']
+    file_path = os.path.join(temp_folder, file_name)
+
+    return file_path
+
+
+def check_file_exists(
+    description: str
+) -> bool:
+    
+    return os.path.exists(description_to_path(description))
+
+
+def load_promoters_from_biomart(
+    file_path: Union[str, bytes, os.PathLike],
+    filter_basic: bool = True,
+    chromosomes: Iterable[str] = [str(i) for i in range(1,23)] + 
+        ['MT', 'X', 'Y'],
+    tss_offset: Tuple[int, int] = (-750, 250),
+    keep_ensembl: bool = True
+) -> dict:
+
+    answer = {}
+    bm_server = BiomartServer(ENSEMBL_URL)
+    ensembl = bm_server.datasets['hsapiens_gene_ensembl']
+    attributes = ['ensembl_transcript_id', 'transcript_gencode_basic', 
+        'chromosome_name', 'transcription_start_site', 'strand']
+    if keep_ensembl:
+        attributes += ['ensembl_gene_id', 'external_gene_name', 
+            'gene_biotype']
+    print ('Retrieving response to query...')
+    response = ensembl.search({'attributes': attributes}, header=1)
+    buffer = download_with_progress(response)
+    answer['version'] = ensembl.display_name
+    dtype_dict = defaultdict(lambda: str)
+    dtype_dict['Transcription start site (TSS)'] = int
+    dtype_dict['Strand'] = int
+    df = pd.read_csv(buffer, sep='\t', dtype=dtype_dict)
+    print ('Filtering and modifying dataframe...')
+    if filter_basic:
+        df = df[df['GENCODE basic annotation'] == 'GENCODE basic'].copy()
+        df.drop(columns='GENCODE basic annotation', inplace=True)
+    if chromosomes is not None:
+        df = df[df['Chromosome/scaffold name'].isin(chromosomes)]
+    df['Chromosome'] = df['Chromosome/scaffold name'].apply(lambda x: 
+        'chrM' if x == 'MT' else f'chr{x}')
+    df['Strand'] = df['Strand'].apply(lambda x: '+' if x > 0 else '-')
+    df['Start'] = df.apply(lambda row: 
+        row['Transcription start site (TSS)'] + tss_offset[0] 
+        if row['Strand'] == '+' 
+        else row['Transcription start site (TSS)'] - tss_offset[1], 
+        axis=1)
+    df['End'] = df['Start'] + (tss_offset[1] - tss_offset[0])
+    df['Score'] = 0
+    df.sort_values(['Chromosome', 'Start'], inplace=True)
+    columns = ['Chromosome', 'Start', 'End', 'Transcript stable ID', 
+        'Score', 'Strand']
+    print (f'Saving data to {file_path}...')
+    df[columns].to_csv(file_path, sep='\t', header=False, index=False)
+    print ()
+    if keep_ensembl:
+        answer['ensembl'] = df[['Gene stable ID', 'Transcript stable ID', 
+            'Gene name', 'Gene type']]
+
+    return answer
+
+
+def load_ensembl_from_biomart(
+    file_path: Union[str, bytes, os.PathLike]
+) -> None:
+    
+    answer = {}
+    bm_server = BiomartServer(ENSEMBL_URL)
+    ensembl = bm_server.datasets['hsapiens_gene_ensembl']
+    attributes = ['ensembl_transcript_id', 'ensembl_gene_id', 
+        'external_gene_name', 'gene_biotype']
+    print ('Retrieving response to query...')
+    response = ensembl.search({'attributes': attributes}, header=1)
+    buffer = download_with_progress(response)
+    answer['version'] = ensembl.display_name
+    df = pd.read_csv(buffer, sep='\t')     
+    df.to_csv(file_path, sep='\t', index=False)
+    answer['ensembl'] = df
+
+    return answer
+
+
 def download_with_progress(
     url: Union[str, requests.models.Response],
     file_path: Optional[Union[str, bytes, os.PathLike]] = None,
@@ -96,8 +210,6 @@ def get_uniprot_mapping(
         was retrieved, typically pointing to an issue with the query
     """
 
-    # TODO: Uniprot has a limit on the number of ids that can be checked at one
-    # time, test if this is affected  
     # The basic form of the request
     data = {'ids': ids, 'from': from_db, 'to': to_db}
     # Potential additional arguments
@@ -114,14 +226,18 @@ def get_uniprot_mapping(
         for message in uniprot_reply['messages']:
             print (message)
         raise RuntimeError()
-    # TODO: Potentially implement max_iterations
-    while True:
+    MAX_ITERATIONS = 40
+    for _ in range(MAX_ITERATIONS):
         # Loop until the results are available
         uniprot_status = requests.get(MAPPING_URL + f'status/{job_id}')
         if 'results' in uniprot_status.json():
             break
         # Try every half a second
         time.sleep(0.5)
+    if 'results' not in uniprot_status.json():
+        # Unable to retrieve the results within the given time
+        print ('No results have been retrieved in the given time')
+        return pd.DataFrame()
     # Retrieve the results
     uniprot_results = requests.get(MAPPING_URL + f'stream/{job_id}')
     # Convert the results to a pandas DataFrame
@@ -129,88 +245,3 @@ def get_uniprot_mapping(
     results_df.drop_duplicates(subset='from', inplace=True)
 
     return results_df
-
-
-def filter_edges(
-    bb_ref: Union[str, bytes, os.PathLike], 
-    bed_df: pd.DataFrame, 
-    motif_list: Iterable[str], 
-    chrom: str, 
-    start_ind: int, 
-    final_ind: int, 
-    score_threshold: float = 400
-) -> pd.DataFrame:
-    """
-    Filters possible binding site matches for the provided transcription
-    factors from a bigbed file. This is done for a number of continuous
-    regions of a single chromosome subject to a score threshold.
-
-    Parameters
-    ----------
-    bb_ref : Union[str, bytes, os.PathLike]
-        The path to a bigbed file that stores all possible matches
-    bed_df : pd.DataFrame
-        A pandas DataFrame containing the regions of interest in the
-        chromosome, typically promoters
-    motif_list : Iterable[str]
-        An Iterable containing the names of transcription factors of
-        interest
-    chrom : str
-        The name of the chromosome of interest
-    start_ind : int
-        The starting index of the region DataFrame (bed_df)
-    final_ind : int
-        The final index of the region DataFrame (bed_df)
-    score_threshold : float, optional
-        The score required for selection, by default 400
-
-    Returns
-    -------
-    pd.DataFrame
-        A pandas DataFrame containing the filtered edges from the 
-        regions of interest
-    """
-    
-    df = pd.DataFrame()
-    for transcript in bed_df.index[start_ind:final_ind]:
-        # Retrieve the start and end points
-        start,end = bed_df.loc[transcript][['start', 'end']]
-        # Load all matches in that region from the bigbed file
-        motifs = bioframe.read_bigbed(bb_ref, chrom, start=start, end=end)
-        # Filter only the transcription factors in the list
-        max_scores = motifs[motifs['TFName'].isin(motif_list)].groupby(
-            'TFName')[['score', 'name']].max()
-        # Filter only high enough scores
-        max_scores = max_scores[max_scores['score'] >= score_threshold]
-        max_scores.reset_index(inplace=True)
-        # Add the transcript (region) name for identification
-        max_scores['transcript'] = transcript
-        # Append the results to the dataframe
-        df = pd.concat((df, max_scores), ignore_index=True, copy=False)
-
-    return df
-
-
-def filter_edges_helper(
-    input_tuple: Tuple[str, pd.DataFrame, Iterable[str], str, int, int, float]
-) -> pd.DataFrame:
-    """
-    Serves as a wrapper around the filter_edges function that only
-    takes a single input, allowing it to be processed by map_async from
-    the multiprocessing module.
-
-    Parameters
-    ----------
-    input_tuple : Tuple[str, pd.DataFrame, Iterable[str], str, int, int, 
-        float]
-        A tuple of all inputs to the filter_edges function, for more
-        details refer to its docstring
-
-    Returns
-    -------
-    pd.DataFrame
-        A pandas DataFrame containing the filtered edges corresponding
-        to the given input
-    """
-
-    return filter_edges(*input_tuple)
