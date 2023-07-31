@@ -52,7 +52,7 @@ class Sponge:
 
     def __init__(
         self,
-        temp_folder: Union[str, bytes, os.PathLike] = '.sponge_temp',
+        temp_folder: Union[str, os.PathLike] = '.sponge_temp',
         run_default: bool = False,
         jaspar_release: Optional[str] = None,
         n_processes: int = 1,
@@ -65,7 +65,7 @@ class Sponge:
 
         Parameters
         ----------
-        temp_folder : Union[str, bytes, os.PathLike], optional
+        temp_folder : Union[str, os.PathLike], optional
             The temporary folder for saving downloaded files, 
             by default '.sponge_temp'
         run_default : bool, optional

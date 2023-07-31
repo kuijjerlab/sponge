@@ -5,7 +5,7 @@ import os
 
 from biomart import BiomartServer
 
-from typing import Optional, Union, Iterable, Tuple
+from typing import Optional, Union, Iterable, Tuple, Dict
 
 from io import BytesIO
 
@@ -19,12 +19,28 @@ from sponge.config import *
 def prompt_to_confirm(
     question: str
 ) -> bool:
+    """
+    Asks the user to confirm the choice interactively, using the
+    provided question.
+
+    Parameters
+    ----------
+    question : str
+        The yes or no question to answer
+
+    Returns
+    -------
+    bool
+        The response provided by user
+    """
     
     key = None
+    # Accepted replies
     positive = ['y', 'yes', 'hell yeah']
     negative = ['n', 'no', 'nope']
     while key is None or key.lower() not in positive + negative:
         if key is not None:
+            # This means there was a reply, but not an accepted one
             print (f'Input not recognised: {key}')
         print (f'{question} Y/N', flush=True)
         key = input()
@@ -36,12 +52,30 @@ def prompt_to_confirm(
 
 def description_to_path(
     description: str,
-    temp_folder: Union[str, bytes, os.PathLike]
+    temp_folder: Union[str, os.PathLike]
 ) -> Optional[str]:
+    """
+    Converts the description of a file to its expected path.
 
+    Parameters
+    ----------
+    description : str
+        The description of a file
+    temp_folder : Union[str, os.PathLike]
+        The path to the temp folder where files are located
+
+    Returns
+    -------
+    Optional[str]
+        The expected path to the file, or None if description is not
+        recognised
+    """
+
+    # All the valid descriptions are indices of the file DataFrame
     if description not in FILE_DF.index:
         print (f'File description not recognised: {description}')
         return None
+    # Join the folder and the expected name
     file_name = FILE_DF.loc[description, 'name']
     file_path = os.path.join(temp_folder, file_name)
 
@@ -51,6 +85,19 @@ def description_to_path(
 def check_file_exists(
     description: str
 ) -> bool:
+    """
+    Checks if the file corresponding to the description exists.
+
+    Parameters
+    ----------
+    description : str
+        The description of a file
+
+    Returns
+    -------
+    bool
+        Whether the file corresponding to the description exists
+    """
     
     return os.path.exists(description_to_path(description))
 
@@ -62,47 +109,97 @@ def load_promoters_from_biomart(
         ['MT', 'X', 'Y'],
     tss_offset: Tuple[int, int] = (-750, 250),
     keep_ensembl: bool = True
-) -> dict:
+) -> Dict[str, Union[str, pd.DataFrame]]:
+    """
+    Generates the promoter file from the data retrieved from the Ensembl
+    BioMart server. Optionally also keeps a subset of the data as a 
+    DataFrame for downstream use. 
+
+    Parameters
+    ----------
+    file_path : Union[str, bytes, os.PathLike]
+        The path to where the resulting file should be saved
+    filter_basic : bool, optional
+        Whether to filter for only the GENCODE basic transcripts, 
+        by default True
+    chromosomes : Iterable[str], optional
+        An Iterable of chromosomes to be considered, by default 
+        [str(i) for i in range(1,23)] + ['MT', 'X', 'Y']
+    tss_offset : Tuple[int, int], optional
+        The offset from the transcription start site to define the 
+        promoter region, by default (-750, 250)
+    keep_ensembl : bool, optional
+        Whether to return the Ensembl DataFrame with a subset of the 
+        data (gene and transcript IDs, gene name, gene type), 
+        by default True
+
+    Returns
+    -------
+    Dict[str, Union[str, pd.DataFrame]]
+        A dictionary containing the version of the database used and
+        optionally the Ensembl DataFrame
+    """
 
     answer = {}
+    # Select the right dataset from BioMart
     bm_server = BiomartServer(ENSEMBL_URL)
     ensembl = bm_server.datasets['hsapiens_gene_ensembl']
+    # Attributes to retrieve
     attributes = ['ensembl_transcript_id', 'transcript_gencode_basic', 
         'chromosome_name', 'transcription_start_site', 'strand']
+    # Extra attributes that matter only for the Ensembl DataFrame
     if keep_ensembl:
         attributes += ['ensembl_gene_id', 'external_gene_name', 
             'gene_biotype']
     print ('Retrieving response to query...')
+    # Submit and retrieve the response
     response = ensembl.search({'attributes': attributes}, header=1)
     buffer = download_with_progress(response)
+    # Save the database version into the dictionary
     answer['version'] = ensembl.display_name
+    # Dictionary of types for conversion from the response, default strings
     dtype_dict = defaultdict(lambda: str)
+    # Change the types that are not strings but integers
     dtype_dict['Transcription start site (TSS)'] = int
     dtype_dict['Strand'] = int
+    # Convert the response into a DataFrame
     df = pd.read_csv(buffer, sep='\t', dtype=dtype_dict)
     print ('Filtering and modifying dataframe...')
     if filter_basic:
+        # Filter only for GENCODE basic
         df = df[df['GENCODE basic annotation'] == 'GENCODE basic'].copy()
         df.drop(columns='GENCODE basic annotation', inplace=True)
     if chromosomes is not None:
+        # Filter only for selected chromosomes
         df = df[df['Chromosome/scaffold name'].isin(chromosomes)]
+    # Convert chromosome names to match with other inputs
+    # TODO: Figure out a more consistent way of doing this
     df['Chromosome'] = df['Chromosome/scaffold name'].apply(lambda x: 
         'chrM' if x == 'MT' else f'chr{x}')
+    # Convert strand to +/-
     df['Strand'] = df['Strand'].apply(lambda x: '+' if x > 0 else '-')
+    # Calculate the start based on the given offset from TSS
+    # The calculation is strand dependent
     df['Start'] = df.apply(lambda row: 
         row['Transcription start site (TSS)'] + tss_offset[0] 
         if row['Strand'] == '+' 
         else row['Transcription start site (TSS)'] - tss_offset[1], 
         axis=1)
+    # End is always greater than start, this way it is strand independent
     df['End'] = df['Start'] + (tss_offset[1] - tss_offset[0])
+    # Score column has to be provided for a valid bed file
     df['Score'] = 0
+    # Order promoters by chromosome and start
     df.sort_values(['Chromosome', 'Start'], inplace=True)
+    # Columns to be saved into a file
     columns = ['Chromosome', 'Start', 'End', 'Transcript stable ID', 
         'Score', 'Strand']
     print (f'Saving data to {file_path}...')
+    # Save the file
     df[columns].to_csv(file_path, sep='\t', header=False, index=False)
     print ()
     if keep_ensembl:
+        # Keep the Ensembl DataFrame in the return dictionary
         answer['ensembl'] = df[['Gene stable ID', 'Transcript stable ID', 
             'Gene name', 'Gene type']]
 
@@ -111,19 +208,43 @@ def load_promoters_from_biomart(
 
 def load_ensembl_from_biomart(
     file_path: Union[str, bytes, os.PathLike]
-) -> None:
+) -> Dict[str, Union[str, pd.DataFrame]]:
+    """
+    Generates the Ensembl file which maps transcripts to genes and 
+    stores gene names and types from the data retrieved from the Ensembl
+    BioMart server. Returns the database version and the file
+    content as a DataFrame.
+
+    Parameters
+    ----------
+    file_path : Union[str, bytes, os.PathLike]
+        The path to where the resulting file should be saved
+
+    Returns
+    -------
+    Dict[str, Union[str, pd.DataFrame]]
+        A dictionary containing the version of the database used and
+        the Ensembl DataFrame
+    """
     
     answer = {}
+    # Select the right dataset from BioMart
     bm_server = BiomartServer(ENSEMBL_URL)
     ensembl = bm_server.datasets['hsapiens_gene_ensembl']
+    # Attributes to retrieve
     attributes = ['ensembl_transcript_id', 'ensembl_gene_id', 
         'external_gene_name', 'gene_biotype']
     print ('Retrieving response to query...')
+    # Submit and retrieve the response
     response = ensembl.search({'attributes': attributes}, header=1)
     buffer = download_with_progress(response)
+    # Save the database version into the dictionary
     answer['version'] = ensembl.display_name
-    df = pd.read_csv(buffer, sep='\t')     
+    # Convert the response into a DataFrame
+    df = pd.read_csv(buffer, sep='\t')
+    # Save the file
     df.to_csv(file_path, sep='\t', index=False)
+    # Keep the DataFrame in the return dictionary
     answer['ensembl'] = df
 
     return answer
@@ -228,7 +349,7 @@ def get_uniprot_mapping(
         raise RuntimeError()
     MAX_ITERATIONS = 40
     for _ in range(MAX_ITERATIONS):
-        # Loop until the results are available
+        # Loop until the results are available or max iterations exceeded
         uniprot_status = requests.get(MAPPING_URL + f'status/{job_id}')
         if 'results' in uniprot_status.json():
             break

@@ -84,6 +84,20 @@ def adjust_gene_name(
 def parse_datetime(
     datetime: Union[str, datetime]
 ) -> str:
+    """
+    Converts the provided datetime object into a formatted string, 
+    or returns the provided string. 
+
+    Parameters
+    ----------
+    datetime : Union[str, datetime]
+        The provided string or datetime object
+
+    Returns
+    -------
+    str
+        The provided string or provided datetime expressed as string
+    """
     
     if type(datetime) == str:
         return datetime
