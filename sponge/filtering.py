@@ -6,9 +6,12 @@ import pandas as pd
 
 from typing import Union, Iterable, Tuple
 
+FILE_LIKE = Union[str, bytes, os.PathLike]
+FILTER_INPUT = Tuple[str, pd.DataFrame, Iterable[str], str, int, int, float]
+
 ### Functions ###
 def filter_edges(
-    bb_ref: Union[str, bytes, os.PathLike], 
+    bb_ref: FILE_LIKE, 
     bed_df: pd.DataFrame, 
     motif_list: Iterable[str], 
     chrom: str, 
@@ -23,7 +26,7 @@ def filter_edges(
 
     Parameters
     ----------
-    bb_ref : Union[str, bytes, os.PathLike]
+    bb_ref : FILE_LIKE
         The path to a bigbed file that stores all possible matches
     bed_df : pd.DataFrame
         A pandas DataFrame containing the regions of interest in the
@@ -48,6 +51,7 @@ def filter_edges(
     """
     
     df = pd.DataFrame()
+    
     for transcript in bed_df.index[start_ind:final_ind]:
         # Retrieve the start and end points
         start,end = bed_df.loc[transcript][['start', 'end']]
@@ -68,7 +72,7 @@ def filter_edges(
 
 
 def filter_edges_helper(
-    input_tuple: Tuple[str, pd.DataFrame, Iterable[str], str, int, int, float]
+    input_tuple: FILTER_INPUT
 ) -> pd.DataFrame:
     """
     Serves as a wrapper around the filter_edges function that only
@@ -77,8 +81,7 @@ def filter_edges_helper(
 
     Parameters
     ----------
-    input_tuple : Tuple[str, pd.DataFrame, Iterable[str], str, int, int, 
-        float]
+    input_tuple : FILTER_INPUT
         A tuple of all inputs to the filter_edges function, for more
         details refer to its docstring
 

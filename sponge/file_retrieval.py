@@ -2,6 +2,7 @@
 import requests
 import time
 import os
+import gzip
 
 from biomart import BiomartServer
 
@@ -14,6 +15,9 @@ from collections import defaultdict
 from tqdm import tqdm
 
 from sponge.config import *
+
+PATH = Union[str, os.PathLike]
+FILE_LIKE = Union[str, bytes, os.PathLike]
 
 ### Functions ###
 def prompt_to_confirm(
@@ -52,7 +56,7 @@ def prompt_to_confirm(
 
 def description_to_path(
     description: str,
-    temp_folder: Union[str, os.PathLike]
+    temp_folder: PATH
 ) -> Optional[str]:
     """
     Converts the description of a file to its expected path.
@@ -61,7 +65,7 @@ def description_to_path(
     ----------
     description : str
         The description of a file
-    temp_folder : Union[str, os.PathLike]
+    temp_folder : PATH
         The path to the temp folder where files are located
 
     Returns
@@ -83,7 +87,8 @@ def description_to_path(
 
 
 def check_file_exists(
-    description: str
+    description: str,
+    temp_folder: PATH
 ) -> bool:
     """
     Checks if the file corresponding to the description exists.
@@ -92,6 +97,8 @@ def check_file_exists(
     ----------
     description : str
         The description of a file
+    temp_folder : PATH
+        The path to the temp folder where files are located
 
     Returns
     -------
@@ -99,14 +106,15 @@ def check_file_exists(
         Whether the file corresponding to the description exists
     """
     
-    return os.path.exists(description_to_path(description))
+    return os.path.exists(description_to_path(description, temp_folder))
 
 
 def load_promoters_from_biomart(
-    file_path: Union[str, bytes, os.PathLike],
+    file_path: FILE_LIKE,
     filter_basic: bool = True,
-    chromosomes: Iterable[str] = [str(i) for i in range(1,23)] + 
-        ['MT', 'X', 'Y'],
+    chromosomes: Optional[Iterable[str]] = 
+        [str(i) for i in range(1,23)] + ['MT', 'X', 'Y'],
+    chromosome_mapping: pd.Series = DEFAULT_MAPPING,
     tss_offset: Tuple[int, int] = (-750, 250),
     keep_ensembl: bool = True
 ) -> Dict[str, Union[str, pd.DataFrame]]:
@@ -117,14 +125,17 @@ def load_promoters_from_biomart(
 
     Parameters
     ----------
-    file_path : Union[str, bytes, os.PathLike]
+    file_path : FILE_LIKE
         The path to where the resulting file should be saved
     filter_basic : bool, optional
         Whether to filter for only the GENCODE basic transcripts, 
         by default True
-    chromosomes : Iterable[str], optional
-        An Iterable of chromosomes to be considered, by default 
-        [str(i) for i in range(1,23)] + ['MT', 'X', 'Y']
+    chromosomes : Optional[Iterable[str]], optional
+        An Iterable of chromosomes to be considered or None to consider 
+        all, by default [str(i) for i in range(1,23)] + ['MT', 'X', 'Y']
+    chromosome_mapping : pd.Series, optional
+        The mapping of Ensembl chromosome names to the UCSC ones, by 
+        default a simple mapping of only the main chromosomes and MT
     tss_offset : Tuple[int, int], optional
         The offset from the transcription start site to define the 
         promoter region, by default (-750, 250)
@@ -141,6 +152,7 @@ def load_promoters_from_biomart(
     """
 
     answer = {}
+
     # Select the right dataset from BioMart
     bm_server = BiomartServer(ENSEMBL_URL)
     ensembl = bm_server.datasets['hsapiens_gene_ensembl']
@@ -155,6 +167,7 @@ def load_promoters_from_biomart(
     # Submit and retrieve the response
     response = ensembl.search({'attributes': attributes}, header=1)
     buffer = download_with_progress(response)
+
     # Save the database version into the dictionary
     answer['version'] = ensembl.display_name
     # Dictionary of types for conversion from the response, default strings
@@ -164,6 +177,7 @@ def load_promoters_from_biomart(
     dtype_dict['Strand'] = int
     # Convert the response into a DataFrame
     df = pd.read_csv(buffer, sep='\t', dtype=dtype_dict)
+    
     print ('Filtering and modifying dataframe...')
     if filter_basic:
         # Filter only for GENCODE basic
@@ -173,16 +187,15 @@ def load_promoters_from_biomart(
         # Filter only for selected chromosomes
         df = df[df['Chromosome/scaffold name'].isin(chromosomes)]
     # Convert chromosome names to match with other inputs
-    # TODO: Figure out a more consistent way of doing this
     df['Chromosome'] = df['Chromosome/scaffold name'].apply(lambda x: 
-        'chrM' if x == 'MT' else f'chr{x}')
+        chromosome_mapping[x])
     # Convert strand to +/-
     df['Strand'] = df['Strand'].apply(lambda x: '+' if x > 0 else '-')
     # Calculate the start based on the given offset from TSS
     # The calculation is strand dependent
-    df['Start'] = df.apply(lambda row: 
-        row['Transcription start site (TSS)'] + tss_offset[0] 
-        if row['Strand'] == '+' 
+    df['Start'] = df.apply(lambda row:
+        row['Transcription start site (TSS)'] + tss_offset[0]
+        if row['Strand'] == '+'
         else row['Transcription start site (TSS)'] - tss_offset[1], 
         axis=1)
     # End is always greater than start, this way it is strand independent
@@ -191,6 +204,7 @@ def load_promoters_from_biomart(
     df['Score'] = 0
     # Order promoters by chromosome and start
     df.sort_values(['Chromosome', 'Start'], inplace=True)
+    
     # Columns to be saved into a file
     columns = ['Chromosome', 'Start', 'End', 'Transcript stable ID', 
         'Score', 'Strand']
@@ -207,7 +221,7 @@ def load_promoters_from_biomart(
 
 
 def load_ensembl_from_biomart(
-    file_path: Union[str, bytes, os.PathLike]
+    file_path: FILE_LIKE
 ) -> Dict[str, Union[str, pd.DataFrame]]:
     """
     Generates the Ensembl file which maps transcripts to genes and 
@@ -217,7 +231,7 @@ def load_ensembl_from_biomart(
 
     Parameters
     ----------
-    file_path : Union[str, bytes, os.PathLike]
+    file_path : FILE_LIKE
         The path to where the resulting file should be saved
 
     Returns
@@ -228,6 +242,7 @@ def load_ensembl_from_biomart(
     """
     
     answer = {}
+
     # Select the right dataset from BioMart
     bm_server = BiomartServer(ENSEMBL_URL)
     ensembl = bm_server.datasets['hsapiens_gene_ensembl']
@@ -238,10 +253,12 @@ def load_ensembl_from_biomart(
     # Submit and retrieve the response
     response = ensembl.search({'attributes': attributes}, header=1)
     buffer = download_with_progress(response)
+
     # Save the database version into the dictionary
     answer['version'] = ensembl.display_name
     # Convert the response into a DataFrame
     df = pd.read_csv(buffer, sep='\t')
+
     # Save the file
     df.to_csv(file_path, sep='\t', index=False)
     # Keep the DataFrame in the return dictionary
@@ -252,7 +269,7 @@ def load_ensembl_from_biomart(
 
 def download_with_progress(
     url: Union[str, requests.models.Response],
-    file_path: Optional[Union[str, bytes, os.PathLike]] = None,
+    file_path: Optional[FILE_LIKE] = None,
     desc: str = 'response'
 ) -> Optional[BytesIO]:
     """
@@ -263,7 +280,7 @@ def download_with_progress(
     ----------
     url : Union[str, requests.models.Response]
         The URL or response to be processed
-    file_path : Optional[Union[str, bytes, os.PathLike]], optional
+    file_path : Optional[FILE_LIKE], optional
         The file path for saving or None to save into a BytesIO object,
         by default None
     desc : str, optional
@@ -288,6 +305,7 @@ def download_with_progress(
     else:
         stream = open(file_path, 'wb')
         desc = file_path
+
     # Download with a progress bar using tqdm
     with tqdm(desc=desc, total=total, unit='iB', unit_scale=True,
         unit_divisor=1024) as bar:
@@ -347,6 +365,7 @@ def get_uniprot_mapping(
         for message in uniprot_reply['messages']:
             print (message)
         raise RuntimeError()
+    
     MAX_ITERATIONS = 40
     for _ in range(MAX_ITERATIONS):
         # Loop until the results are available or max iterations exceeded
@@ -359,10 +378,52 @@ def get_uniprot_mapping(
         # Unable to retrieve the results within the given time
         print ('No results have been retrieved in the given time')
         return pd.DataFrame()
+    
     # Retrieve the results
     uniprot_results = requests.get(MAPPING_URL + f'stream/{job_id}')
+    
     # Convert the results to a pandas DataFrame
     results_df = pd.DataFrame(uniprot_results.json()['results'])
     results_df.drop_duplicates(subset='from', inplace=True)
 
     return results_df
+
+
+def get_ensembl_assembly(
+) -> str:
+    
+    # Select the Ensembl dataset from BioMart and get the display name
+    bm_server = BiomartServer(ENSEMBL_URL)
+    ensembl = bm_server.datasets['hsapiens_gene_ensembl']
+    display_name = ensembl.display_name
+    # Isolate the version from the bracket
+    version_string = display_name.split('(')[-1].split(')')[0]
+    # Remove the update part
+    version_major = version_string.split('.')[0]
+
+    # Return the simplified synonym (e.g. hg38 instead of GRCh38):
+    return ASSEMBLY_SYNONYM[version_major]
+
+
+def get_chromosome_mapping(
+    assembly: str
+) -> Tuple[pd.Series, pd.Series]:
+    
+    if assembly[:2] == 'hg':
+        print (f'Retrieving chromosome name mapping for {assembly}...')
+        f = gzip.open(download_with_progress(HG_CHROMOSOME_URL.format(
+            genome_assembly=assembly)))
+        header_fields = ['alt', 'ucsc', 'notes']
+        chrom_df = pd.read_csv(f, sep='\t', names=header_fields)
+        ens_to_ucsc = chrom_df.set_index('alt')['ucsc']
+        chrom_df_filt = chrom_df[chrom_df['notes'].apply(lambda x:
+            'ensembl' in x)]
+        ucsc_to_ens = chrom_df_filt.set_index('ucsc')['alt']
+    else:
+        print ('No chromosome name mapping available for the assembly', 
+            assembly)
+        print ('Using the default mapping')
+        ens_to_ucsc = DEFAULT_MAPPING
+        ucsc_to_ens = pd.Series(ens_to_ucsc.index, index=ens_to_ucsc.values)
+    
+    return (ens_to_ucsc, ucsc_to_ens)
