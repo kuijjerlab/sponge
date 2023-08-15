@@ -19,6 +19,8 @@ from sponge.filtering import *
 
 from shutil import rmtree
 
+FINGERPRINTS = defaultdict(Dict[str, Union[str, datetime, bool]])
+
 ### Class definition ###
 class Sponge:
     """
@@ -30,8 +32,8 @@ class Sponge:
     NetZoo tools.
 
     The run_default option is implemented in the constructor which will
-    run the entire pipeline after class creation using the provided
-    options and defaults where appropriate.
+    run the entire pipeline after class instance initialisation using 
+    the provided options and defaults where appropriate.
 
     Usage:
     sponge_obj = Sponge(run_default=True)
@@ -80,7 +82,7 @@ class Sponge:
             by default '.sponge_temp'
         run_default : bool, optional
             Whether to run the default pipeline automatically after
-            class creation, by default False
+            class instance initialisation, by default False
         jaspar_release : Optional[str], optional
             Which JASPAR release to use or None to select the newest, 
             by default None
@@ -132,6 +134,7 @@ class Sponge:
             by default True
         """
 
+        # Initialise important variables
         self.temp_folder = temp_folder
         self.ensembl = None
         self.ppi_frame = None
@@ -141,6 +144,7 @@ class Sponge:
         self.provided_paths = paths_to_files
         self.jaspar_release = None
 
+        # Store the provided options
         self.drop_heterodimers = drop_heterodimers
         self.chromosomes = chromosomes
         self.tss_offset = tss_offset
@@ -152,19 +156,24 @@ class Sponge:
         self.ppi_outfile = ppi_outfile
         self.assembly = genome_assembly
 
+        # Retrieve genome assembly if necessary
         if self.assembly is None:
             self.assembly = get_ensembl_assembly()
 
+        # Create the temporary folder
         if not os.path.exists(self.temp_folder):
             os.mkdir(self.temp_folder)
 
+        # Initialise the JASPAR database object
         self.initialise_jaspar(jaspar_release)
         if self.jaspar_release is None:
             return
         self.log_fingerprint('JASPAR', self.jaspar_release)
 
+        # Locate or download all the required files
         self.files_ready = self.prepare_files(prompt)
 
+        # Run default workflow if selected
         if run_default and self.files_ready:
             self.run_default_workflow()
 
@@ -173,22 +182,39 @@ class Sponge:
         self,
         jaspar_release: Optional[str] = None
     ) -> None:
+        """
+        Initialises the JASPAR database object to be used for motif
+        selection.
 
+        Parameters
+        ----------
+        jaspar_release : Optional[str], optional
+            Which JASPAR release to use or None to select the newest, 
+            by default None
+        """
+
+        # Initialise a database object to interact with
         self.jdb_obj = jaspardb()
         if jaspar_release is None:
+            # Just keep the current object, log the release version
             from pyjaspar import JASPAR_LATEST_RELEASE
             self.jaspar_release = JASPAR_LATEST_RELEASE
         else:
             jaspar_available = self.jdb_obj.get_releases()
             if jaspar_release in jaspar_available:
+                # Release found as specified
                 self.jaspar_release = jaspar_release
                 self.jdb_obj = jaspardb(self.jaspar_release)
             elif 'JASPAR' + jaspar_release in jaspar_available:
+                # Try adding JASPAR to the provided release
+                # Converts e.g. 2022 to JASPAR2022 (actual release name)
                 print (f'Found {"JASPAR" + jaspar_release} in available '
                     'releases, assuming this matches your choice')
                 self.jaspar_release = 'JASPAR' + jaspar_release
                 self.jdb_obj = jaspardb(self.jaspar_release)
             else:
+                # Default self.jaspar_release is None, so this will be
+                # registered as failure downstream
                 print ('The specified version of the JASPAR release '
                     f'({jaspar_release}) is not available')
                 print ('Available versions:')
@@ -200,15 +226,32 @@ class Sponge:
     def prepare_files(
         self,
         prompt: bool = True
-    ) -> bool:      
+    ) -> bool:
+        """
+        Locates or downloads the files required for the running of the
+        prior creation pipeline.
+
+        Parameters
+        ----------
+        prompt : bool, optional
+            Whether to prompt to confirm the file downloads, 
+            by default True
+
+        Returns
+        -------
+        bool
+            Whether the files were located or downloaded successfully
+        """
 
         print ()
         print ('--- Running prepare_files() ---')
 
+        # Retrieve and save the chromosome name mappings
         chrom_mappings = get_chromosome_mapping(self.assembly)
         self.ens_to_ucsc = chrom_mappings[0]
         self.ucsc_to_ens = chrom_mappings[1]
 
+        # Attemp to first use the provided paths
         provided = []
         for k,v in self.provided_paths.items():
             if k not in FILE_DF.index:
@@ -223,6 +266,7 @@ class Sponge:
         self.provided_paths = {k: v for k,v in self.provided_paths.items()
             if k in provided}
 
+        # Check for the files in the temp folder
         to_check = [file for file in FILE_DF.index if file not in provided]
         to_retrieve = {}
         for file in to_check:
@@ -236,6 +280,7 @@ class Sponge:
                 f'{self.temp_folder} directory')
             return True
         else:
+            # Download anything that's missing
             print ('The following files were not found:')
             print (', '.join(to_retrieve.values()))
             if prompt:
@@ -254,6 +299,7 @@ class Sponge:
                             'retrieved')
                         return False
             else:
+                # Prompt was refused
                 return False
 
 
@@ -262,14 +308,48 @@ class Sponge:
         description: str,
         prompt: bool = True
     ) -> Optional[str]:
+        """
+        Attempts to retrieve a file corresponding to a given 
+        description. If the file is found in the temporary directory or 
+        has been flagged as provided it is not downloaded, but the path
+        to it will be returned in any case. If the file cannot be
+        retrieved (e.g. because the description is invalid), None is
+        returned.
+
+        Parameters
+        ----------
+        description : str
+            The description of a file to be retrieved
+            Available descriptions: 'homologene', 'promoter', 
+                'jaspar_bigbed', 'ensembl'
+        prompt : bool, optional
+            Whether to prompt to confirm the file downloads, 
+            by default True
+
+        Returns
+        -------
+        Optional[str]
+            The path to the retrieved file or None if the file was not
+            retrieved
+
+        Raises
+        ------
+        ValueError
+            If self.jaspar_release is not specified prior to attempting
+            to retrieve the jaspar_bigbed file
+        """
         
+        # Just use the provided path
         if description in self.provided_paths:
             print ('Using provided file', self.provided_paths[description])
             print ()
             return self.provided_paths[description]
+        # Figure out where in the temp folder the file should be
         file_path = description_to_path(description, self.temp_folder)
+        # Redundant now as the class initialisation creates the temp folder
         if not os.path.exists(self.temp_folder):
             os.mkdir(self.temp_folder)
+        # Use the cached file if it exists
         if os.path.exists(file_path):
             print ('Using cached file', file_path)
             print ()
@@ -280,12 +360,14 @@ class Sponge:
                 reply = prompt_to_confirm('Do you want to download it?')
                 if not reply:
                     return None
+            # The URL to retrieve the file from
             to_request = FILE_DF.loc[description, 'url']
             if to_request is None:
-                # These options are not unused: they are passed to the
-                # evaluated function call as kwargs
+                # No URL in this case, retrieve via function call
+                # These options are passed to the function as kwargs
                 options = {'file_path': file_path}
                 if description == 'promoter':
+                    # Extra options for the promoter file
                     options['tss_offset'] = self.tss_offset
                     if self.chromosomes is None:
                         options['chromosomes'] = None
@@ -293,12 +375,16 @@ class Sponge:
                         options['chromosomes'] = [self.ucsc_to_ens[x] for x in
                             self.chromosomes]
                     options['chromosome_mapping'] = self.ens_to_ucsc
+                # Call the responsible function
                 result = eval(FILE_DF.loc[description, 'eval'])
+                # Log the fingerprint for the retrieved file
                 self.log_fingerprint(description.upper(), result['version'])
+                # Save the Ensembl DataFrame
                 if 'ensembl' in result:
                     self.ensembl = result['ensembl']
             else:
                 if description == 'jaspar_bigbed':
+                    # The file to download depends on the JASPAR release
                     if self.jaspar_release is None:
                         raise ValueError('The release of jaspar has to be '
                             'specified in order to retrieve the bigbed file')
@@ -307,13 +393,16 @@ class Sponge:
                         genome_assembly=self.assembly)
                     version = self.jaspar_release
                 elif description == 'homologene':
+                    # The version needs to be determined via a separate request
                     version_url = '/'.join(to_request.split('/')[:-1] + 
                         ['RELEASE_NUMBER'])
                     version_request = requests.get(version_url, stream=True)
                     version = version_request.text.strip()
+                # Download the specified file
                 print (f'Downloading data into {file_path}...')
                 download_with_progress(to_request, file_path)
                 print ()
+                # Log the fingerprint for the retrieved file
                 self.log_fingerprint(description.upper(), version)
 
         return file_path
@@ -321,12 +410,25 @@ class Sponge:
 
     def update_label_in_cache(
         self,
-        temp_fingerprint: dict,
+        temp_fingerprint: FINGERPRINTS,
         label: str
     ) -> None:
+        """
+        Updates a given label in the cached fingerprint file.
 
-        fingerprint_file = os.path.join(self.temp_folder, '.fingerprint')
+        Parameters
+        ----------
+        temp_fingerprint : FINGERPRINTS
+            The fingerprint to be updated, can be empty or initially
+            loaded from the cached fingerprint
+        label : str
+            The label to update
+        """
+
+        # Update the label
         temp_fingerprint[label] = self.fingerprint[label]
+        # Dump into the fingerprint file
+        fingerprint_file = os.path.join(self.temp_folder, '.fingerprint')
         pickle.dump(temp_fingerprint, open(fingerprint_file, 'wb'))
 
 
@@ -337,25 +439,48 @@ class Sponge:
         provided: bool = False,
         cached: bool = False
     ) -> None:
+        """
+        Logs the fingerprint (label, version, retrieval time) for a
+        given file. The fingerprints are stored within the class
+        instance and also as a hidden file in the temp folder.
+
+        Parameters
+        ----------
+        label : str
+            The label corresponding to the file
+        version : str
+            The version of the database used to make the file
+        provided : bool, optional
+            Whether the path to the file was provided by user, 
+            by default False
+        cached : bool, optional
+            Whether the file was retrieved from cache, by default False
+        """
         
+        # Update the details in the fingerprint based on the provided data
         self.fingerprint[label]['version'] = version
         self.fingerprint[label]['datetime'] = datetime.fromtimestamp(
             time.time())
         self.fingerprint[label]['provided'] = provided
         self.fingerprint[label]['cached'] = cached
 
+        # Update the fingerprint file as well
         fingerprint_file = os.path.join(self.temp_folder, '.fingerprint')
+        # Load the current fingerprint or make a new one
         if os.path.exists(fingerprint_file):
             temp_fingerprint = pickle.load(open(fingerprint_file, 'rb'))
         else:
             temp_fingerprint = {}
         if not provided and not cached:
+            # No prior data, just rewrite
             self.update_label_in_cache(temp_fingerprint, label)
         if cached:
             if label in temp_fingerprint:
+                # Previously cached, so keep the cached data (more precise)
                 self.fingerprint[label] = temp_fingerprint[label]
                 self.fingerprint[label]['cached'] = True
             else:
+                # File is cached but not in the cached fingerprint
                 self.fingerprint[label]['version'] = 'unknown version'
                 self.fingerprint[label]['datetime'] = 'at unknown time'
                 self.update_label_in_cache(temp_fingerprint, label)
@@ -365,6 +490,23 @@ class Sponge:
     def run_default_workflow(  
         self
     ) -> None:
+        """
+        Runs the default workflow by running the following functions
+        in sequence using the options provided during class instance
+        initialisation:
+
+        self.select_tfs()
+        self.find_human_homologs(prompt=False)
+        self.filter_matches(prompt=False)
+        self.retrieve_ppi()
+        self.write_ppi_prior()
+        self.aggregate_matches(prompt=False)
+        self.write_motif_prior()
+
+        This will result in the generation of priors as specified and
+        should be used unless there is a desire to change the provided
+        settings after initialisation.
+        """
 
         self.select_tfs()
         self.find_human_homologs(prompt=False)
@@ -385,8 +527,9 @@ class Sponge:
 
         Parameters
         ----------
-        drop_heterodimers : bool, optional
-            Whether to drop heterodimer motifs, by default True
+        drop_heterodimers : Optional[bool], optional
+            Whether to drop heterodimer motifs or None to follow the
+            option from the initialisation, by default None
         """
 
         print ()
@@ -510,11 +653,33 @@ class Sponge:
             on='Uniprot').join(hg_df.set_index('Protein Accession'), 
             on='Accession', rsuffix='_HG')
 
-        def corresponding_id(name):
+        def corresponding_id(
+            name: str
+        ) -> np.array:
+            """
+            Retrieves the corresponding group ID for a given gene name 
+            from the homologene DataFrame, or matching DataFrame if it
+            is not found.
+
+            Parameters
+            ----------
+            name : str
+                The gene name of interest
+
+            Returns
+            -------
+            np.array
+                The array containing the corresponding group ID
+            """
+
+            # Choose the values of the group ID from the homologene DataFrame
+            # which correspond to the gene of interest
             values = hg_df[hg_df['Gene Symbol'] == name]['HG Group ID'].values
             if len(values) == 0:
+                # If none are found, use the matching DataFrame instead
                 matches = matching_df[matching_df['Gene Symbol'] == name]
                 values = matches['HG Group ID'].values
+
             return values
 
         # Create a DataFrame of corresponding names
@@ -586,6 +751,33 @@ class Sponge:
         n_processes: Optional[int] = None,
         prompt: bool = True
     ) -> None:
+        """
+        Filters all the binding sites in the JASPAR bigbed file to
+        select only the ones in the promoter regions of genes on given
+        chromosomes, subject to a score threshold. Stores the result
+        internally.
+
+        Parameters
+        ----------
+        promoter_file : Optional[FILE_LIKE], optional
+            The path to a promoter file or None to use cache or
+            download it, by default None
+        bigbed_file : Optional[FILE_LIKE], optional
+            The path to a JASPAR bigbed file or None to use cache or
+            download it, by default None
+        score_threshold : Optional[float], optional
+            The minimal score of a match for it to be included in the 
+            prior or None to follow the option from the initialisation, 
+            by default None
+        chromosomes : Optional[Iterable[str]], optional
+            Which chromosomes to get the promoters from or None to 
+            follow the option from the initialisation, by default None
+        n_processes : Optional[int], optional
+            The number of processes to run in parallel or None to 
+            follow the option from the initialisation, by default None
+        prompt : bool, optional
+            Whether to prompt before downloading, by default True
+        """
         
         print ()
         print ('--- Running filter_matches() ---')
@@ -615,6 +807,7 @@ class Sponge:
         print ('Loading the promoter bed file...')
         df_full = bioframe.read_table(promoter_file, schema='bed')
         df_full['name'] = df_full['name'].apply(lambda x: x.split('.')[0])
+        # Some parts of the bed file are unnecessary
         df_full.drop(columns=['score', 'strand'], inplace=True)
         df_full.set_index('name', inplace=True)
 
@@ -636,10 +829,13 @@ class Sponge:
             print (f'Chromosome {chrom[3:]} with ' + suffix)
             if len(df_chrom) == 0:
                 continue
+            # This is a heuristic approximation of the ideal chunk size
+            # Based off of performance benchmarking
             chunk_size = ceil(sqrt(len(df_chrom) / n_processes))
             chunk_divisions = [i for i in range(0, len(df_chrom), chunk_size)]
             input_tuples = [(bigbed_file, df_chrom, self.tf_names, chrom, i, 
                 i+chunk_size, score_threshold) for i in chunk_divisions]
+            # Run the calculations in parallel
             result = p.map_async(filter_edges_helper, input_tuples, 
                 chunksize=n_processes)
             edges_chrom_list = result.get()
@@ -652,6 +848,8 @@ class Sponge:
         print ()
         print (f'Total time: {elapsed // 60:n} m {elapsed % 60:.2f} s')
 
+        # Save the final results, ignoring the index makes this fast
+        # The index is irrelevant
         self.all_edges = pd.concat(results_list, ignore_index=True)
 
     
@@ -680,12 +878,18 @@ class Sponge:
     def retrieve_ppi(
         self
     ) -> None:
+        """
+        Retrieves the protein-protein interaction data from the STRING
+        database for the previously identified transcription factors.
+        Stores the resulting network internally.
+        """
         
         print ()
         print ('--- Running retrieve_ppi() ---')
         
+        # Use the human names for the TFs
         filtered_tfs = self.all_edges['TFName'].unique()
-        humanised_tfs = [self.animal_to_human[x] if x in self.animal_to_human 
+        humanised_tfs = [self.animal_to_human[x] if x in self.animal_to_human
             else x for x in filtered_tfs]
         query_string = '%0d'.join(humanised_tfs)
 
@@ -695,22 +899,27 @@ class Sponge:
         mapping_df = pd.read_csv(BytesIO(mapping_request.content), sep='\t')
         mapping_df['queryName'] = mapping_df['queryIndex'].apply(
             lambda i: humanised_tfs[i])
+        # Check where the preferred name doesn't match the query
         diff_df = mapping_df[mapping_df['queryName'] != 
             mapping_df['preferredName']]
         ids_to_check = np.concatenate((diff_df['queryName'], 
             diff_df['preferredName']))
         matching_ids = list(mapping_df[mapping_df['queryName'] == 
             mapping_df['preferredName']]['preferredName'])
+        # Log the STRING version in the fingerprint
         version_request = requests.get(f'{STRING_URL}version')
         version_df = pd.read_csv(BytesIO(version_request.content), sep='\t')
         self.log_fingerprint('STRING', version_df['string_version'])
         
         if len(ids_to_check) > 0:
+            # Retrieve UniProt identifiers for the genes with differing names
             print ('Checking the conflicts in the UniProt database...')
             uniprot_df = get_uniprot_mapping('Gene_Name', 'UniProtKB', 
                 ids_to_check).set_index('from')
             p_to_q = {p: q for q,p in zip(diff_df['queryName'], 
                 diff_df['preferredName'])}
+            # Keep the conflicts where there is a match or where one or both
+            # of the names doesn't find an identifier
             for p,q in p_to_q.items():
                 if (p not in uniprot_df.index or q not in uniprot_df.index
                     or uniprot_df.loc[p, 'to'] == uniprot_df.loc[q, 'to']):
@@ -729,6 +938,7 @@ class Sponge:
         ppi_df.rename(columns={'preferredName_A': 'tf1', 
             'preferredName_B': 'tf2'}, inplace=True)
         if len(ids_to_check) > 0:
+            # Replace with names that have been queried (as used by JASPAR)
             ppi_df['tf1'].replace(p_to_q, inplace=True)
             ppi_df['tf2'].replace(p_to_q, inplace=True)
         ppi_df.sort_values(by=['tf1', 'tf2'], inplace=True)
@@ -746,6 +956,20 @@ class Sponge:
         output_path: Optional[FILE_LIKE] = None,
         weighted: Optional[bool] = None
     ) -> None:
+        """
+        Writes the protein-protein interaction prior network into a 
+        file.
+
+        Parameters
+        ----------
+        output_path : Optional[FILE_LIKE], optional
+            The path to write the prior into or None to follow the 
+            option from the initialisation, by default None
+        weighted : Optional[bool], optional
+            Whether to use weights for the edges as opposed to making 
+            them binary or None to follow the option from the 
+            initialisation, by default None
+        """
         
         print ()
         print ('--- Running write_ppi_prior() ---')
@@ -776,6 +1000,27 @@ class Sponge:
         use_gene_names: Optional[bool] = None,
         protein_coding_only: Optional[bool] = None
     ) -> None:
+        """
+        Aggregates all the matches corresponding to individual 
+        transcripts into genes, creating a transcription factor - gene
+        matrix. Stores the result internally.
+
+        Parameters
+        ----------
+        ensembl_file : Optional[FILE_LIKE], optional
+            The path to an Ensembl file or None to use cache or
+            download it, by default None
+        prompt : bool, optional
+            Whether to prompt before downloading, by default True
+        use_gene_names : Optional[bool], optional
+            Whether to use gene names instead of Ensembl IDs or None
+            to follow the option from the initialisation, 
+            by default None
+        protein_coding_only : Optional[bool], optional
+            Whether to restrict the selection to only protein coding 
+            genes or None to follow the option from the initialisation, 
+            by default None
+        """
         
         print ()
         print ('--- Running aggregate_matches() ---')
@@ -794,29 +1039,40 @@ class Sponge:
         if protein_coding_only is None:
             protein_coding_only = self.protein_coding_only
 
+        # Add the Ensembl data (gene names) to the edges previously found
         motif_df = self.all_edges.join(other=self.ensembl.set_index(
             'Transcript stable ID'), on='transcript')
         print ('Number of TF - transcript edges:', len(motif_df))
         if protein_coding_only:
             motif_df = motif_df[motif_df['Gene type'] == 
                 'protein_coding'].copy()
+        # Drop columns that are not required anymore
         motif_df.drop(columns=['Gene type', 'name'], inplace=True)
+        # Humanise the TF names
         motif_df['TFName'] = motif_df['TFName'].apply(lambda x: 
             self.animal_to_human[x] if x in self.animal_to_human else x)
+        # Ignore genes without identifiers
         motif_df.dropna(subset=['Gene stable ID'], inplace=True)
         motif_df.sort_values('score', ascending=False, inplace=True)
+        # Sometimes edges are identified from multiple transcripts
         motif_df.drop_duplicates(subset=['TFName', 'Gene stable ID'],
             inplace=True)
         print ('Number of TF - gene edges:', len(motif_df))
         if use_gene_names:
+            # Names are not unique - filtering needed
+            # Fill empty gene names with IDs
             motif_df['Gene name'] = motif_df.apply(lambda x: x['Gene name'] if 
                 type(x['Gene name']) == str else x['Gene stable ID'], axis=1)
+            # Count the number of edges for every name/ID pair
             name_id_matching = motif_df.groupby(
                 ['Gene name', 'Gene stable ID'])['Gene name'].count()
+            # Use the name for the ID that has the most edges
             id_to_name = {i[1]: i[0] for i in name_id_matching.groupby(
                 level=0).idxmax().values}
+            # Convert selected gene IDs to names
             motif_df['Gene name'] = motif_df['Gene stable ID'].apply(
                 lambda x: id_to_name[x] if x in id_to_name else np.nan)
+            # Drop the rest
             motif_df.dropna(subset='Gene name', inplace=True)
             print ('Number of TF - gene edges after name conversion:',
                 len(motif_df))
@@ -824,7 +1080,9 @@ class Sponge:
         self.motif_frame = motif_df
         if (self.use_gene_names is not None and 
             self.use_gene_names != use_gene_names):
+            # Notify that the provided setting for gene name use has changed
             print ('Changing the use_gene_names setting to ', use_gene_names)
+        # Update the setting in any case, to prevent unwanted saving issues
         self.use_gene_names = use_gene_names
     
 
@@ -834,6 +1092,24 @@ class Sponge:
         use_gene_names: Optional[bool] = None,
         weighted: Optional[bool] = None
     ) -> None:
+        """
+        Writes the motif (transcription factor - gene) prior network 
+        into a file.
+
+        Parameters
+        ----------
+        output_path : Optional[FILE_LIKE], optional
+            The path to write the prior into or None to follow the 
+            option from the initialisation, by default None
+        use_gene_names : Optional[bool], optional
+            Whether to use gene names instead of Ensembl IDs or None
+            to follow the option from the initialisation, 
+            by default None
+        weighted : Optional[bool], optional
+            Whether to use weights for the edges as opposed to making 
+            them binary or None to follow the option from the 
+            initialisation, by default None
+        """
         
         print ()
         print ('--- Running write_motif_prior() ---')
@@ -849,6 +1125,7 @@ class Sponge:
             weighted = self.weighted
         if use_gene_names is None:
             use_gene_names = self.use_gene_names
+            
         if use_gene_names:
             column = 'Gene name'
         else:
@@ -857,6 +1134,7 @@ class Sponge:
         self.motif_frame.sort_values(by=['TFName', column], inplace=True)
 
         if weighted:
+            # The scores are converted to floats < 10 (typically)
             self.motif_frame['weight'] = self.motif_frame['score'] / 100
             self.motif_frame[['TFName', column, 'weight']].to_csv(
                 output_path, sep='\t', index=False, header=False)
@@ -869,18 +1147,27 @@ class Sponge:
     def show_fingerprint(
         self
     ) -> None:
+        """
+        Prints the fingerprint for the files and databases used by this
+        instance of the Sponge class.
+        """
         
         for k,v in self.fingerprint.items():
             if v['provided']:
+                # No information is known about this file as it was provided
                 print (f'{k}: provided by user')
             elif v['cached']:
+                # Some information may be available in the cache
                 if v['version'] == '':
+                    # Not available
                     print (f'{k}: retrieved from cache')
                 else:
+                    # Available
                     print (f'{k}: {v["version"]}, retrieved from cache,',
                         'originally retrieved', 
                         parse_datetime(v['datetime']))                      
             else:
+                # File was retrieved by this instance, all info available
                 print (f'{k}: {v["version"]}, retrieved',
                     parse_datetime(v['datetime']))
 

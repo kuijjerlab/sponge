@@ -391,6 +391,15 @@ def get_uniprot_mapping(
 
 def get_ensembl_assembly(
 ) -> str:
+    """
+    Returns the simple synonym of the genome assembly used by the
+    Ensembl server (e.g. hg38).
+
+    Returns
+    -------
+    str
+        A simple synonym of the genome assembly used by Ensembl
+    """
     
     # Select the Ensembl dataset from BioMart and get the display name
     bm_server = BiomartServer(ENSEMBL_URL)
@@ -408,22 +417,47 @@ def get_ensembl_assembly(
 def get_chromosome_mapping(
     assembly: str
 ) -> Tuple[pd.Series, pd.Series]:
+    """
+    Returns a tuple with two pandas Series which can be used to map
+    Ensembl chromosome names to UCSC (first Series) and vice versa
+    (second Series) for a provided genome assembly. If it is not
+    recognised, a default mapping valid from the main chromosomes 
+    (autosomes + X, Y, MT) is returned.
+
+    Parameters
+    ----------
+    assembly : str
+        The assembly for which to provide the mapping (e.g. hg38)
+
+    Returns
+    -------
+    Tuple[pd.Series, pd.Series]
+        A tuple of two pandas Series, providing chromosome name mapping 
+        from Ensembl to UCSC (first one) and vice versa (second one)
+    """
     
     if assembly[:2] == 'hg':
+        # The mapping can be retrieved from a chromAlias.tsv file
         print (f'Retrieving chromosome name mapping for {assembly}...')
         f = gzip.open(download_with_progress(HG_CHROMOSOME_URL.format(
             genome_assembly=assembly)))
         header_fields = ['alt', 'ucsc', 'notes']
         chrom_df = pd.read_csv(f, sep='\t', names=header_fields)
+        # This mapping is unambiguous even if things other than Ensembl
+        # are included in the index
         ens_to_ucsc = chrom_df.set_index('alt')['ucsc']
+        # For the mapping the other way, we filter out only Ensembl to
+        # prevent multiple values for a single index
         chrom_df_filt = chrom_df[chrom_df['notes'].apply(lambda x:
             'ensembl' in x)]
         ucsc_to_ens = chrom_df_filt.set_index('ucsc')['alt']
     else:
+        # Default mapping for the 22 autosomal chromosomes + X, Y, MT
         print ('No chromosome name mapping available for the assembly', 
             assembly)
         print ('Using the default mapping')
         ens_to_ucsc = DEFAULT_MAPPING
+        # Simple inversion as there is no duplication here
         ucsc_to_ens = pd.Series(ens_to_ucsc.index, index=ens_to_ucsc.values)
     
     return (ens_to_ucsc, ucsc_to_ens)
