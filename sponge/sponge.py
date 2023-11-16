@@ -836,7 +836,7 @@ class Sponge:
             input_tuples = [(bigbed_file, df_chrom, self.tf_names, chrom, i, 
                 i+chunk_size, score_threshold) for i in chunk_divisions]
             # Run the calculations in parallel
-            result = p.map_async(filter_edges_helper, input_tuples, 
+            result = p.starmap_async(filter_edges, input_tuples, 
                 chunksize=n_processes)
             edges_chrom_list = result.get()
             results_list += edges_chrom_list
