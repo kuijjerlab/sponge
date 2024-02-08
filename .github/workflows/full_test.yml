@@ -2,9 +2,9 @@ name: SPONGE test on a combination of Python versions and OS
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   os-python-compatibility:

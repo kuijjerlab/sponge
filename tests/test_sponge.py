@@ -11,31 +11,26 @@ import sponge.helper_functions as helper_f
 @pytest.mark.parametrize("input, expected_output", [
     (0, 0),
     (0.5, -0.5),
-    (0, 1),
     (1, 0),
 ])
 def test_plogp(input, expected_output):
     assert helper_f.plogp(input) == expected_output
 
 
-def test_calculate_ic_no_info():
-    from sponge.test_motifs import no_info_motif
+from sponge.test_motifs import *
+
+def test_calculate_ic_no_info(no_info_motif):
     assert helper_f.calculate_ic(no_info_motif) == 0
 
 
-def test_calculate_ic_all_the_same():
-    from sponge.test_motifs import all_A_motif
+def test_calculate_ic_all_the_same(all_A_motif):
     # Length of the test motif is 6, so expected value is 2 * 6 = 12
     assert helper_f.calculate_ic(all_A_motif) == 12
 
 
-def test_calculate_ic_SOX2():
-    from sponge.test_motifs import SOX2_motif
-    assert helper_f.calculate_ic(SOX2_motif) == pytest.approx(12.95, abs=0.01)
-
-
-# def test_calculate_ic_SOX2(SOX2_motif):
-#     assert helper_f.calculate_ic(SOX2_motif) == pytest.approx(12.95, abs=0.01)
+def test_calculate_ic_SOX2(SOX2_motif):
+    assert (helper_f.calculate_ic(SOX2_motif) == 
+        pytest.approx(12.95, abs=0.01))
 
 
 @pytest.mark.parametrize("input, expected_output", [
