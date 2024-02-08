@@ -1,3 +1,5 @@
+import pytest
+
 import pandas as pd
 
 from Bio.motifs.jaspar import Motif
@@ -19,3 +21,11 @@ all_A_motif = Motif(matrix_id='XXX', name='XXX', counts=all_A_pwm)
 # A real motif for SOX2
 jdb_obj = jaspardb(release='JASPAR2024')
 SOX2_motif = jdb_obj.fetch_motif_by_id('MA0143.1')
+
+# A real motif for SOX2, as a fixture this time
+# @pytest.fixture
+# def SOX2_motif():
+#     jdb_obj = jaspardb(release='JASPAR2024')
+#     SOX2_motif = jdb_obj.fetch_motif_by_id('MA0143.1')
+    
+#     return jdb_obj

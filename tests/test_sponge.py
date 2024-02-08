@@ -11,6 +11,7 @@ import sponge.helper_functions as helper_f
 @pytest.mark.parametrize("input, expected_output", [
     (0, 0),
     (0.5, -0.5),
+    (0, 1),
     (1, 0),
 ])
 def test_plogp(input, expected_output):
@@ -31,6 +32,10 @@ def test_calculate_ic_all_the_same():
 def test_calculate_ic_SOX2():
     from sponge.test_motifs import SOX2_motif
     assert helper_f.calculate_ic(SOX2_motif) == pytest.approx(12.95, abs=0.01)
+
+
+# def test_calculate_ic_SOX2(SOX2_motif):
+#     assert helper_f.calculate_ic(SOX2_motif) == pytest.approx(12.95, abs=0.01)
 
 
 @pytest.mark.parametrize("input, expected_output", [
@@ -67,6 +72,12 @@ import os
 from sponge.sponge import Sponge
 
 from shutil import rmtree
+
+# def test_show_tmp_path(tmp_path):
+#     print (tmp_path)
+#     print (f'{tmp_path}/ppi_prior.tsv')
+#     assert False
+
 
 @pytest.mark.skip
 def test_full_default_workflow():
