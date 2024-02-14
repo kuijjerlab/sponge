@@ -1,8 +1,5 @@
 import pytest
 
-def please_dont_execute_this():
-    assert False
-
 ### Unit tests ###
 
 # Helper functions
@@ -67,12 +64,6 @@ import os
 from sponge.sponge import Sponge
 
 from shutil import rmtree
-
-# def test_show_tmp_path(tmp_path):
-#     print (tmp_path)
-#     print (f'{tmp_path}/ppi_prior.tsv')
-#     assert False
-
 
 @pytest.mark.skip
 def test_full_default_workflow():
