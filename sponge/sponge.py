@@ -19,7 +19,7 @@ from sponge.filtering import *
 
 from shutil import rmtree
 
-FINGERPRINTS = defaultdict(Dict[str, Union[str, datetime, bool]])
+FINGERPRINTS = Dict[str, Dict[str, Union[str, datetime, bool]]]
 
 ### Class definition ###
 class Sponge:
@@ -301,6 +301,7 @@ class Sponge:
             else:
                 # Prompt was refused
                 return False
+            return True
 
 
     def retrieve_file(
@@ -388,9 +389,11 @@ class Sponge:
                     if self.jaspar_release is None:
                         raise ValueError('The release of jaspar has to be '
                             'specified in order to retrieve the bigbed file')
-                    to_request = to_request.format(
+                    # Hosted on two possible servers, they are both listed
+                    # in the table, new one first
+                    to_request = [tr.format(
                         year=self.jaspar_release[-4:],
-                        genome_assembly=self.assembly)
+                        genome_assembly=self.assembly) for tr in to_request]
                     version = self.jaspar_release
                 elif description == 'homologene':
                     # The version needs to be determined via a separate request

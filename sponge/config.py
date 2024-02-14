@@ -5,10 +5,13 @@ import pandas as pd
 FILE_DF = pd.DataFrame(
     {'description': ['homologene', 'promoter', 'jaspar_bigbed', 'ensembl'],
      'name': ['homologene.tsv', 'promoters.bed', 'JASPAR.bb', 'ensembl.tsv'],
-     'url': ['https://ftp.ncbi.nih.gov/pub/HomoloGene/current/homologene.data',
+     'url': ['https://ftp.ncbi.nih.gov/pub/HomoloGene/last-archive/'
+             'homologene.data',
              None,
-             'http://expdata.cmmt.ubc.ca/JASPAR/downloads/UCSC_tracks/{year}'
+             ['http://frigg.uio.no/JASPAR/JASPAR_TFBSs/{year}'
              '/JASPAR{year}_{genome_assembly}.bb',
+             'http://expdata.cmmt.ubc.ca/JASPAR/downloads/UCSC_tracks/{year}'
+             '/JASPAR{year}_{genome_assembly}.bb'],
              None],
      'eval': [None,
               'load_promoters_from_biomart(**options)',

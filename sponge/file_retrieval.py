@@ -6,7 +6,7 @@ import gzip
 
 from biomart import BiomartServer
 
-from typing import Optional, Union, Iterable, Tuple, Dict
+from typing import Optional, Union, Iterable, Tuple, Dict, List
 
 from io import BytesIO
 
@@ -268,9 +268,9 @@ def load_ensembl_from_biomart(
 
 
 def download_with_progress(
-    url: Union[str, requests.models.Response],
+    url: Union[List[str], str, requests.models.Response],
     file_path: Optional[FILE_LIKE] = None,
-    desc: str = 'response'
+    desc: str = 'response',
 ) -> Optional[BytesIO]:
     """
     Downloads from a given URL or retrieves a response to a given 
@@ -295,7 +295,26 @@ def download_with_progress(
     
     # Determine the type of request
     if type(url) == str:
-        request = requests.get(url, stream=True)
+        try:
+            request = requests.get(url, stream=True)
+        except requests.exceptions.SSLError as ssl:
+            print ('The following verification error has occured:')
+            print (ssl)
+            print ('Retrying without verification')
+            request = requests.get(url, stream=True, verify=False)
+    elif isinstance(url, List):
+        # Multiple possible urls, use the first one that works
+        for pos,u in enumerate(url):
+            try: 
+                return download_with_progress(u, 
+                    file_path=file_path, desc=desc)
+            except requests.exceptions.ConnectionError as conn:
+                if pos < len(url) - 1:
+                    print ('The following URL was unreachable:')
+                    print (u)
+                    print ('Trying the next one')
+                else:
+                    raise conn
     else:
         request = url
     total = int(request.headers.get('content-length', 0))   
