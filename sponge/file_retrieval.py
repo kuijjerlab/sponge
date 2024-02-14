@@ -21,7 +21,7 @@ FILE_LIKE = Union[str, bytes, os.PathLike]
 
 ### Functions ###
 def prompt_to_confirm(
-    question: str
+    question: str,
 ) -> bool:
     """
     Asks the user to confirm the choice interactively, using the
@@ -56,7 +56,7 @@ def prompt_to_confirm(
 
 def description_to_path(
     description: str,
-    temp_folder: PATH
+    temp_folder: PATH,
 ) -> Optional[str]:
     """
     Converts the description of a file to its expected path.
@@ -88,7 +88,7 @@ def description_to_path(
 
 def check_file_exists(
     description: str,
-    temp_folder: PATH
+    temp_folder: PATH,
 ) -> bool:
     """
     Checks if the file corresponding to the description exists.
@@ -116,7 +116,7 @@ def load_promoters_from_biomart(
         [str(i) for i in range(1,23)] + ['MT', 'X', 'Y'],
     chromosome_mapping: pd.Series = DEFAULT_MAPPING,
     tss_offset: Tuple[int, int] = (-750, 250),
-    keep_ensembl: bool = True
+    keep_ensembl: bool = True,
 ) -> Dict[str, Union[str, pd.DataFrame]]:
     """
     Generates the promoter file from the data retrieved from the Ensembl
@@ -221,7 +221,7 @@ def load_promoters_from_biomart(
 
 
 def load_ensembl_from_biomart(
-    file_path: FILE_LIKE
+    file_path: FILE_LIKE,
 ) -> Dict[str, Union[str, pd.DataFrame]]:
     """
     Generates the Ensembl file which maps transcripts to genes and 
@@ -317,8 +317,8 @@ def download_with_progress(
                     raise conn
     else:
         request = url
-    total = int(request.headers.get('content-length', 0))   
-    # Determine whether to save data to a file or object       
+    total = int(request.headers.get('content-length', 0))
+    # Determine whether to save data to a file or object
     if file_path is None:
         stream = BytesIO()
     else:
@@ -340,7 +340,7 @@ def get_uniprot_mapping(
     from_db: str,
     to_db: str,
     ids: Union[str, Iterable[str]],
-    **kwargs
+    **kwargs,
 ) -> pd.DataFrame:
     """
     Attempts to get a mapping for the given IDs from Uniprot. Can be 
@@ -434,7 +434,7 @@ def get_ensembl_assembly(
 
 
 def get_chromosome_mapping(
-    assembly: str
+    assembly: str,
 ) -> Tuple[pd.Series, pd.Series]:
     """
     Returns a tuple with two pandas Series which can be used to map

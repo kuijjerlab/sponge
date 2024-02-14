@@ -17,7 +17,7 @@ def filter_edges(
     chrom: str, 
     start_ind: int, 
     final_ind: int, 
-    score_threshold: float = 400
+    score_threshold: float = 400,
 ) -> pd.DataFrame:
     """
     Filters possible binding site matches for the provided transcription
@@ -69,27 +69,3 @@ def filter_edges(
         df = pd.concat((df, max_scores), ignore_index=True, copy=False)
 
     return df
-
-
-# def filter_edges_helper(
-#     input_tuple: FILTER_INPUT
-# ) -> pd.DataFrame:
-#     """
-#     Serves as a wrapper around the filter_edges function that only
-#     takes a single input, allowing it to be processed by map_async from
-#     the multiprocessing module.
-
-#     Parameters
-#     ----------
-#     input_tuple : FILTER_INPUT
-#         A tuple of all inputs to the filter_edges function, for more
-#         details refer to its docstring
-
-#     Returns
-#     -------
-#     pd.DataFrame
-#         A pandas DataFrame containing the filtered edges corresponding
-#         to the given input
-#     """
-
-#     return filter_edges(*input_tuple)

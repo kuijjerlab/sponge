@@ -11,7 +11,7 @@ from datetime import datetime
 
 ### Functions ###
 def plogp(
-    x: float
+    x: float,
 ) -> float:   
     """
     Returns x*log2(x) for a number, handles the 0 case properly.
@@ -34,7 +34,7 @@ def plogp(
 
 
 def calculate_ic(
-    motif: Motif
+    motif: Motif,
 ) -> float:
     """
     Calculates the information content for a given motif, assuming equal 
@@ -61,7 +61,7 @@ def calculate_ic(
 
 
 def adjust_gene_name(
-    gene: str
+    gene: str,
 ) -> str:
     """
     Adjusts the gene name by converting the last two letters to 
@@ -82,7 +82,7 @@ def adjust_gene_name(
 
 
 def parse_datetime(
-    datetime: Union[str, datetime]
+    datetime: Union[str, datetime],
 ) -> str:
     """
     Converts the provided datetime object into a formatted string, 

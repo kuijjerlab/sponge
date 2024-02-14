@@ -70,7 +70,7 @@ class Sponge:
         weighted: bool = False,
         motif_outfile: FILE_LIKE = 'motif_prior.tsv',
         ppi_outfile: FILE_LIKE = 'ppi_prior.tsv',
-        prompt: bool = True
+        prompt: bool = True,
     ):
         """
         Initialises an instance of the Sponge class.
@@ -180,7 +180,7 @@ class Sponge:
 
     def initialise_jaspar(
         self,
-        jaspar_release: Optional[str] = None
+        jaspar_release: Optional[str] = None,
     ) -> None:
         """
         Initialises the JASPAR database object to be used for motif
@@ -225,7 +225,7 @@ class Sponge:
     ### File retrieval functions ###
     def prepare_files(
         self,
-        prompt: bool = True
+        prompt: bool = True,
     ) -> bool:
         """
         Locates or downloads the files required for the running of the
@@ -307,7 +307,7 @@ class Sponge:
     def retrieve_file(
         self,
         description: str,
-        prompt: bool = True
+        prompt: bool = True,
     ) -> Optional[str]:
         """
         Attempts to retrieve a file corresponding to a given 
@@ -414,7 +414,7 @@ class Sponge:
     def update_label_in_cache(
         self,
         temp_fingerprint: FINGERPRINTS,
-        label: str
+        label: str,
     ) -> None:
         """
         Updates a given label in the cached fingerprint file.
@@ -440,7 +440,7 @@ class Sponge:
         label: str,
         version: str,
         provided: bool = False,
-        cached: bool = False
+        cached: bool = False,
     ) -> None:
         """
         Logs the fingerprint (label, version, retrieval time) for a
@@ -491,7 +491,7 @@ class Sponge:
 
     ### Main workflow functions ###
     def run_default_workflow(  
-        self
+        self,
     ) -> None:
         """
         Runs the default workflow by running the following functions
@@ -522,7 +522,7 @@ class Sponge:
 
     def select_tfs(
         self,
-        drop_heterodimers: Optional[bool] = None
+        drop_heterodimers: Optional[bool] = None,
     ) -> None:
         """
         Selects transcription factors from the newest version of the
@@ -592,7 +592,7 @@ class Sponge:
     def find_human_homologs(
         self, 
         homologene_file: Optional[FILE_LIKE] = None,
-        prompt: bool = True
+        prompt: bool = True,
     ) -> None:
         """
         Attempts to map all initially selected non-human transcription
@@ -657,7 +657,7 @@ class Sponge:
             on='Accession', rsuffix='_HG')
 
         def corresponding_id(
-            name: str
+            name: str,
         ) -> np.array:
             """
             Retrieves the corresponding group ID for a given gene name 
@@ -752,7 +752,7 @@ class Sponge:
         score_threshold: Optional[float] = None,
         chromosomes: Optional[Iterable[str]] = None,
         n_processes: Optional[int] = None,
-        prompt: bool = True
+        prompt: bool = True,
     ) -> None:
         """
         Filters all the binding sites in the JASPAR bigbed file to
@@ -858,7 +858,7 @@ class Sponge:
     
     def load_matches(
         self,
-        file_path: FILE_LIKE
+        file_path: FILE_LIKE,
     ):
         """
         Loads the filtered matches from a file, allows the use of
@@ -879,7 +879,7 @@ class Sponge:
 
 
     def retrieve_ppi(
-        self
+        self,
     ) -> None:
         """
         Retrieves the protein-protein interaction data from the STRING
@@ -911,8 +911,9 @@ class Sponge:
             mapping_df['preferredName']]['preferredName'])
         # Log the STRING version in the fingerprint
         version_request = requests.get(f'{STRING_URL}version')
-        version_df = pd.read_csv(BytesIO(version_request.content), sep='\t')
-        self.log_fingerprint('STRING', version_df['string_version'])
+        version_df = pd.read_csv(BytesIO(version_request.content), sep='\t', 
+            dtype=str)
+        self.log_fingerprint('STRING', version_df['string_version'].loc[0])
         
         if len(ids_to_check) > 0:
             # Retrieve UniProt identifiers for the genes with differing names
@@ -957,7 +958,7 @@ class Sponge:
     def write_ppi_prior(
         self,
         output_path: Optional[FILE_LIKE] = None,
-        weighted: Optional[bool] = None
+        weighted: Optional[bool] = None,
     ) -> None:
         """
         Writes the protein-protein interaction prior network into a 
@@ -1001,7 +1002,7 @@ class Sponge:
         ensembl_file: Optional[FILE_LIKE] = None,
         prompt: bool = True,
         use_gene_names: Optional[bool] = None,
-        protein_coding_only: Optional[bool] = None
+        protein_coding_only: Optional[bool] = None,
     ) -> None:
         """
         Aggregates all the matches corresponding to individual 
@@ -1093,7 +1094,7 @@ class Sponge:
         self,
         output_path: Optional[FILE_LIKE] = None,
         use_gene_names: Optional[bool] = None,
-        weighted: Optional[bool] = None
+        weighted: Optional[bool] = None,
     ) -> None:
         """
         Writes the motif (transcription factor - gene) prior network 
@@ -1148,7 +1149,7 @@ class Sponge:
 
 
     def show_fingerprint(
-        self
+        self,
     ) -> None:
         """
         Prints the fingerprint for the files and databases used by this
@@ -1176,7 +1177,7 @@ class Sponge:
 
 
     def clear_cache(
-        self
+        self,
     ) -> None:
         """
         Removes the temporary folder and everything in it.
