@@ -37,4 +37,4 @@ jobs:
         pip install -e .
 
     - name: Run the tests
-      run: pytest tests
+      run: pytest tests -m 'not slow'

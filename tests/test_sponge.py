@@ -51,7 +51,7 @@ def test_parse_datetime(input, expected_output):
 
 
 # Filtering functions
-import sponge.filtering as filter_f 
+import sponge.filtering as filter_f
 
 
 # File retrieval functions
@@ -63,27 +63,20 @@ import os
 
 from sponge.sponge import Sponge
 
-from shutil import rmtree
-
-@pytest.mark.skip
-def test_full_default_workflow():
-    temp_folder = '.sponge_temp/'
-    ppi_output = 'ppi_prior.tsv'
-    motif_output = 'motif_prior.tsv'
-
-    if os.path.exists(temp_folder):
-        rmtree(temp_folder)
-    for file in [ppi_output, motif_output]:
-        if os.path.exists(file):
-            os.remove(file)
+# The test is marked as slow because the download of the bigbed file takes 
+# a lot of time and the filtering is also time consuming unless parallelised
+@pytest.mark.slow
+def test_full_default_workflow(tmp_path):
+    # Make use of the tmp_path fixture to store the files in a temporary path
+    ppi_output = os.path.join(tmp_path, 'ppi_prior.tsv')
+    motif_output = os.path.join(tmp_path, 'motif_prior.tsv')
 
     sponge_obj = Sponge(
         run_default=True,
-        temp_folder=temp_folder,
+        temp_folder=tmp_path,
         ppi_outfile=ppi_output,
         motif_outfile=motif_output,
     )
-    sponge_obj.clear_cache()
 
     assert os.path.exists(ppi_output)
     assert os.path.exists(motif_output)

@@ -28,3 +28,9 @@ dependencies = [
 
 [project.urls]
 Repository = "https://github.com/ladislav-hovan/sponge"
+
+[tool.pytest.ini_options]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "serial",
+]
