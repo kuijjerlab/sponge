@@ -1,20 +1,16 @@
 ### Imports ###
-import os
-
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from typing import Union
-
+from pathlib import Path
 from sklearn.metrics import classification_report, confusion_matrix
 
-FILE_LIKE = Union[str, bytes, os.PathLike]
 MOTIF_COLS = ['tf', 'gene', 'edge']
 
 ### Functions ###
 def load_prior(
-    path: FILE_LIKE,
+    path: Path,
 ) -> pd.DataFrame:
     
     return pd.read_csv(path, sep='\t', header=None, names=MOTIF_COLS)

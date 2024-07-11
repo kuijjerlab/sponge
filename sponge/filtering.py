@@ -1,17 +1,16 @@
 ### Imports ###
 import bioframe
-import os
 
 import pandas as pd
 
-from typing import Union, Iterable, Tuple
+from pathlib import Path
+from typing import Iterable, Tuple
 
-FILE_LIKE = Union[str, bytes, os.PathLike]
 FILTER_INPUT = Tuple[str, pd.DataFrame, Iterable[str], str, int, int, float]
 
 ### Functions ###
 def filter_edges(
-    bb_ref: FILE_LIKE, 
+    bb_ref: Path, 
     bed_df: pd.DataFrame, 
     motif_list: Iterable[str], 
     chrom: str, 
@@ -26,7 +25,7 @@ def filter_edges(
 
     Parameters
     ----------
-    bb_ref : FILE_LIKE
+    bb_ref : Path
         The path to a bigbed file that stores all possible matches
     bed_df : pd.DataFrame
         A pandas DataFrame containing the regions of interest in the

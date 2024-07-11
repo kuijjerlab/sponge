@@ -4,20 +4,15 @@ import pickle
 import numpy as np
 
 from datetime import datetime
-
+from math import ceil, sqrt
+from multiprocessing import Pool
 from pyjaspar import jaspardb
-
+from shutil import rmtree
 from typing import Mapping
 
-from multiprocessing import Pool
-
-from math import ceil, sqrt
-
 from sponge.file_retrieval import *
-from sponge.helper_functions import *
 from sponge.filtering import *
-
-from shutil import rmtree
+from sponge.helper_functions import *
 
 FINGERPRINTS = Dict[str, Dict[str, Union[str, datetime, bool]]]
 
@@ -54,12 +49,12 @@ class Sponge:
 
     def __init__(
         self,
-        temp_folder: PATH = '.sponge_temp',
+        temp_folder: Path = '.sponge_temp',
         run_default: bool = False,
         jaspar_release: Optional[str] = None,
         genome_assembly: Optional[str] = None,
         n_processes: int = 1,
-        paths_to_files: Mapping[str, FILE_LIKE] = {},
+        paths_to_files: Mapping[str, Path] = {},
         drop_heterodimers: bool = True,
         chromosomes: Iterable[str] = [f'chr{i}' for i in [j for j in 
             range(1, 23)] + ['M', 'X', 'Y']],
@@ -68,8 +63,8 @@ class Sponge:
         protein_coding_only: bool = False,
         use_gene_names: bool = True,
         weighted: bool = False,
-        motif_outfile: FILE_LIKE = 'motif_prior.tsv',
-        ppi_outfile: FILE_LIKE = 'ppi_prior.tsv',
+        motif_outfile: Path = 'motif_prior.tsv',
+        ppi_outfile: Path = 'ppi_prior.tsv',
         prompt: bool = True,
     ):
         """
@@ -77,7 +72,7 @@ class Sponge:
 
         Parameters
         ----------
-        temp_folder : PATH, optional
+        temp_folder : Path, optional
             The temporary folder for saving downloaded files, 
             by default '.sponge_temp'
         run_default : bool, optional
@@ -94,7 +89,7 @@ class Sponge:
         n_processes : int, optional
             The number of processes to run in parallel for the filtering
             of the bigbed file, by default 1
-        paths_to_files : Mapping[str, FILE_LIKE], optional
+        paths_to_files : Mapping[str, Path], optional
             A dictionary of paths to required files, keyed by their 
             descriptions; if a path is not provided the files will be 
             looked for in the temp folder or downloaded, by default {}
@@ -123,10 +118,10 @@ class Sponge:
         weighted : bool, optional
             Whether to use weighted rather than binary prior networks,
             by default False
-        motif_outfile : FILE_LIKE, optional
+        motif_outfile : Path, optional
             The path to save the motif prior into, by default 
             'motif_prior.tsv'
-        ppi_outfile : FILE_LIKE, optional
+        ppi_outfile : Path, optional
             The path to save the PPI prior into, by default
             'ppi_prior.tsv'
         prompt : bool, optional
@@ -591,7 +586,7 @@ class Sponge:
 
     def find_human_homologs(
         self, 
-        homologene_file: Optional[FILE_LIKE] = None,
+        homologene_file: Optional[Path] = None,
         prompt: bool = True,
     ) -> None:
         """
@@ -600,7 +595,7 @@ class Sponge:
 
         Parameters
         ----------
-        homologene_file : Optional[FILE_LIKE], 
+        homologene_file : Optional[Path], 
             optional
             The path to a homologene file or None to use cache or
             download it, by default None
@@ -747,8 +742,8 @@ class Sponge:
 
     def filter_matches(
         self, 
-        promoter_file: Optional[FILE_LIKE] = None, 
-        bigbed_file: Optional[FILE_LIKE] = None,
+        promoter_file: Optional[Path] = None, 
+        bigbed_file: Optional[Path] = None,
         score_threshold: Optional[float] = None,
         chromosomes: Optional[Iterable[str]] = None,
         n_processes: Optional[int] = None,
@@ -762,10 +757,10 @@ class Sponge:
 
         Parameters
         ----------
-        promoter_file : Optional[FILE_LIKE], optional
+        promoter_file : Optional[Path], optional
             The path to a promoter file or None to use cache or
             download it, by default None
-        bigbed_file : Optional[FILE_LIKE], optional
+        bigbed_file : Optional[Path], optional
             The path to a JASPAR bigbed file or None to use cache or
             download it, by default None
         score_threshold : Optional[float], optional
@@ -858,7 +853,7 @@ class Sponge:
     
     def load_matches(
         self,
-        file_path: FILE_LIKE,
+        file_path: Path,
     ):
         """
         Loads the filtered matches from a file, allows the use of
@@ -867,7 +862,7 @@ class Sponge:
 
         Parameters
         ----------
-        file_path : FILE_LIKE
+        file_path : Path
             The path to a file that contains the filtered matches 
             in a format compatible with what filter_matches generates
         """
@@ -957,7 +952,7 @@ class Sponge:
 
     def write_ppi_prior(
         self,
-        output_path: Optional[FILE_LIKE] = None,
+        output_path: Optional[Path] = None,
         weighted: Optional[bool] = None,
     ) -> None:
         """
@@ -966,7 +961,7 @@ class Sponge:
 
         Parameters
         ----------
-        output_path : Optional[FILE_LIKE], optional
+        output_path : Optional[Path], optional
             The path to write the prior into or None to follow the 
             option from the initialisation, by default None
         weighted : Optional[bool], optional
@@ -999,7 +994,7 @@ class Sponge:
 
     def aggregate_matches(
         self,
-        ensembl_file: Optional[FILE_LIKE] = None,
+        ensembl_file: Optional[Path] = None,
         prompt: bool = True,
         use_gene_names: Optional[bool] = None,
         protein_coding_only: Optional[bool] = None,
@@ -1011,7 +1006,7 @@ class Sponge:
 
         Parameters
         ----------
-        ensembl_file : Optional[FILE_LIKE], optional
+        ensembl_file : Optional[Path], optional
             The path to an Ensembl file or None to use cache or
             download it, by default None
         prompt : bool, optional
@@ -1092,7 +1087,7 @@ class Sponge:
 
     def write_motif_prior(
         self,
-        output_path: Optional[FILE_LIKE] = None,
+        output_path: Optional[Path] = None,
         use_gene_names: Optional[bool] = None,
         weighted: Optional[bool] = None,
     ) -> None:
@@ -1102,7 +1097,7 @@ class Sponge:
 
         Parameters
         ----------
-        output_path : Optional[FILE_LIKE], optional
+        output_path : Optional[Path], optional
             The path to write the prior into or None to follow the 
             option from the initialisation, by default None
         use_gene_names : Optional[bool], optional

@@ -5,19 +5,12 @@ import os
 import gzip
 
 from biomart import BiomartServer
-
-from typing import Optional, Union, Iterable, Tuple, Dict, List
-
-from io import BytesIO
-
 from collections import defaultdict
-
-from tqdm import tqdm
-
+from io import BytesIO
+from pathlib import Path
 from sponge.config import *
-
-PATH = Union[str, os.PathLike]
-FILE_LIKE = Union[str, bytes, os.PathLike]
+from tqdm import tqdm
+from typing import Optional, Union, Iterable, Tuple, Dict, List
 
 ### Functions ###
 def prompt_to_confirm(
@@ -56,7 +49,7 @@ def prompt_to_confirm(
 
 def description_to_path(
     description: str,
-    temp_folder: PATH,
+    temp_folder: Path,
 ) -> Optional[str]:
     """
     Converts the description of a file to its expected path.
@@ -65,7 +58,7 @@ def description_to_path(
     ----------
     description : str
         The description of a file
-    temp_folder : PATH
+    temp_folder : Path
         The path to the temp folder where files are located
 
     Returns
@@ -88,7 +81,7 @@ def description_to_path(
 
 def check_file_exists(
     description: str,
-    temp_folder: PATH,
+    temp_folder: Path,
 ) -> bool:
     """
     Checks if the file corresponding to the description exists.
@@ -96,9 +89,9 @@ def check_file_exists(
     Parameters
     ----------
     description : str
-        The description of a file
-    temp_folder : PATH
-        The path to the temp folder where files are located
+        Description of a file
+    temp_folder : Path
+        Path to the temp folder where files are located
 
     Returns
     -------
@@ -110,7 +103,7 @@ def check_file_exists(
 
 
 def load_promoters_from_biomart(
-    file_path: FILE_LIKE,
+    file_path: Path,
     filter_basic: bool = True,
     chromosomes: Optional[Iterable[str]] = 
         [str(i) for i in range(1,23)] + ['MT', 'X', 'Y'],
@@ -125,7 +118,7 @@ def load_promoters_from_biomart(
 
     Parameters
     ----------
-    file_path : FILE_LIKE
+    file_path : Path
         The path to where the resulting file should be saved
     filter_basic : bool, optional
         Whether to filter for only the GENCODE basic transcripts, 
@@ -221,7 +214,7 @@ def load_promoters_from_biomart(
 
 
 def load_ensembl_from_biomart(
-    file_path: FILE_LIKE,
+    file_path: Path,
 ) -> Dict[str, Union[str, pd.DataFrame]]:
     """
     Generates the Ensembl file which maps transcripts to genes and 
@@ -231,8 +224,8 @@ def load_ensembl_from_biomart(
 
     Parameters
     ----------
-    file_path : FILE_LIKE
-        The path to where the resulting file should be saved
+    file_path : Path
+        Path to where the resulting file should be saved
 
     Returns
     -------
@@ -269,7 +262,7 @@ def load_ensembl_from_biomart(
 
 def download_with_progress(
     url: Union[List[str], str, requests.models.Response],
-    file_path: Optional[FILE_LIKE] = None,
+    file_path: Optional[Path] = None,
     desc: str = 'response',
 ) -> Optional[BytesIO]:
     """
@@ -280,7 +273,7 @@ def download_with_progress(
     ----------
     url : Union[str, requests.models.Response]
         The URL or response to be processed
-    file_path : Optional[FILE_LIKE], optional
+    file_path : Optional[Path], optional
         The file path for saving or None to save into a BytesIO object,
         by default None
     desc : str, optional

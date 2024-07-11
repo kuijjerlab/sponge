@@ -1,13 +1,10 @@
 ### Imports ###
 import pandas as pd
 
-from math import log2
-
 from Bio.motifs.jaspar import Motif
-
-from typing import Union
-
 from datetime import datetime
+from math import log2
+from typing import Union
 
 ### Functions ###
 def plogp(
