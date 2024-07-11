@@ -61,6 +61,7 @@ class Sponge:
             range(1, 23)] + ['M', 'X', 'Y']],
         tss_offset: Tuple[int, int] = (-750, 250),
         score_threshold: float = 400,
+        on_the_fly_processing: bool = False,
         protein_coding_only: bool = False,
         use_gene_names: bool = True,
         weighted: bool = False,
@@ -110,6 +111,10 @@ class Sponge:
         score_threshold : float, optional
             Minimal score of a match for it to be included in the
             prior, by default 400
+        on_the_fly_processing : bool, optional
+            Whether to not use the entire JASPAR bigbed file but rather
+            download individual files for the motifs of interest on the
+            fly and delete them afterwards, by default False
         protein_coding_only : bool, optional
             Whether to restrict the gene selection to only protein
             coding genes, by default False
@@ -145,6 +150,7 @@ class Sponge:
         self.chromosomes = chromosomes
         self.tss_offset = tss_offset
         self.score_threshold = score_threshold
+        self.on_the_fly_processing = on_the_fly_processing
         self.protein_coding_only = protein_coding_only
         self.use_gene_names = use_gene_names
         self.weighted = weighted
@@ -250,6 +256,11 @@ class Sponge:
         # Attemp to first use the provided paths
         provided = []
         for k,v in self.provided_paths.items():
+            if k == 'jaspar_bigbed' and self.on_the_fly_processing:
+                print ('On the fly processing was chosen but path to the '
+                    'JASPAR bigbed file was provided, turning off on the fly '
+                    'processing')
+                self.on_the_fly_processing = False
             if k not in FILE_DF.index:
                 print (f'Unrecognised file type: {k}, ignoring provided path')
                 continue
@@ -266,6 +277,8 @@ class Sponge:
         to_check = [file for file in FILE_DF.index if file not in provided]
         to_retrieve = {}
         for file in to_check:
+            if file == 'jaspar_bigbed' and self.on_the_fly_processing:
+                continue
             if not check_file_exists(file, self.temp_folder):
                 to_retrieve[file] = FILE_DF.loc[file, 'name']
             else:
