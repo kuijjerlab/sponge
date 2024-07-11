@@ -44,7 +44,7 @@ import datetime
 
 @pytest.mark.parametrize("input, expected_output", [
     ('a_string', 'a_string'),
-    (datetime.datetime(1992, 5, 29, 23, 15), '29/05/1992, 23:15:00')
+    (datetime.datetime(1992, 5, 29, 23, 15), '29/05/1992, 23:15:00'),
 ])
 def test_parse_datetime(input, expected_output):
     assert helper_f.parse_datetime(input) == expected_output

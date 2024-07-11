@@ -1,6 +1,8 @@
 ### Imports ###
 import os
 
+import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 from typing import Union
@@ -31,10 +33,32 @@ def describe_prior(
     print (f'Network density: {100 * len(prior) / (n_tfs * n_genes):.2f} %')
 
 
+def plot_confusion_matrix(
+    data: np.array,
+) -> plt.Axes:
+    
+    s_data = data * 100 / np.sum(data)
+
+    fig,ax = plt.subplots(figsize=(6,6))
+    mappable = ax.imshow(s_data, cmap='Blues', vmin=0, vmax=100)
+    fig.colorbar(mappable, ax=ax, shrink=0.8)
+    ax.tick_params(top=True, labeltop=True, bottom=False, labelbottom=False)
+    ax.set_xticks([0,1], labels=['0 in first prior', '1 in first prior'])
+    ax.set_yticks([0,1], labels=['0 in second prior', '1 in second prior'], 
+        rotation='vertical', va='center')
+    for i in range(2):
+        for j in range(2):
+            ax.text(i, j, f'{data[i][j]:,d}\n{s_data[i][j]:.2f} %', 
+                ha='center', va='center', 
+                c='white' if s_data[i][j] > 50 else 'black')
+            
+    return ax
+
+
 def compare_priors(
     prior_1: pd.DataFrame,
     prior_2: pd.DataFrame,
-) -> None:
+) -> plt.Axes:
 
     print ('Statistics for the first prior:')
     describe_prior(prior_1)
@@ -65,4 +89,6 @@ def compare_priors(
         f'{100 * comp_df["edge_2"].mean():.2f} %')
     print ()
     print (classification_report(comp_df['edge_1'], comp_df['edge_2']))
-    print (confusion_matrix(comp_df['edge_1'], comp_df['edge_2']))
+    
+    return plot_confusion_matrix(
+        confusion_matrix(comp_df['edge_1'], comp_df['edge_2']))
