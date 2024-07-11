@@ -4,8 +4,6 @@ import pickle
 import numpy as np
 
 from datetime import datetime
-from math import ceil, sqrt
-from multiprocessing import Pool
 from pyjaspar import jaspardb
 from shutil import rmtree
 from typing import Literal, Mapping
@@ -58,7 +56,7 @@ class Sponge:
         paths_to_files: Mapping[str, Path] = {},
         drop_heterodimers: bool = True,
         chromosomes: Iterable[str] = [f'chr{i}' for i in [j for j in
-            range(1, 23)] + ['M', 'X', 'Y']],
+            range(1, 23)] + ['X', 'Y']],
         tss_offset: Tuple[int, int] = (-750, 250),
         score_threshold: float = 400,
         on_the_fly_processing: bool = False,
@@ -759,6 +757,7 @@ class Sponge:
         promoter_file: Optional[Path] = None,
         bigbed_file: Optional[Path] = None,
         score_threshold: Optional[float] = None,
+        on_the_fly_processing: Optional[bool] = None,
         chromosomes: Optional[Iterable[str]] = None,
         n_processes: Optional[int] = None,
         prompt: bool = True,
@@ -781,6 +780,11 @@ class Sponge:
             Minimal score of a match for it to be included in the
             prior or None to follow the option from the initialisation,
             by default None
+        on_the_fly_processing : Optional[bool], optional
+            Whether to not use the entire JASPAR bigbed file but rather
+            download individual files for the motifs of interest on the
+            fly and delete them afterwards or None to follow the option
+            from the initialisation, by default None
         chromosomes : Optional[Iterable[str]], optional
             Which chromosomes to get the promoters from or None to
             follow the option from the initialisation, by default None
@@ -799,9 +803,13 @@ class Sponge:
         if chromosomes is None:
             chromosomes = self.chromosomes
             if chromosomes is None:
+                # Ignore pylance, this code is not unreachable
+                # It just won't be reached if type hints are followed
                 chromosomes = self.ucsc_to_ens.index
         if score_threshold is None:
             score_threshold = self.score_threshold
+        if on_the_fly_processing is None:
+            on_the_fly_processing = self.on_the_fly_processing
 
         if promoter_file is None:
             promoter_file = self.retrieve_file('promoter', prompt=prompt)
@@ -809,7 +817,7 @@ class Sponge:
                 print ('Unable to find or retrieve the promoter file, exiting')
                 return
 
-        if bigbed_file is None:
+        if bigbed_file is None and not on_the_fly_processing:
             bigbed_file = self.retrieve_file('jaspar_bigbed', prompt=prompt)
             if bigbed_file is None:
                 print ('Unable to find or retrieve the JASPAR bigbed file, '
@@ -823,38 +831,12 @@ class Sponge:
         df_full.drop(columns=['score', 'strand'], inplace=True)
         df_full.set_index('name', inplace=True)
 
-        results_list = []
-        p = Pool(n_processes)
-
-        print ()
-        print ('Iterating over the chromosomes...')
         start_time = time.time()
-        for chrom in chromosomes:
-            st_chr = time.time()
-            df_chrom = df_full[df_full['chrom'] == chrom]
-            if len(df_chrom) == 0:
-                suffix = 'no transcripts'
-            elif len(df_chrom) == 1:
-                suffix = '1 transcript'
-            else:
-                suffix = f'{len(df_chrom)} transcripts'
-            print (f'Chromosome {chrom[3:]} with ' + suffix)
-            if len(df_chrom) == 0:
-                continue
-            # This is a heuristic approximation of the ideal chunk size
-            # Based off of performance benchmarking
-            chunk_size = ceil(sqrt(len(df_chrom) / n_processes))
-            chunk_divisions = [i for i in range(0, len(df_chrom), chunk_size)]
-            input_tuples = [(bigbed_file, df_chrom, self.tf_names, chrom, i,
-                i+chunk_size, score_threshold) for i in chunk_divisions]
-            # Run the calculations in parallel
-            result = p.starmap_async(filter_edges, input_tuples,
-                chunksize=n_processes)
-            edges_chrom_list = result.get()
-            results_list += edges_chrom_list
-            elapsed_chr = time.time() - st_chr
-            print (f'Done in: {elapsed_chr // 60:n} m '
-                f'{elapsed_chr % 60:.2f} s')
+        if on_the_fly_processing:
+            pass
+        else:
+            results_list = iterate_chromosomes(df_full, bigbed_file,
+                chromosomes, self.tf_names, n_processes, score_threshold)
 
         elapsed = time.time() - start_time
         print ()

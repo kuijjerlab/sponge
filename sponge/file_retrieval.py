@@ -296,7 +296,7 @@ def download_with_progress(
             print ('Retrying without verification')
             request = requests.get(url, stream=True, verify=False)
     elif isinstance(url, List):
-        # Multiple possible urls, use the first one that works
+        # Multiple possible URLs, use the first one that works
         for pos,u in enumerate(url):
             try:
                 return download_with_progress(u,
