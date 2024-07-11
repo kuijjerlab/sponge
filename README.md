@@ -99,7 +99,7 @@ Room for improvement:
 - Add more and better tests
 
 To do:
-- Automatic flow, addition of a command line script
+- Addition of a command line script
 - Support for more species
 
 

@@ -1,6 +1,6 @@
 import pandas as pd
 
-# The links for downloading files or alternatively the names of functions that 
+# The links for downloading files or alternatively the names of functions that
 # should be executed in order to retrieve them
 FILE_DF = pd.DataFrame(
     {'description': ['homologene', 'promoter', 'jaspar_bigbed', 'ensembl'],
