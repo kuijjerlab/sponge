@@ -8,7 +8,7 @@ FILE_DF = pd.DataFrame(
      'url': ['https://ftp.ncbi.nih.gov/pub/HomoloGene/last-archive/'
              'homologene.data',
              None,
-             ['http://frigg.uio.no/JASPAR/JASPAR_TFBSs/{year}'
+             ['https://frigg.uio.no/JASPAR/JASPAR_TFBSs/{year}'
              '/JASPAR{year}_{genome_assembly}.bb',
              'http://expdata.cmmt.ubc.ca/JASPAR/downloads/UCSC_tracks/{year}'
              '/JASPAR{year}_{genome_assembly}.bb'],
@@ -21,7 +21,7 @@ FILE_DF = pd.DataFrame(
 
 # URLs to websites for downloads, should only be provided here and referenced
 # by their variable names for ease of future updates
-MOTIF_URL = ['http://frigg.uio.no/JASPAR/JASPAR_TFBSs/{year}/'
+MOTIF_URL = ['https://frigg.uio.no/JASPAR/JASPAR_TFBSs/{year}/'
     '{genome_assembly}/',
     'http://expdata.cmmt.ubc.ca/JASPAR/downloads/UCSC_tracks/{year}/'
     '{genome_assembly}/']

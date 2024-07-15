@@ -1,5 +1,6 @@
 ### Imports ###
 import bioframe
+import os
 import time
 
 import pandas as pd
@@ -8,6 +9,9 @@ from math import ceil, sqrt
 from multiprocessing import Pool
 from pathlib import Path
 from typing import List, Iterable, Tuple
+
+from sponge.config import MOTIF_URL
+from sponge.file_retrieval import download_with_progress
 
 FILTER_INPUT = Tuple[str, pd.DataFrame, Iterable[str], str, int, int, float]
 
@@ -112,15 +116,32 @@ def iterate_chromosomes(
         edges_chrom_list = result.get()
         results_list += edges_chrom_list
         elapsed_chr = time.time() - st_chr
-        print (f'Done in: {elapsed_chr // 60:n} m '
-            f'{elapsed_chr % 60:.2f} s')
+        print (f'Done in: {elapsed_chr // 60:n} m {elapsed_chr % 60:.2f} s')
 
     return results_list
 
 
 def iterate_motifs(
-    
+    df_full: pd.DataFrame,
+    chromosomes: List[str],
+    tf_names: List[str],
+    matrix_ids: List[str],
+    temp_folder: Path,
+    jaspar_release: str,
+    assembly: str,
+    n_processes: int = 1,
+    score_threshold: float = 400,
 ) -> List[pd.DataFrame]:
 
 
-    pass
+    for tf,m_id in zip(tf_names, matrix_ids):
+        file_name = f'{m_id}.tsv.gz'
+        to_request = [tr.format(
+            year=jaspar_release[-4:],
+            genome_assembly=assembly) + file_name for tr in MOTIF_URL]
+        save_path = os.path.join(temp_folder, file_name)
+
+        try:
+            download_with_progress(to_request, save_path)
+        except Exception as e:
+            print (f'Unable to download {file_name}')

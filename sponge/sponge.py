@@ -55,7 +55,7 @@ class Sponge:
         n_processes: int = 1,
         paths_to_files: Mapping[str, Path] = {},
         drop_heterodimers: bool = True,
-        chromosomes: Iterable[str] = [f'chr{i}' for i in [j for j in
+        chromosomes: Optional[Iterable[str]] = [f'chr{i}' for i in [j for j in
             range(1, 23)] + ['X', 'Y']],
         tss_offset: Tuple[int, int] = (-750, 250),
         score_threshold: float = 400,
@@ -98,10 +98,10 @@ class Sponge:
         drop_heterodimers : bool, optional
             Whether to drop the heterodimer motifs from consideration,
             by default True
-        chromosomes : Iterable[str], optional
-            Which chromosomes to get the promoters from, by default
-            [f'chr{i}' for i in [j for j in range(1, 23)] +
-            ['M', 'X', 'Y']]
+        chromosomes : Optional[Iterable[str]], optional
+            Which chromosomes to get the promoters from or None to use
+            all chromosomes present in the assembly, by default
+            [f'chr{i}' for i in [j for j in range(1, 23)] + ['X', 'Y']]
         tss_offset : Tuple[int, int], optional
             Offset from the transcription start site to use for the
             assignment of transcription factors to promoters,
@@ -743,13 +743,16 @@ class Sponge:
         print ()
         print ('Final number of IDs which will be replaced by human homologs:',
                len(animal_to_human))
+        # Doing it this way ensures the ordering matches
         matrix_ids = [motif.matrix_id for motif in self.motifs if
+            (motif.name in human_motif_names or motif.name in animal_to_human)]
+        tf_names = [motif.name for motif in self.motifs if
             (motif.name in human_motif_names or motif.name in animal_to_human)]
         print ('Final number of total matrix IDs:', len(matrix_ids))
 
         self.animal_to_human = animal_to_human
         self.matrix_ids = matrix_ids
-        self.tf_names = human_motif_names + list(animal_to_human.keys())
+        self.tf_names = tf_names
 
 
     def filter_matches(
@@ -803,8 +806,6 @@ class Sponge:
         if chromosomes is None:
             chromosomes = self.chromosomes
             if chromosomes is None:
-                # Ignore pylance, this code is not unreachable
-                # It just won't be reached if type hints are followed
                 chromosomes = self.ucsc_to_ens.index
         if score_threshold is None:
             score_threshold = self.score_threshold

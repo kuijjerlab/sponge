@@ -295,6 +295,8 @@ def download_with_progress(
             print (ssl)
             print ('Retrying without verification')
             request = requests.get(url, stream=True, verify=False)
+        # Client or server errors
+        request.raise_for_status()
     elif isinstance(url, List):
         # Multiple possible URLs, use the first one that works
         for pos,u in enumerate(url):
@@ -308,6 +310,14 @@ def download_with_progress(
                     print ('Trying the next one')
                 else:
                     raise conn
+            except requests.exceptions.HTTPError as http:
+                if pos < len(url) - 1:
+                    print ('An HTTP error was raised when connecting to this '
+                        'URL:')
+                    print (u)
+                    print ('Trying the next one')
+                else:
+                    raise http
     else:
         request = url
     total = int(request.headers.get('content-length', 0))
