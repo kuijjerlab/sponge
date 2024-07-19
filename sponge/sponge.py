@@ -4,8 +4,6 @@ import pickle
 import numpy as np
 
 from datetime import datetime
-from math import ceil, sqrt
-from multiprocessing import Pool
 from pyjaspar import jaspardb
 from shutil import rmtree
 from typing import Literal, Mapping
@@ -57,10 +55,11 @@ class Sponge:
         n_processes: int = 1,
         paths_to_files: Mapping[str, Path] = {},
         drop_heterodimers: bool = True,
-        chromosomes: Iterable[str] = [f'chr{i}' for i in [j for j in
-            range(1, 23)] + ['M', 'X', 'Y']],
+        chromosomes: Optional[Iterable[str]] = [f'chr{i}' for i in [j for j in
+            range(1, 23)] + ['X', 'Y']],
         tss_offset: Tuple[int, int] = (-750, 250),
         score_threshold: float = 400,
+        on_the_fly_processing: bool = False,
         protein_coding_only: bool = False,
         use_gene_names: bool = True,
         weighted: bool = False,
@@ -99,10 +98,10 @@ class Sponge:
         drop_heterodimers : bool, optional
             Whether to drop the heterodimer motifs from consideration,
             by default True
-        chromosomes : Iterable[str], optional
-            Which chromosomes to get the promoters from, by default
-            [f'chr{i}' for i in [j for j in range(1, 23)] +
-            ['M', 'X', 'Y']]
+        chromosomes : Optional[Iterable[str]], optional
+            Which chromosomes to get the promoters from or None to use
+            all chromosomes present in the assembly, by default
+            [f'chr{i}' for i in [j for j in range(1, 23)] + ['X', 'Y']]
         tss_offset : Tuple[int, int], optional
             Offset from the transcription start site to use for the
             assignment of transcription factors to promoters,
@@ -110,6 +109,10 @@ class Sponge:
         score_threshold : float, optional
             Minimal score of a match for it to be included in the
             prior, by default 400
+        on_the_fly_processing : bool, optional
+            Whether to not use the entire JASPAR bigbed file but rather
+            download individual files for the motifs of interest on the
+            fly and delete them afterwards, by default False
         protein_coding_only : bool, optional
             Whether to restrict the gene selection to only protein
             coding genes, by default False
@@ -145,6 +148,7 @@ class Sponge:
         self.chromosomes = chromosomes
         self.tss_offset = tss_offset
         self.score_threshold = score_threshold
+        self.on_the_fly_processing = on_the_fly_processing
         self.protein_coding_only = protein_coding_only
         self.use_gene_names = use_gene_names
         self.weighted = weighted
@@ -250,6 +254,11 @@ class Sponge:
         # Attemp to first use the provided paths
         provided = []
         for k,v in self.provided_paths.items():
+            if k == 'jaspar_bigbed' and self.on_the_fly_processing:
+                print ('On the fly processing was chosen but path to the '
+                    'JASPAR bigbed file was provided, turning off on the fly '
+                    'processing')
+                self.on_the_fly_processing = False
             if k not in FILE_DF.index:
                 print (f'Unrecognised file type: {k}, ignoring provided path')
                 continue
@@ -266,6 +275,8 @@ class Sponge:
         to_check = [file for file in FILE_DF.index if file not in provided]
         to_retrieve = {}
         for file in to_check:
+            if file == 'jaspar_bigbed' and self.on_the_fly_processing:
+                continue
             if not check_file_exists(file, self.temp_folder):
                 to_retrieve[file] = FILE_DF.loc[file, 'name']
             else:
@@ -538,29 +549,34 @@ class Sponge:
         if drop_heterodimers is None:
             drop_heterodimers = self.drop_heterodimers
 
-        # All vertebrate motifs
-        motifs = self.jdb_obj.fetch_motifs(collection='CORE',
-            tax_group='vertebrates', all_versions=True)
-        print ()
-        print ('All motif versions:', len(motifs))
-        print ('Motif base IDs:', len(set([i.base_id for i in motifs])))
+        # # All vertebrate motifs
+        # motifs = self.jdb_obj.fetch_motifs(collection='CORE',
+        #     tax_group='vertebrates', all_versions=True)
+        # print ()
+        # print ('All motif versions:', len(motifs))
+        # print ('Motif base IDs:', len(set([i.base_id for i in motifs])))
 
-        # Select latest, preferring human ones
-        latest = {}
-        for i in motifs:
-            if i.base_id not in latest:
-                latest[i.base_id] = [i.matrix_id, i.species]
-            else:
-                # Replace with newer version if the new one is human or the old
-                # one isn't
-                if (('9606' in i.species) or
-                    ('9606' not in latest[i.base_id][1])):
-                    # This could be added to the logical condition above but
-                    # this is more readable
-                    if int(i.matrix_id[-1]) > int(latest[i.base_id][0][-1]):
-                        latest[i.base_id] = [i.matrix_id, i.species]
-        motifs_latest = [i for i in motifs if
-            i.matrix_id == latest[i.base_id][0]]
+        # # Select latest, preferring human ones
+        # latest = {}
+        # for i in motifs:
+        #     if i.base_id not in latest:
+        #         latest[i.base_id] = [i.matrix_id, i.species]
+        #     else:
+        #         # Replace with newer version if the new one is human or the old
+        #         # one isn't
+        #         if (('9606' in i.species) or
+        #             ('9606' not in latest[i.base_id][1])):
+        #             # This could be added to the logical condition above but
+        #             # this is more readable
+        #             if int(i.matrix_id[-1]) > int(latest[i.base_id][0][-1]):
+        #                 latest[i.base_id] = [i.matrix_id, i.species]
+        # motifs_latest = [i for i in motifs if
+        #     i.matrix_id == latest[i.base_id][0]]
+
+        # Latest vertebrate motifs
+        motifs = self.jdb_obj.fetch_motifs(collection='CORE',
+            tax_group='vertebrates')
+        motifs_latest = motifs
 
         # Keep only one motif per TF
         # Consider dropping this requirement maybe
@@ -732,13 +748,16 @@ class Sponge:
         print ()
         print ('Final number of IDs which will be replaced by human homologs:',
                len(animal_to_human))
+        # Doing it this way ensures the ordering matches
         matrix_ids = [motif.matrix_id for motif in self.motifs if
+            (motif.name in human_motif_names or motif.name in animal_to_human)]
+        tf_names = [motif.name for motif in self.motifs if
             (motif.name in human_motif_names or motif.name in animal_to_human)]
         print ('Final number of total matrix IDs:', len(matrix_ids))
 
         self.animal_to_human = animal_to_human
         self.matrix_ids = matrix_ids
-        self.tf_names = human_motif_names + list(animal_to_human.keys())
+        self.tf_names = tf_names
 
 
     def filter_matches(
@@ -746,6 +765,7 @@ class Sponge:
         promoter_file: Optional[Path] = None,
         bigbed_file: Optional[Path] = None,
         score_threshold: Optional[float] = None,
+        on_the_fly_processing: Optional[bool] = None,
         chromosomes: Optional[Iterable[str]] = None,
         n_processes: Optional[int] = None,
         prompt: bool = True,
@@ -768,6 +788,11 @@ class Sponge:
             Minimal score of a match for it to be included in the
             prior or None to follow the option from the initialisation,
             by default None
+        on_the_fly_processing : Optional[bool], optional
+            Whether to not use the entire JASPAR bigbed file but rather
+            download individual files for the motifs of interest on the
+            fly and delete them afterwards or None to follow the option
+            from the initialisation, by default None
         chromosomes : Optional[Iterable[str]], optional
             Which chromosomes to get the promoters from or None to
             follow the option from the initialisation, by default None
@@ -789,6 +814,8 @@ class Sponge:
                 chromosomes = self.ucsc_to_ens.index
         if score_threshold is None:
             score_threshold = self.score_threshold
+        if on_the_fly_processing is None:
+            on_the_fly_processing = self.on_the_fly_processing
 
         if promoter_file is None:
             promoter_file = self.retrieve_file('promoter', prompt=prompt)
@@ -796,7 +823,7 @@ class Sponge:
                 print ('Unable to find or retrieve the promoter file, exiting')
                 return
 
-        if bigbed_file is None:
+        if bigbed_file is None and not on_the_fly_processing:
             bigbed_file = self.retrieve_file('jaspar_bigbed', prompt=prompt)
             if bigbed_file is None:
                 print ('Unable to find or retrieve the JASPAR bigbed file, '
@@ -810,38 +837,14 @@ class Sponge:
         df_full.drop(columns=['score', 'strand'], inplace=True)
         df_full.set_index('name', inplace=True)
 
-        results_list = []
-        p = Pool(n_processes)
-
-        print ()
-        print ('Iterating over the chromosomes...')
         start_time = time.time()
-        for chrom in chromosomes:
-            st_chr = time.time()
-            df_chrom = df_full[df_full['chrom'] == chrom]
-            if len(df_chrom) == 0:
-                suffix = 'no transcripts'
-            elif len(df_chrom) == 1:
-                suffix = '1 transcript'
-            else:
-                suffix = f'{len(df_chrom)} transcripts'
-            print (f'Chromosome {chrom[3:]} with ' + suffix)
-            if len(df_chrom) == 0:
-                continue
-            # This is a heuristic approximation of the ideal chunk size
-            # Based off of performance benchmarking
-            chunk_size = ceil(sqrt(len(df_chrom) / n_processes))
-            chunk_divisions = [i for i in range(0, len(df_chrom), chunk_size)]
-            input_tuples = [(bigbed_file, df_chrom, self.tf_names, chrom, i,
-                i+chunk_size, score_threshold) for i in chunk_divisions]
-            # Run the calculations in parallel
-            result = p.starmap_async(filter_edges, input_tuples,
-                chunksize=n_processes)
-            edges_chrom_list = result.get()
-            results_list += edges_chrom_list
-            elapsed_chr = time.time() - st_chr
-            print (f'Done in: {elapsed_chr // 60:n} m '
-                f'{elapsed_chr % 60:.2f} s')
+        if on_the_fly_processing:
+            results_list = iterate_motifs(df_full, chromosomes, self.tf_names,
+                self.matrix_ids, self.jaspar_release, self.assembly, 
+                n_processes, score_threshold)
+        else:
+            results_list = iterate_chromosomes(df_full, bigbed_file,
+                chromosomes, self.matrix_ids, n_processes, score_threshold)
 
         elapsed = time.time() - start_time
         print ()
