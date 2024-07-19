@@ -315,6 +315,10 @@ def iterate_motifs(
             compression='gzip')
         motif_df.drop(columns=['p-val', 'TFName', 'strand'], inplace=True)
         motif_df = motif_df[motif_df['chrom'].isin(chromosomes)]
+        # Adjust the scores to match the bigbed ones (max 1000)
+        BIGBED_MAX_SCORE = 1000
+        motif_df['score'] = motif_df['score'].astype(int).apply(
+            lambda x: min(x, BIGBED_MAX_SCORE))
         # Process the individual TF track
         result = process_motif(motif_df, promoter_df, score_threshold,
             n_processes)
