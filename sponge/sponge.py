@@ -840,8 +840,8 @@ class Sponge:
         start_time = time.time()
         if on_the_fly_processing:
             results_list = iterate_motifs(df_full, chromosomes, self.tf_names,
-                self.matrix_ids, self.temp_folder, self.jaspar_release,
-                self.assembly, n_processes, score_threshold)
+                self.matrix_ids, self.jaspar_release, self.assembly, 
+                n_processes, score_threshold)
         else:
             results_list = iterate_chromosomes(df_full, bigbed_file,
                 chromosomes, self.matrix_ids, n_processes, score_threshold)

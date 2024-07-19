@@ -253,7 +253,6 @@ def iterate_motifs(
     chromosomes: List[str],
     tf_names: List[str],
     matrix_ids: List[str],
-    temp_folder: Path,
     jaspar_release: str,
     assembly: str,
     n_processes: int = 1,
@@ -261,7 +260,7 @@ def iterate_motifs(
 ) -> List[pd.DataFrame]:
     """
     Iterates over the TFs to filter all binding sites within regions of
-    interest, downloading the files temporarily in the process.
+    interest, downloading the TF tracks as they are required.
 
     Parameters
     ----------
@@ -275,8 +274,6 @@ def iterate_motifs(
     matrix_ids : List[str]
         List of matrix IDs of transcription factors to use, ordered the
         same way as tf_names
-    temp_folder : Path
-        Path to a folder to temporarily save the downloaded files into
     jaspar_release : str
         JASPAR release used
     assembly : str
@@ -303,10 +300,9 @@ def iterate_motifs(
         to_request = [tr.format(
             year=jaspar_release[-4:],
             genome_assembly=assembly) + file_name for tr in MOTIF_URL]
-        save_path = os.path.join(temp_folder, file_name)
         # Attempt to download the TF track
         try:
-            download_with_progress(to_request, save_path)
+            bytes = download_with_progress(to_request)
         except Exception:
             print ('Unable to download', file_name)
             print (f'The TF {tf} will be skipped')
@@ -315,7 +311,8 @@ def iterate_motifs(
         # Load the downloaded TF track
         MOTIF_COLS = ['chrom', 'start', 'end', 'TFName', 'p-val', 'score',
             'strand']
-        motif_df = pd.read_csv(save_path, sep='\t', names=MOTIF_COLS)
+        motif_df = pd.read_csv(bytes, sep='\t', names=MOTIF_COLS,
+            compression='gzip')
         motif_df.drop(columns=['p-val', 'TFName', 'strand'], inplace=True)
         motif_df = motif_df[motif_df['chrom'].isin(chromosomes)]
         # Process the individual TF track
@@ -325,7 +322,5 @@ def iterate_motifs(
         result['TFName'] = tf
         # Append the resulting pandas DataFrame to the list
         results_list.append(result)
-        # Remove the downloaded file after processing
-        os.remove(save_path)
 
     return results_list
