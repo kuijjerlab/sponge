@@ -106,7 +106,7 @@ def load_promoters_from_biomart(
     file_path: Path,
     filter_basic: bool = True,
     chromosomes: Optional[Iterable[str]] =
-        [str(i) for i in range(1,23)] + ['MT', 'X', 'Y'],
+        [str(i) for i in range(1,23)] + ['X', 'Y'],
     chromosome_mapping: pd.Series = DEFAULT_MAPPING,
     tss_offset: Tuple[int, int] = (-750, 250),
     keep_ensembl: bool = True,
@@ -125,10 +125,10 @@ def load_promoters_from_biomart(
         by default True
     chromosomes : Optional[Iterable[str]], optional
         Iterable of chromosomes to be considered or None to consider
-        all, by default [str(i) for i in range(1,23)] + ['MT', 'X', 'Y']
+        all, by default [str(i) for i in range(1,23)] + ['X', 'Y']
     chromosome_mapping : pd.Series, optional
         Mapping of Ensembl chromosome names to the UCSC ones, by
-        default a simple mapping of only the main chromosomes and MT
+        default a simple mapping of only the main chromosomes
     tss_offset : Tuple[int, int], optional
         Offset from the transcription start site to define the
         promoter region, by default (-750, 250)

@@ -549,29 +549,34 @@ class Sponge:
         if drop_heterodimers is None:
             drop_heterodimers = self.drop_heterodimers
 
-        # All vertebrate motifs
-        motifs = self.jdb_obj.fetch_motifs(collection='CORE',
-            tax_group='vertebrates', all_versions=True)
-        print ()
-        print ('All motif versions:', len(motifs))
-        print ('Motif base IDs:', len(set([i.base_id for i in motifs])))
+        # # All vertebrate motifs
+        # motifs = self.jdb_obj.fetch_motifs(collection='CORE',
+        #     tax_group='vertebrates', all_versions=True)
+        # print ()
+        # print ('All motif versions:', len(motifs))
+        # print ('Motif base IDs:', len(set([i.base_id for i in motifs])))
 
-        # Select latest, preferring human ones
-        latest = {}
-        for i in motifs:
-            if i.base_id not in latest:
-                latest[i.base_id] = [i.matrix_id, i.species]
-            else:
-                # Replace with newer version if the new one is human or the old
-                # one isn't
-                if (('9606' in i.species) or
-                    ('9606' not in latest[i.base_id][1])):
-                    # This could be added to the logical condition above but
-                    # this is more readable
-                    if int(i.matrix_id[-1]) > int(latest[i.base_id][0][-1]):
-                        latest[i.base_id] = [i.matrix_id, i.species]
-        motifs_latest = [i for i in motifs if
-            i.matrix_id == latest[i.base_id][0]]
+        # # Select latest, preferring human ones
+        # latest = {}
+        # for i in motifs:
+        #     if i.base_id not in latest:
+        #         latest[i.base_id] = [i.matrix_id, i.species]
+        #     else:
+        #         # Replace with newer version if the new one is human or the old
+        #         # one isn't
+        #         if (('9606' in i.species) or
+        #             ('9606' not in latest[i.base_id][1])):
+        #             # This could be added to the logical condition above but
+        #             # this is more readable
+        #             if int(i.matrix_id[-1]) > int(latest[i.base_id][0][-1]):
+        #                 latest[i.base_id] = [i.matrix_id, i.species]
+        # motifs_latest = [i for i in motifs if
+        #     i.matrix_id == latest[i.base_id][0]]
+
+        # Latest vertebrate motifs
+        motifs = self.jdb_obj.fetch_motifs(collection='CORE',
+            tax_group='vertebrates')
+        motifs_latest = motifs
 
         # Keep only one motif per TF
         # Consider dropping this requirement maybe
@@ -834,10 +839,12 @@ class Sponge:
 
         start_time = time.time()
         if on_the_fly_processing:
-            pass
+            results_list = iterate_motifs(df_full, chromosomes, self.tf_names,
+                self.matrix_ids, self.temp_folder, self.jaspar_release,
+                self.assembly, n_processes, score_threshold)
         else:
             results_list = iterate_chromosomes(df_full, bigbed_file,
-                chromosomes, self.tf_names, n_processes, score_threshold)
+                chromosomes, self.matrix_ids, n_processes, score_threshold)
 
         elapsed = time.time() - start_time
         print ()
