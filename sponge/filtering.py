@@ -52,7 +52,7 @@ def filter_edges(
     Returns
     -------
     pd.DataFrame
-        A pandas DataFrame containing the filtered edges from the
+        Pandas DataFrame containing the filtered edges from the
         regions of interest
     """
 
@@ -80,14 +80,39 @@ def filter_edges(
 
 
 def iterate_chromosomes(
-    df_full: pd.DataFrame,
+    promoter_df: pd.DataFrame,
     bigbed_file: Path,
     chromosomes: List[str],
     matrix_ids: List[str],
     n_processes: int = 1,
     score_threshold: float = 400,
 ) -> List[pd.DataFrame]:
+    """
+    Iterates over the chromosomes in a bigbed file, intersecting the
+    TF binding sites with a list of defined regions and returning the
+    result.
 
+    Parameters
+    ----------
+    promoter_df : pd.DataFrame
+        Pandas DataFrame containing the regions of interest
+    bigbed_file : Path
+        Path to a JASPAR bigbed file
+    chromosomes : List[str]
+        List of chromosomes to use
+    matrix_ids : List[str]
+        List of matrix IDs of transcription factors to use
+    n_processes : int, optional
+        Number of processes to run in parallel, by default 1
+    score_threshold : float, optional
+        Score required for selection, by default 400
+
+    Returns
+    -------
+    List[pd.DataFrame]
+        List of pandas DataFrames containing the edges between TFs and
+        regions of interest
+    """
 
     results_list = []
     p = Pool(n_processes)
@@ -96,7 +121,7 @@ def iterate_chromosomes(
     print ('Iterating over the chromosomes...')
     for chrom in chromosomes:
         st_chr = time.time()
-        df_chrom = df_full[df_full['chrom'] == chrom]
+        df_chrom = promoter_df[promoter_df['chrom'] == chrom]
         if len(df_chrom) == 0:
             suffix = 'no transcripts'
         elif len(df_chrom) == 1:
@@ -127,33 +152,52 @@ def process_chromosome(
     motifs_chrom: pd.DataFrame,
     transcript_df: pd.DataFrame,
     score_threshold: float = 400,
-):
-    
+) -> pd.DataFrame:
+    """
+    Finds the overlap between TF binding sites and regions of interest
+    within a single chromosome.
+
+    Parameters
+    ----------
+    motifs_chrom : pd.DataFrame
+        Pandas DataFrame containing the detected TF binding sites
+        in a single chromosome
+    transcript_df : pd.DataFrame
+        Pandas DataFrame containing the regions of interest in a single
+        chromosome
+    score_threshold : float, optional
+        Score required for selection, by default 400
+
+    Returns
+    -------
+    pd.DataFrame
+        Pandas DataFrame containing the filtered edges from the
+        regions of interest in a single chromosome
+    """
 
     df = pd.DataFrame()
 
     for t in transcript_df.index:
-        # 
-        start = transcript_df.loc[t]['start']
-        end = transcript_df.loc[t]['end']
-        # 
+        # Retrieve the start and end points
+        start,end = transcript_df.loc[t][['start', 'end']]
+        # Find the corresponding TF binding sites using binary search
         id_start = motifs_chrom['start'].searchsorted(start, 'left')
         id_end = motifs_chrom['end'].searchsorted(end, 'right')
         motifs = motifs_chrom.iloc[id_start:id_end]
         if len(motifs) == 0:
             continue
-        #
+        # Filter only high enough scores
         to_add = {}
         to_add['score'] = motifs['score'].max()
         if to_add['score'] < score_threshold:
             continue
         # Add the transcript (region) name for identification
         to_add['transcript'] = t
+        # Append the results to the dataframe
         df = pd.concat((df, pd.DataFrame(to_add, index=[0])),
             ignore_index=True, copy=False)
 
     return df
-
 
 
 def process_motif(
@@ -162,29 +206,50 @@ def process_motif(
     score_threshold: float = 400,
     n_processes: int = 1,
 ) -> pd.DataFrame:
+    """
+    Finds all the binding sites within regions of interest over all
+    chromosomes for a single TF.
 
+    Parameters
+    ----------
+    motif_df : pd.DataFrame
+        Pandas DataFrame containing the detected TF binding sites in
+        the genome
+    bed_df : pd.DataFrame
+        Pandas DataFrame containing the regions of interest
+    score_threshold : float, optional
+        Score required for selection, by default 400
+    n_processes : int, optional
+        Number of processes to run in parallel, by default 1
+
+    Returns
+    -------
+    pd.DataFrame
+        Pandas DataFrame containing the filtered edges from the
+        regions of interest
+    """
 
     p = Pool(n_processes)
-
+    # Find out chromosome boundaries, relying on continuity
     chrom_info = motif_df.reset_index().groupby('chrom')
     chrom_mins = chrom_info['index'].min()
     chrom_maxs = chrom_info['index'].max()
-
+    # Setup input for parallelisation across chromosomes
     input_tuples = [(motif_df.loc[chrom_mins[chr]:chrom_maxs[chr]],
-        bed_df[bed_df['chrom'] == chr], score_threshold) 
+        bed_df[bed_df['chrom'] == chr], score_threshold)
         for chr in chrom_mins.index]
-
+    # Parallelise the filtering across chromosomes
     result = p.starmap_async(process_chromosome, input_tuples,
         chunksize=n_processes)
     result_list = result.get()
-
+    # Merge the results
     df = pd.concat(result_list, ignore_index=True, copy=False)
 
     return df
 
 
 def iterate_motifs(
-    df_full: pd.DataFrame,
+    promoter_df: pd.DataFrame,
     chromosomes: List[str],
     tf_names: List[str],
     matrix_ids: List[str],
@@ -194,40 +259,73 @@ def iterate_motifs(
     n_processes: int = 1,
     score_threshold: float = 400,
 ) -> List[pd.DataFrame]:
+    """
+    Iterates over the TFs to filter all binding sites within regions of
+    interest, downloading the files temporarily in the process.
 
+    Parameters
+    ----------
+    promoter_df : pd.DataFrame
+        Pandas DataFrame containing the regions of interest
+    chromosomes : List[str]
+        List of chromosomes to use
+    tf_names : List[str]
+        List of names of transcription factors to use, ordered the same
+        way as matrix_ids
+    matrix_ids : List[str]
+        List of matrix IDs of transcription factors to use, ordered the
+        same way as tf_names
+    temp_folder : Path
+        Path to a folder to temporarily save the downloaded files into
+    jaspar_release : str
+        JASPAR release used
+    assembly : str
+        Assembly of the genome used
+    n_processes : int, optional
+        Number of processes to run in parallel, by default 1
+    score_threshold : float, optional
+        Score required for selection, by default 400
+
+    Returns
+    -------
+    List[pd.DataFrame]
+        List of pandas DataFrames containing the edges between TFs and
+        regions of interest
+    """
 
     results_list = []
 
     print ()
     print ('Iterating over the transcription factors...')
     for tf,m_id in zip(tf_names, matrix_ids):
+        print (f'Processing the TF {tf} with matrix ID {m_id}')
         file_name = f'{m_id}.tsv.gz'
         to_request = [tr.format(
             year=jaspar_release[-4:],
             genome_assembly=assembly) + file_name for tr in MOTIF_URL]
         save_path = os.path.join(temp_folder, file_name)
-
+        # Attempt to download the TF track
         try:
             download_with_progress(to_request, save_path)
-        except Exception as e:
-            print (f'Unable to download {file_name}')
+        except Exception:
+            print ('Unable to download', file_name)
             print (f'The TF {tf} will be skipped')
+            print ()
             continue
-
-        MOTIF_COLS = ['chrom', 'start', 'end', 'TFName', 'p-val', 'score', 
+        # Load the downloaded TF track
+        MOTIF_COLS = ['chrom', 'start', 'end', 'TFName', 'p-val', 'score',
             'strand']
-
         motif_df = pd.read_csv(save_path, sep='\t', names=MOTIF_COLS)
         motif_df.drop(columns=['p-val', 'TFName', 'strand'], inplace=True)
         motif_df = motif_df[motif_df['chrom'].isin(chromosomes)]
-        
-        result = process_motif(motif_df, df_full, score_threshold,
+        # Process the individual TF track
+        result = process_motif(motif_df, promoter_df, score_threshold,
             n_processes)
         result['name'] = m_id
         result['TFName'] = tf
-
+        # Append the resulting pandas DataFrame to the list
         results_list.append(result)
-
+        # Remove the downloaded file after processing
         os.remove(save_path)
 
     return results_list
