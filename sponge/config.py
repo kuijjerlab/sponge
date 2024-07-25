@@ -38,5 +38,3 @@ ASSEMBLY_SYNONYM = {'GRCh38': 'hg38', 'GRCh37': 'hg19', 'T2T-CHM13v2.0': 'hs1'}
 index = [str(i) for i in range(1, 23)] + ['X', 'Y', 'MT']
 values = ['chrM' if i == 'MT' else f'chr{i}' for i in index]
 DEFAULT_MAPPING = pd.Series(values, index=index)
-
-# TODO: unipressed module to replace Uniprot calls?

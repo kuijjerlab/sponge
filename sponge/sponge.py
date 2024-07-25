@@ -54,6 +54,8 @@ class Sponge:
         genome_assembly: Optional[str] = None,
         n_processes: int = 1,
         paths_to_files: Mapping[str, Path] = {},
+        tf_names: Iterable[str] = [],
+        matrix_ids: Iterable[str] = [],
         drop_heterodimers: bool = True,
         chromosomes: Optional[Iterable[str]] = [f'chr{i}' for i in [j for j in
             range(1, 23)] + ['X', 'Y']],
@@ -95,6 +97,12 @@ class Sponge:
             looked for in the temp folder or downloaded, by default {}
             Available descriptions: 'homologene', 'promoter',
                 'jaspar_bigbed', 'ensembl'
+        tf_names : Iterable[str], optional
+            Iterable of names of transcription factors to consider, if
+            empty it is ignored, by default []
+        motif_ids : Iterable[str], optional
+            Iterable of transcription factor JASPAR motif IDs to
+            consider, if empty it is ignored, by default []
         drop_heterodimers : bool, optional
             Whether to drop the heterodimer motifs from consideration,
             by default True
@@ -111,8 +119,8 @@ class Sponge:
             prior, by default 400
         on_the_fly_processing : bool, optional
             Whether to not use the entire JASPAR bigbed file but rather
-            download individual files for the motifs of interest on the
-            fly and delete them afterwards, by default False
+            download TF tracks for the motifs of interest on the fly and
+            discard them afterwards, by default False
         protein_coding_only : bool, optional
             Whether to restrict the gene selection to only protein
             coding genes, by default False
@@ -147,6 +155,8 @@ class Sponge:
         self.drop_heterodimers = drop_heterodimers
         self.chromosomes = chromosomes
         self.tss_offset = tss_offset
+        self.prov_tf_names = tf_names
+        self.prov_matrix_ids = matrix_ids
         self.score_threshold = score_threshold
         self.on_the_fly_processing = on_the_fly_processing
         self.protein_coding_only = protein_coding_only
@@ -530,6 +540,8 @@ class Sponge:
     def select_tfs(
         self,
         drop_heterodimers: Optional[bool] = None,
+        tf_names: Optional[Iterable[str]] = None,
+        matrix_ids: Optional[Iterable[str]] = None,
     ) -> None:
         """
         Selects transcription factors from the newest version of the
@@ -540,6 +552,14 @@ class Sponge:
         drop_heterodimers : Optional[bool], optional
             Whether to drop heterodimer motifs or None to follow the
             option from the initialisation, by default None
+        tf_names : Optional[Iterable[str]], optional
+            Iterable of names of transcription factors to consider or
+            None to follow the option from the initialisation, if empty
+            it is ignored, by default None
+        motif_ids : Optional[Iterable[str]], optional
+            Iterable of transcription factor JASPAR motif IDs to
+            consider or None to follow the option from the
+            initialisation, if empty it is ignored, by default None
         """
 
         print ()
@@ -548,46 +568,34 @@ class Sponge:
 
         if drop_heterodimers is None:
             drop_heterodimers = self.drop_heterodimers
+        if tf_names is None:
+            tf_names = self.prov_tf_names
+        if matrix_ids is None:
+            matrix_ids = self.prov_matrix_ids
 
-        # # All vertebrate motifs
-        # motifs = self.jdb_obj.fetch_motifs(collection='CORE',
-        #     tax_group='vertebrates', all_versions=True)
-        # print ()
-        # print ('All motif versions:', len(motifs))
-        # print ('Motif base IDs:', len(set([i.base_id for i in motifs])))
+        if (matrix_ids is not None and len(matrix_ids) > 0 and
+            tf_names is not None and len(tf_names) > 0):
+            print ('Both motif IDs and TF names have been specified, will '
+                'filter on both (intersection)')
 
-        # # Select latest, preferring human ones
-        # latest = {}
-        # for i in motifs:
-        #     if i.base_id not in latest:
-        #         latest[i.base_id] = [i.matrix_id, i.species]
-        #     else:
-        #         # Replace with newer version if the new one is human or the old
-        #         # one isn't
-        #         if (('9606' in i.species) or
-        #             ('9606' not in latest[i.base_id][1])):
-        #             # This could be added to the logical condition above but
-        #             # this is more readable
-        #             if int(i.matrix_id[-1]) > int(latest[i.base_id][0][-1]):
-        #                 latest[i.base_id] = [i.matrix_id, i.species]
-        # motifs_latest = [i for i in motifs if
-        #     i.matrix_id == latest[i.base_id][0]]
-
-        # Latest vertebrate motifs
+        # Latest vertebrate motifs, filter by matrix IDs if any
         motifs = self.jdb_obj.fetch_motifs(collection='CORE',
-            tax_group='vertebrates')
-        motifs_latest = motifs
+            tax_group='vertebrates', matrix_id=matrix_ids)
+        # Filter also by TF names if any
+        if tf_names is not None and len(tf_names) > 0:
+            tf_name_set = set(tf_names)
+            motifs_filt = [i for i in motifs if i.name in tf_name_set]
+        else:
+            motifs_filt = motifs
+        print ('Retrieved motifs:', len(motifs_filt))
 
         # Keep only one motif per TF
         # Consider dropping this requirement maybe
-        tf_to_motif = {}
-        for i in motifs_latest:
-            if i.name not in tf_to_motif:
-                tf_to_motif[i.name] = {i.matrix_id: calculate_ic(i)}
-            else:
-                tf_to_motif[i.name][i.matrix_id] = calculate_ic(i)
+        tf_to_motif = defaultdict(dict)
+        for i in motifs_filt:
+            tf_to_motif[i.name][i.matrix_id] = calculate_ic(i)
         self.tf_to_motif = tf_to_motif
-        motifs_unique = [i for i in motifs_latest if
+        motifs_unique = [i for i in motifs_filt if
             (tf_to_motif[i.name][i.matrix_id] ==
             max(tf_to_motif[i.name].values()))]
         print ('Unique motifs:', len(motifs_unique))
@@ -790,9 +798,9 @@ class Sponge:
             by default None
         on_the_fly_processing : Optional[bool], optional
             Whether to not use the entire JASPAR bigbed file but rather
-            download individual files for the motifs of interest on the
-            fly and delete them afterwards or None to follow the option
-            from the initialisation, by default None
+            download TF tracks for the motifs of interest on the fly and
+            discard them afterwards or None to follow the option from
+            the initialisation, by default None
         chromosomes : Optional[Iterable[str]], optional
             Which chromosomes to get the promoters from or None to
             follow the option from the initialisation, by default None
@@ -840,7 +848,7 @@ class Sponge:
         start_time = time.time()
         if on_the_fly_processing:
             results_list = iterate_motifs(df_full, chromosomes, self.tf_names,
-                self.matrix_ids, self.jaspar_release, self.assembly, 
+                self.matrix_ids, self.jaspar_release, self.assembly,
                 n_processes, score_threshold)
         else:
             results_list = iterate_chromosomes(df_full, bigbed_file,
