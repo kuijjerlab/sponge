@@ -1,9 +1,9 @@
-# SPONGE - Simple PriOr Network GEnerator
+# SPONGE - Simple Prior Omics Network GEnerator
 The SPONGE package generates human prior gene regulatory networks.
 
 
 ## Table of Contents
-- [SPONGE - Simple PriOr Network GEnerator](#sponge---simple-prior-network-generator)
+- [SPONGE - Simple Prior Omics Network GEnerator](#sponge---simple-prior-omics-network-generator)
   - [Table of Contents](#table-of-contents)
   - [General Information](#general-information)
   - [Features](#features)
@@ -97,6 +97,7 @@ The project is: _in progress_.
 ## Room for Improvement
 Room for improvement:
 - Add more and better tests
+- Try incorporating unipressed and pyranges
 
 To do:
 - Addition of a command line script
