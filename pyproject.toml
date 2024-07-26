@@ -18,11 +18,12 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
-    "pandas",
-    "numpy",
-    "biomart",
     "bioframe",
+    "biomart",  
+    "numpy",
+    "pandas",
     "pyjaspar",
+    "scikit-learn",
     "tqdm",
 ]
 

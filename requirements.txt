@@ -1,6 +1,7 @@
+bioframe
+biomart
 numpy
 pandas
-biomart
-bioframe
 pyjaspar
+scikit-learn
 tqdm
