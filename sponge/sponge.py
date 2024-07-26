@@ -36,10 +36,10 @@ class Sponge:
     sponge_obj.select_tfs()
     sponge_obj.find_human_homologs()
     sponge_obj.filter_matches()
-    sponge_obj.retrieve_ppi()
-    sponge_obj.write_ppi_prior()
     sponge_obj.aggregate_matches()
     sponge_obj.write_motif_prior()
+    sponge_obj.retrieve_ppi()
+    sponge_obj.write_ppi_prior()
 
     Most functions have options which can usually also be provided
     to the constructor, for more details refer to the documentation of
@@ -100,8 +100,8 @@ class Sponge:
         tf_names : Iterable[str], optional
             Iterable of names of transcription factors to consider, if
             empty it is ignored, by default []
-        motif_ids : Iterable[str], optional
-            Iterable of transcription factor JASPAR motif IDs to
+        matrix_ids : Iterable[str], optional
+            Iterable of transcription factor JASPAR matrix IDs to
             consider, if empty it is ignored, by default []
         drop_heterodimers : bool, optional
             Whether to drop the heterodimer motifs from consideration,
@@ -416,7 +416,10 @@ class Sponge:
                     # The version needs to be determined via a separate request
                     version_url = '/'.join(to_request.split('/')[:-1] +
                         ['RELEASE_NUMBER'])
-                    version_request = requests.get(version_url, stream=True)
+                    version_request = requests.get(version_url)
+                    # Set the encoding to stop warning about too few bytes
+                    # to infer it from
+                    version_request.encoding = 'ascii'
                     version = version_request.text.strip()
                 # Download the specified file
                 print (f'Downloading data into {file_path}...')
@@ -518,10 +521,10 @@ class Sponge:
         self.select_tfs()
         self.find_human_homologs(prompt=False)
         self.filter_matches(prompt=False)
-        self.retrieve_ppi()
-        self.write_ppi_prior()
         self.aggregate_matches(prompt=False)
         self.write_motif_prior()
+        self.retrieve_ppi()
+        self.write_ppi_prior()
 
         This will result in the generation of priors as specified and
         should be used unless there is a desire to change the provided
@@ -531,10 +534,10 @@ class Sponge:
         self.select_tfs()
         self.find_human_homologs(prompt=False)
         self.filter_matches(prompt=False)
-        self.retrieve_ppi()
-        self.write_ppi_prior()
         self.aggregate_matches(prompt=False)
         self.write_motif_prior()
+        self.retrieve_ppi()
+        self.write_ppi_prior()
 
 
     def select_tfs(
@@ -556,8 +559,8 @@ class Sponge:
             Iterable of names of transcription factors to consider or
             None to follow the option from the initialisation, if empty
             it is ignored, by default None
-        motif_ids : Optional[Iterable[str]], optional
-            Iterable of transcription factor JASPAR motif IDs to
+        matrix_ids : Optional[Iterable[str]], optional
+            Iterable of transcription factor JASPAR matrix IDs to
             consider or None to follow the option from the
             initialisation, if empty it is ignored, by default None
         """
@@ -645,33 +648,38 @@ class Sponge:
         # Read the homologene database
         hg_df = pd.read_csv(homologene_file, sep='\t', header=None,
                     names=['HG Group ID', 'TaxID', 'Gene ID',
-                           'Gene Symbol', 'Protein GI', 'Protein Accession'])
+                        'Gene Symbol', 'Protein GI', 'Protein Accession'])
 
         # Get the non-human motif names
         non_human_motif_names = [i.name for i in non_human_motifs]
         # Compare against homologene
-        found_names = hg_df[hg_df['Gene Symbol'].isin([adjust_gene_name(i) for
-            i in non_human_motif_names])]['Gene Symbol'].unique()
+        found_names = hg_df[hg_df['Gene Symbol'].isin([adjust_gene_name(i) 
+            for i in non_human_motif_names])]['Gene Symbol'].unique()
         # Find the missing ones
-        missing = (set([adjust_gene_name(i) for i in non_human_motif_names]) -
-            set(found_names))
+        missing = (set([adjust_gene_name(i) for i in 
+            non_human_motif_names]) - set(found_names))
         print ()
         print ('Names missing from the homologene database:')
         for i in [(i.name, i.acc) for i in non_human_motifs if
             i.name in missing]:
             print (i[0], *i[1])
 
-        # Get the missing IDs from Uniprot API
-        print ()
-        print ('Retrieving matches from UniProt...')
-        mapping = get_uniprot_mapping('UniProtKB_AC-ID', 'RefSeq_Protein',
-            [i.acc[0] for i in non_human_motifs if i.name in missing])
-        mapping.columns = ['Uniprot', 'Accession']
+        UNIPROT_COLUMNS = ['Uniprot', 'Accession']
+        if len(missing) > 0:
+            # Get the missing IDs from Uniprot API
+            print ()
+            print ('Retrieving matches from UniProt...')
+            mapping = get_uniprot_mapping('UniProtKB_AC-ID', 'RefSeq_Protein',
+                [i.acc[0] for i in non_human_motifs if i.name in missing])
+            mapping.columns = UNIPROT_COLUMNS
+        else:
+            mapping = pd.DataFrame(columns=UNIPROT_COLUMNS)
 
         # Create a DataFrame for matching missing entries
         hg_df[hg_df['Protein Accession'].isin(mapping['Accession'])]
-        missing_df = pd.DataFrame([(i.name, i.acc[0]) for i in non_human_motifs
-            if i.name in missing], columns = ['Gene Symbol', 'Uniprot'])
+        missing_df = pd.DataFrame([(i.name, i.acc[0]) for i in 
+            non_human_motifs if i.name in missing], 
+            columns = ['Gene Symbol', 'Uniprot'])
         matching_df = missing_df.join(mapping.set_index('Uniprot'),
             on='Uniprot').join(hg_df.set_index('Protein Accession'),
             on='Accession', rsuffix='_HG')
@@ -885,125 +893,6 @@ class Sponge:
         self.all_edges = pd.read_csv(file_path, sep='\t')
 
 
-    def retrieve_ppi(
-        self,
-    ) -> None:
-        """
-        Retrieves the protein-protein interaction data from the STRING
-        database for the previously identified transcription factors.
-        Stores the resulting network internally.
-        """
-
-        print ()
-        print ('--- Running retrieve_ppi() ---')
-
-        # Use the human names for the TFs
-        filtered_tfs = self.all_edges['TFName'].unique()
-        humanised_tfs = [self.animal_to_human[x] if x in self.animal_to_human
-            else x for x in filtered_tfs]
-        query_string = '%0d'.join(humanised_tfs)
-
-        print ('Retrieving mapping from STRING...')
-        mapping_request = requests.get(f'{STRING_URL}get_string_ids?'
-            f'identifiers={query_string}&species=9606')
-        mapping_df = pd.read_csv(BytesIO(mapping_request.content), sep='\t')
-        mapping_df['queryName'] = mapping_df['queryIndex'].apply(
-            lambda i: humanised_tfs[i])
-        # Check where the preferred name doesn't match the query
-        diff_df = mapping_df[mapping_df['queryName'] !=
-            mapping_df['preferredName']]
-        ids_to_check = np.concatenate((diff_df['queryName'],
-            diff_df['preferredName']))
-        matching_ids = list(mapping_df[mapping_df['queryName'] ==
-            mapping_df['preferredName']]['preferredName'])
-        # Log the STRING version in the fingerprint
-        version_request = requests.get(f'{STRING_URL}version')
-        version_df = pd.read_csv(BytesIO(version_request.content), sep='\t',
-            dtype=str)
-        self.log_fingerprint('STRING', version_df['string_version'].loc[0])
-
-        if len(ids_to_check) > 0:
-            # Retrieve UniProt identifiers for the genes with differing names
-            print ('Checking the conflicts in the UniProt database...')
-            uniprot_df = get_uniprot_mapping('Gene_Name', 'UniProtKB',
-                ids_to_check).set_index('from')
-            p_to_q = {p: q for q,p in zip(diff_df['queryName'],
-                diff_df['preferredName'])}
-            # Keep the conflicts where there is a match or where one or both
-            # of the names doesn't find an identifier
-            for p,q in p_to_q.items():
-                if (p not in uniprot_df.index or q not in uniprot_df.index
-                    or uniprot_df.loc[p, 'to'] == uniprot_df.loc[q, 'to']):
-                    matching_ids.append(p)
-        query_string_filt = '%0d'.join(matching_ids)
-
-        print ('Retrieving the network from STRING...')
-        request = requests.get(f'{STRING_URL}network?'
-            f'identifiers={query_string_filt}&species=9606')
-        ppi_df = pd.read_csv(BytesIO(request.content), sep='\t')
-
-        print ('Processing the results...')
-        ppi_df.drop(['stringId_A', 'stringId_B', 'ncbiTaxonId', 'nscore',
-            'fscore', 'pscore', 'ascore', 'escore', 'dscore', 'tscore'],
-            axis=1, inplace=True)
-        ppi_df.rename(columns={'preferredName_A': 'tf1',
-            'preferredName_B': 'tf2'}, inplace=True)
-        if len(ids_to_check) > 0:
-            # Replace with names that have been queried (as used by JASPAR)
-            ppi_df['tf1'].replace(p_to_q, inplace=True)
-            ppi_df['tf2'].replace(p_to_q, inplace=True)
-        ppi_df.sort_values(by=['tf1', 'tf2'], inplace=True)
-
-        print ()
-        print ('Final number of TFs in the PPI network: '
-            f'{len(set(ppi_df["tf1"]).union(set(ppi_df["tf2"])))}')
-        print (f'Final number of edges: {len(ppi_df)}')
-
-        self.ppi_frame = ppi_df
-
-
-    def write_ppi_prior(
-        self,
-        output_path: Optional[Path] = None,
-        weighted: Optional[bool] = None,
-    ) -> None:
-        """
-        Writes the protein-protein interaction prior network into a
-        file.
-
-        Parameters
-        ----------
-        output_path : Optional[Path], optional
-            Path to write the prior into or None to follow the
-            option from the initialisation, by default None
-        weighted : Optional[bool], optional
-            Whether to use weights for the edges as opposed to making
-            them binary or None to follow the option from the
-            initialisation, by default None
-        """
-
-        print ()
-        print ('--- Running write_ppi_prior() ---')
-
-        if output_path is None:
-            output_path = self.ppi_outfile
-        if weighted is None:
-            weighted = self.weighted
-
-        if self.ppi_frame is None:
-            print ('No motif prior has been generated yet, please run '
-                'retrieve_ppi() first')
-            return
-
-        if weighted:
-            self.ppi_frame[['tf1', 'tf2', 'score']].to_csv(output_path,
-                sep='\t', index=False, header=False)
-        else:
-            self.ppi_frame['edge'] = 1
-            self.ppi_frame[['tf1', 'tf2', 'edge']].to_csv(output_path,
-                sep='\t', index=False, header=False)
-
-
     def aggregate_matches(
         self,
         ensembl_file: Optional[Path] = None,
@@ -1153,6 +1042,125 @@ class Sponge:
             self.motif_frame['edge'] = 1
             self.motif_frame[['TFName', column, 'edge']].to_csv(
                 output_path, sep='\t', index=False, header=False)
+
+
+    def retrieve_ppi(
+        self,
+    ) -> None:
+        """
+        Retrieves the protein-protein interaction data from the STRING
+        database for the previously identified transcription factors.
+        Stores the resulting network internally.
+        """
+
+        print ()
+        print ('--- Running retrieve_ppi() ---')
+
+        # Use the human names for the TFs
+        filtered_tfs = self.all_edges['TFName'].unique()
+        humanised_tfs = [self.animal_to_human[x] if x in self.animal_to_human
+            else x for x in filtered_tfs]
+        query_string = '%0d'.join(humanised_tfs)
+
+        print ('Retrieving mapping from STRING...')
+        mapping_request = requests.get(f'{STRING_URL}get_string_ids?'
+            f'identifiers={query_string}&species=9606')
+        mapping_df = pd.read_csv(BytesIO(mapping_request.content), sep='\t')
+        mapping_df['queryName'] = mapping_df['queryIndex'].apply(
+            lambda i: humanised_tfs[i])
+        # Check where the preferred name doesn't match the query
+        diff_df = mapping_df[mapping_df['queryName'] !=
+            mapping_df['preferredName']]
+        ids_to_check = np.concatenate((diff_df['queryName'],
+            diff_df['preferredName']))
+        matching_ids = list(mapping_df[mapping_df['queryName'] ==
+            mapping_df['preferredName']]['preferredName'])
+        # Log the STRING version in the fingerprint
+        version_request = requests.get(f'{STRING_URL}version')
+        version_df = pd.read_csv(BytesIO(version_request.content), sep='\t',
+            dtype=str)
+        self.log_fingerprint('STRING', version_df['string_version'].loc[0])
+
+        if len(ids_to_check) > 0:
+            # Retrieve UniProt identifiers for the genes with differing names
+            print ('Checking the conflicts in the UniProt database...')
+            uniprot_df = get_uniprot_mapping('Gene_Name', 'UniProtKB',
+                ids_to_check).set_index('from')
+            p_to_q = {p: q for q,p in zip(diff_df['queryName'],
+                diff_df['preferredName'])}
+            # Keep the conflicts where there is a match or where one or both
+            # of the names doesn't find an identifier
+            for p,q in p_to_q.items():
+                if (p not in uniprot_df.index or q not in uniprot_df.index
+                    or uniprot_df.loc[p, 'to'] == uniprot_df.loc[q, 'to']):
+                    matching_ids.append(p)
+        query_string_filt = '%0d'.join(matching_ids)
+
+        print ('Retrieving the network from STRING...')
+        request = requests.get(f'{STRING_URL}network?'
+            f'identifiers={query_string_filt}&species=9606')
+        ppi_df = pd.read_csv(BytesIO(request.content), sep='\t')
+
+        print ('Processing the results...')
+        ppi_df.drop(['stringId_A', 'stringId_B', 'ncbiTaxonId', 'nscore',
+            'fscore', 'pscore', 'ascore', 'escore', 'dscore', 'tscore'],
+            axis=1, inplace=True)
+        ppi_df.rename(columns={'preferredName_A': 'tf1',
+            'preferredName_B': 'tf2'}, inplace=True)
+        if len(ids_to_check) > 0:
+            # Replace with names that have been queried (as used by JASPAR)
+            ppi_df['tf1'].replace(p_to_q, inplace=True)
+            ppi_df['tf2'].replace(p_to_q, inplace=True)
+        ppi_df.sort_values(by=['tf1', 'tf2'], inplace=True)
+
+        print ()
+        print ('Final number of TFs in the PPI network: '
+            f'{len(set(ppi_df["tf1"]).union(set(ppi_df["tf2"])))}')
+        print (f'Final number of edges: {len(ppi_df)}')
+
+        self.ppi_frame = ppi_df
+
+
+    def write_ppi_prior(
+        self,
+        output_path: Optional[Path] = None,
+        weighted: Optional[bool] = None,
+    ) -> None:
+        """
+        Writes the protein-protein interaction prior network into a
+        file.
+
+        Parameters
+        ----------
+        output_path : Optional[Path], optional
+            Path to write the prior into or None to follow the
+            option from the initialisation, by default None
+        weighted : Optional[bool], optional
+            Whether to use weights for the edges as opposed to making
+            them binary or None to follow the option from the
+            initialisation, by default None
+        """
+
+        print ()
+        print ('--- Running write_ppi_prior() ---')
+
+        if output_path is None:
+            output_path = self.ppi_outfile
+        if weighted is None:
+            weighted = self.weighted
+
+        if self.ppi_frame is None:
+            print ('No motif prior has been generated yet, please run '
+                'retrieve_ppi() first')
+            return
+
+        if weighted:
+            self.ppi_frame[['tf1', 'tf2', 'score']].to_csv(output_path,
+                sep='\t', index=False, header=False)
+        else:
+            self.ppi_frame['edge'] = 1
+            self.ppi_frame[['tf1', 'tf2', 'edge']].to_csv(output_path,
+                sep='\t', index=False, header=False)
 
 
     def show_fingerprint(

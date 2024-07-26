@@ -71,8 +71,34 @@ def test_full_default_workflow(tmp_path):
     ppi_output = os.path.join(tmp_path, 'ppi_prior.tsv')
     motif_output = os.path.join(tmp_path, 'motif_prior.tsv')
 
-    sponge_obj = Sponge(
+    _ = Sponge(
         run_default=True,
+        prompt=False,
+        temp_folder=tmp_path,
+        ppi_outfile=ppi_output,
+        motif_outfile=motif_output,
+    )
+
+    assert os.path.exists(ppi_output)
+    assert os.path.exists(motif_output)
+
+
+def test_small_workflow(tmp_path):
+    # Make use of the tmp_path fixture to store the files in a temporary path
+    ppi_output = os.path.join(tmp_path, 'ppi_prior.tsv')
+    motif_output = os.path.join(tmp_path, 'motif_prior.tsv')
+
+    _ = Sponge(
+        run_default=True,
+        prompt=False,
+        # paths_to_files={
+        #     'ensembl': 'updated_priors/.sponge_temp/ensembl.tsv',
+        #     'homologene': 'updated_priors/.sponge_temp/homologene.tsv',
+        #     'promoter': 'updated_priors/.sponge_temp/promoters.tsv',
+        # },
+        on_the_fly_processing=True,
+        tf_names=['GATA2', 'FOXF2', 'MYC'],
+        chromosomes=['chr21'],
         temp_folder=tmp_path,
         ppi_outfile=ppi_output,
         motif_outfile=motif_output,

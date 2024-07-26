@@ -72,15 +72,15 @@ sponge_obj.find_human_homologs()
 # Filter the matches of the JASPAR bigbed file to the ones in the
 # promoters of human transcripts
 sponge_obj.filter_matches()
+# Aggregate the filtered matches on promoters to genes
+sponge_obj.aggregate_matches()
+# Write the final motif prior to a file
+sponge_obj.write_motif_prior()
 # Retrieve the protein-protein interactions between the transcription
 # factors from the STRING database
 sponge_obj.retrieve_ppi()
 # Write the PPI prior to a file
 sponge_obj.write_ppi_prior()
-# Aggregate the filtered matches on promoters to genes
-sponge_obj.aggregate_matches()
-# Write the final motif prior to a file
-sponge_obj.write_motif_prior()
 ```
 
 SPONGE will attempt to download the files it needs into a temporary
@@ -88,6 +88,13 @@ directory (`.sponge_temp` by default). Paths can be provided if these
 files were downloaded in advance. The JASPAR bigbed file required for
 filtering is huge (> 100 GB), so the download might take some time. Make
 sure you're running SPONGE somewhere that has enough space!
+
+As an alternative to the bigbed file download, SPONGE can download
+tracks for individual TFs on the fly and filter them individually. This
+way of processing is slower than the bigbed file when all TFs in the
+database are considered, but it becomes competitive when only a subset
+is used. The physical storage footprint is much reduced. The option is
+enabled with `on_the_fly_processing=True`.
 
 
 ## Project Status
