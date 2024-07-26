@@ -58,8 +58,14 @@ import sponge.filtering as filter_f
 import sponge.file_retrieval as file_f
 
 
+# Analysis functions
+import sponge.analysis as anal_f
+
+
 ### Integration tests ###
 import os
+
+import pandas as pd
 
 from sponge.sponge import Sponge
 
@@ -89,13 +95,9 @@ def test_small_workflow(tmp_path):
     motif_output = os.path.join(tmp_path, 'motif_prior.tsv')
 
     _ = Sponge(
+        jaspar_release='JASPAR2024',
         run_default=True,
         prompt=False,
-        # paths_to_files={
-        #     'ensembl': 'updated_priors/.sponge_temp/ensembl.tsv',
-        #     'homologene': 'updated_priors/.sponge_temp/homologene.tsv',
-        #     'promoter': 'updated_priors/.sponge_temp/promoters.tsv',
-        # },
         on_the_fly_processing=True,
         tf_names=['GATA2', 'FOXF2', 'MYC'],
         chromosomes=['chr21'],
@@ -106,3 +108,15 @@ def test_small_workflow(tmp_path):
 
     assert os.path.exists(ppi_output)
     assert os.path.exists(motif_output)
+
+    ppi_df = pd.read_csv(ppi_output, sep='\t', header=None)
+    ppi_df_t = pd.read_csv(os.path.join('tests', 'sponge', 
+        'test_ppi_prior.tsv'), sep='\t', header=None)
+
+    pd.testing.assert_frame_equal(ppi_df, ppi_df_t)
+
+    motif_df = pd.read_csv(motif_output, sep='\t', header=None)
+    motif_df_t = pd.read_csv(os.path.join('tests', 'sponge', 
+        'test_motif_prior.tsv'), sep='\t', header=None)
+
+    pd.testing.assert_frame_equal(motif_df, motif_df_t)
