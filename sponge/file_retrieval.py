@@ -425,8 +425,10 @@ def get_ensembl_assembly(
 
     # Select the Ensembl dataset from BioMart and get the display name
     bm_server = BiomartServer(ENSEMBL_URL)
-    ensembl = bm_server.datasets['hsapiens_gene_ensembl']
-    display_name = ensembl.display_name
+    r = bm_server.get_request(type='datasets', mart='ENSEMBL_MART_ENSEMBL')
+    table = pd.read_csv(BytesIO(r.content), sep='\t', usecols=[1, 2],
+        header=None).set_index(1)
+    display_name = table.loc['hsapiens_gene_ensembl', 2]
     # Isolate the version from the bracket
     version_string = display_name.split('(')[-1].split(')')[0]
     # Remove the update part
