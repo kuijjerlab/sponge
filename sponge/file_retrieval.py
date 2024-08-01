@@ -366,11 +366,14 @@ def get_uniprot_mapping(
 
     Raises
     ------
-    HTTPError
+    requests.exceptions.HTTPError
         Reproduction of an error message from UniProt if no job ID
         was retrieved, typically pointing to an issue with the query
     """
 
+    # Guard against empty request
+    if len(ids) == 0:
+        return pd.DataFrame(columns=['from', 'to'])
     # The basic form of the request
     data = {'ids': ids, 'from': from_db, 'to': to_db}
     # Potential additional arguments
