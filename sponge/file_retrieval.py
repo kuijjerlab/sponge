@@ -366,7 +366,7 @@ def get_uniprot_mapping(
 
     Raises
     ------
-    RuntimeError
+    HTTPError
         Reproduction of an error message from UniProt if no job ID
         was retrieved, typically pointing to an issue with the query
     """
@@ -382,11 +382,7 @@ def get_uniprot_mapping(
         job_id = uniprot_reply['jobId']
     else:
         # No job ID was assigned - probably an issue with the query
-        print ('Unable to retrieve a job ID from UniProt')
-        print ('The following reply was received instead:')
-        for message in uniprot_reply['messages']:
-            print (message)
-        raise RuntimeError()
+        raise requests.exceptions.HTTPError(uniprot_reply['messages'][0])
 
     MAX_ITERATIONS = 40
     for _ in range(MAX_ITERATIONS):

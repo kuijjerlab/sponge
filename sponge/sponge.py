@@ -614,124 +614,62 @@ class Sponge:
 
     def find_human_homologs(
         self,
-        homologene_file: Optional[Path] = None,
-        prompt: bool = True,
     ) -> None:
         """
         Attempts to map all initially selected non-human transcription
         factors to their human homologs.
-
-        Parameters
-        ----------
-        homologene_file : Optional[Path],
-            optional
-            Path to a homologene file or None to use cache or
-            download it, by default None
-        prompt : bool, optional
-            Whether to prompt before downloading, by default True
         """
 
         print ()
         print ('--- Running find_human_homologs() ---')
 
-        if homologene_file is None:
-            homologene_file = self.retrieve_file('homologene', prompt=prompt)
-            if homologene_file is None:
-                print ('Unable to find or retrieve the homologene file, '
-                    'exiting')
-                return
-
         # Get the non-human motifs
         non_human_motifs = [i for i in self.motifs if '9606' not in i.species]
         print ('Non-human motifs:', len(non_human_motifs))
 
-        # Read the homologene database
-        hg_df = pd.read_csv(homologene_file, sep='\t', header=None,
-                    names=['HG Group ID', 'TaxID', 'Gene ID',
-                        'Gene Symbol', 'Protein GI', 'Protein Accession'])
+        # Retrieve mapping of Uniprot to GeneID
+        mapping = get_uniprot_mapping('UniProtKB_AC-ID', 'GeneID',
+            [i.acc for i in non_human_motifs])
+        # Get the human homologs from NCBI
+        print ()
+        print ('Retrieving homologs from NCBI...')
+        homologs = {}
+        suffix = '/gene/id/{gene_id}/orthologs'
+        for acc,gene_id in mapping[['from', 'to']].values:
+            r = requests.get(NCBI_URL + suffix.format(gene_id=gene_id),
+                params=dict(taxon_filter=9606))
+            r.raise_for_status()
+            table = r.json()
+            if 'reports' in table:
+                gene = table['reports'][0]['gene']
+                homologs[acc] = [gene['symbol'], gene['gene_id']]
 
         # Get the non-human motif names
         non_human_motif_names = [i.name for i in non_human_motifs]
-        # Compare against homologene
-        found_names = hg_df[hg_df['Gene Symbol'].isin([adjust_gene_name(i) 
-            for i in non_human_motif_names])]['Gene Symbol'].unique()
+        # Compare against NCBI homologs
+        found_names = [adjust_gene_name(i.name) for i in non_human_motifs
+            if i.acc[0] in homologs]
         # Find the missing ones
-        missing = (set([adjust_gene_name(i) for i in 
+        missing = (set([adjust_gene_name(i) for i in
             non_human_motif_names]) - set(found_names))
         print ()
-        print ('Names missing from the homologene database:')
-        for i in [(i.name, i.acc) for i in non_human_motifs if
-            i.name in missing]:
-            print (i[0], *i[1])
-
-        UNIPROT_COLUMNS = ['Uniprot', 'Accession']
-        if len(missing) > 0:
-            # Get the missing IDs from Uniprot API
-            print ()
-            print ('Retrieving matches from UniProt...')
-            mapping = get_uniprot_mapping('UniProtKB_AC-ID', 'RefSeq_Protein',
-                [i.acc[0] for i in non_human_motifs if i.name in missing])
-            mapping.columns = UNIPROT_COLUMNS
-        else:
-            mapping = pd.DataFrame(columns=UNIPROT_COLUMNS)
-
-        # Create a DataFrame for matching missing entries
-        hg_df[hg_df['Protein Accession'].isin(mapping['Accession'])]
-        missing_df = pd.DataFrame([(i.name, i.acc[0]) for i in 
-            non_human_motifs if i.name in missing], 
-            columns = ['Gene Symbol', 'Uniprot'])
-        matching_df = missing_df.join(mapping.set_index('Uniprot'),
-            on='Uniprot').join(hg_df.set_index('Protein Accession'),
-            on='Accession', rsuffix='_HG')
-
-        def corresponding_id(
-            name: str,
-        ) -> np.array:
-            """
-            Retrieves the corresponding group ID for a given gene name
-            from the homologene DataFrame, or matching DataFrame if it
-            is not found.
-
-            Parameters
-            ----------
-            name : str
-                Gene name of interest
-
-            Returns
-            -------
-            np.array
-                Array containing the corresponding group ID
-            """
-
-            # Choose the values of the group ID from the homologene DataFrame
-            # which correspond to the gene of interest
-            values = hg_df[hg_df['Gene Symbol'] == name]['HG Group ID'].values
-            if len(values) == 0:
-                # If none are found, use the matching DataFrame instead
-                matches = matching_df[matching_df['Gene Symbol'] == name]
-                values = matches['HG Group ID'].values
-
-            return values
+        print ('TFs for which no homolog was found:')
+        for i in non_human_motifs:
+            if i.name in missing:
+                print (i.name, *i.acc)
 
         # Create a DataFrame of corresponding names
+        corr_names = {i.name: homologs[i.acc[0]][0] for i in non_human_motifs
+            if i.acc[0] in homologs}
         corr_df = pd.DataFrame(non_human_motif_names,
             columns=['Original Name'])
         corr_df['Adjusted Name'] = corr_df['Original Name'].apply(
             adjust_gene_name)
-        corr_df['Group ID'] = corr_df['Adjusted Name'].apply(corresponding_id)
-        corr_df['Group ID'] = corr_df['Group ID'].apply(lambda x:
-            x[0] if len(x) > 0 else np.nan)
-        corr_df['Human Name'] = corr_df['Group ID'].apply(lambda x:
-            hg_df[(hg_df['HG Group ID'] == x) &
-            (hg_df['TaxID'] == 9606)]['Gene Symbol'].values)
-        corr_df['Human Name'] = corr_df['Human Name'].apply(lambda x:
-            x[0] if len(x) > 0 else '')
-        corr_df['Trivial'] = corr_df['Original Name'].apply(lambda x:
-            x.upper()) == corr_df['Human Name']
+        corr_df['Human Name'] = corr_df['Original Name'].apply(corr_names.get)
 
         # Find duplicates
         duplicated = corr_df[corr_df['Human Name'].duplicated(keep=False) &
-            (corr_df['Human Name'] != '')].copy()
+            ~corr_df['Human Name'].isna()].copy()
         to_print = duplicated.groupby('Human Name')['Original Name'].unique(
             ).apply(lambda x: ' '.join(x))
         print ()
@@ -746,7 +684,7 @@ class Sponge:
         to_drop = duplicated['Original Name'][duplicated.sort_values(
             'IC').duplicated('Human Name', keep='last')]
 
-        # Exlude the IDs which are already present among the human ones
+        # Exclude the IDs which are already present among the human ones
         human_motif_names = [i.name for i in self.motifs if
             '9606' in i.species]
         corr_df['Duplicate'] = corr_df['Human Name'].isin(human_motif_names)
@@ -754,13 +692,13 @@ class Sponge:
         # Perform the final filtering - discard all duplicates and TFs without
         # homologs
         corr_df_final = corr_df[(corr_df['Duplicate'] == False) &
-            (corr_df['Human Name'] != '') &
+            (~corr_df['Human Name'].isna()) &
             (corr_df['Original Name'].isin(to_drop) == False)]
 
         # The mapping of original to human names and the matrix IDs to be kept
         animal_to_human = {animal_name: human_name for animal_name, human_name
             in zip(corr_df_final['Original Name'],
-            corr_df_final['Human Name'])}
+                corr_df_final['Human Name'])}
         print ()
         print ('Final number of IDs which will be replaced by human homologs:',
                len(animal_to_human))
@@ -769,7 +707,7 @@ class Sponge:
             (motif.name in human_motif_names or motif.name in animal_to_human)]
         tf_names = [motif.name for motif in self.motifs if
             (motif.name in human_motif_names or motif.name in animal_to_human)]
-        print ('Final number of total matrix IDs:', len(matrix_ids))
+        print ('Final number of all matrix IDs:', len(matrix_ids))
 
         self.animal_to_human = animal_to_human
         self.matrix_ids = matrix_ids
