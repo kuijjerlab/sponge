@@ -8,7 +8,7 @@ from pyjaspar import jaspardb
 from shutil import rmtree
 from typing import Literal, Mapping
 
-from sponge.file_retrieval import *
+from sponge.data_retrieval import *
 from sponge.filtering import *
 from sponge.helper_functions import *
 
@@ -95,8 +95,8 @@ class Sponge:
             Dictionary of paths to required files, keyed by their
             descriptions; if a path is not provided the files will be
             looked for in the temp folder or downloaded, by default {}
-            Available descriptions: 'homologene', 'promoter',
-                'jaspar_bigbed', 'ensembl'
+            Available descriptions: 'promoter', 'jaspar_bigbed',
+                'ensembl'
         tf_names : Iterable[str], optional
             Iterable of names of transcription factors to consider, if
             empty it is ignored, by default []
@@ -412,15 +412,6 @@ class Sponge:
                         year=self.jaspar_release[-4:],
                         genome_assembly=self.assembly) for tr in to_request]
                     version = self.jaspar_release
-                elif description == 'homologene':
-                    # The version needs to be determined via a separate request
-                    version_url = '/'.join(to_request.split('/')[:-1] +
-                        ['RELEASE_NUMBER'])
-                    version_request = requests.get(version_url)
-                    # Set the encoding to stop warning about too few bytes
-                    # to infer it from
-                    version_request.encoding = 'ascii'
-                    version = version_request.text.strip()
                 # Download the specified file
                 print (f'Downloading data into {file_path}...')
                 download_with_progress(to_request, file_path)
@@ -442,8 +433,8 @@ class Sponge:
         Parameters
         ----------
         temp_fingerprint : FINGERPRINTS
-            Fingerprint to be updated, can be empty or initially
-            loaded from the cached fingerprint
+            Fingerprint to be updated, can be empty or initially loaded
+            from the cached fingerprint
         label : str
             Label to update
         """
@@ -643,6 +634,10 @@ class Sponge:
             if 'reports' in table:
                 gene = table['reports'][0]['gene']
                 homologs[acc] = [gene['symbol'], gene['gene_id']]
+        # Record the version of NCBI services
+        version_r = requests.get(NCBI_URL + '/version')
+        version = version_r.json()['version']
+        self.log_fingerprint('NCBI', version)
 
         # Get the non-human motif names
         non_human_motif_names = [i.name for i in non_human_motifs]
@@ -796,11 +791,13 @@ class Sponge:
             results_list = iterate_motifs(df_full, chromosomes, self.tf_names,
                 self.matrix_ids, self.jaspar_release, self.assembly,
                 n_processes, score_threshold)
+            self.log_fingerprint('JASPAR_TSV', self.jaspar_release)
         else:
             results_list = iterate_chromosomes(df_full, bigbed_file,
                 chromosomes, self.matrix_ids, n_processes, score_threshold)
 
         elapsed = time.time() - start_time
+
         print ()
         print (f'Total time: {elapsed // 60:n} m {elapsed % 60:.2f} s')
 

@@ -26,7 +26,7 @@ def test_calculate_ic_all_the_same(all_A_motif):
 
 
 def test_calculate_ic_SOX2(SOX2_motif):
-    assert (helper_f.calculate_ic(SOX2_motif) == 
+    assert (helper_f.calculate_ic(SOX2_motif) ==
         pytest.approx(12.95, abs=0.01))
 
 
@@ -55,7 +55,7 @@ import sponge.filtering as filter_f
 
 
 # File retrieval functions
-import sponge.file_retrieval as file_f
+import sponge.data_retrieval as data_f
 
 
 # Analysis functions
@@ -69,7 +69,7 @@ import pandas as pd
 
 from sponge.sponge import Sponge
 
-# The test is marked as slow because the download of the bigbed file takes 
+# The test is marked as slow because the download of the bigbed file takes
 # a lot of time and the filtering is also time consuming unless parallelised
 @pytest.mark.slow
 def test_full_default_workflow(tmp_path):
@@ -110,13 +110,13 @@ def test_small_workflow(tmp_path):
     assert os.path.exists(motif_output)
 
     ppi_df = pd.read_csv(ppi_output, sep='\t', header=None)
-    ppi_df_t = pd.read_csv(os.path.join('tests', 'sponge', 
+    ppi_df_t = pd.read_csv(os.path.join('tests', 'sponge',
         'test_ppi_prior.tsv'), sep='\t', header=None)
 
     pd.testing.assert_frame_equal(ppi_df, ppi_df_t)
 
     motif_df = pd.read_csv(motif_output, sep='\t', header=None)
-    motif_df_t = pd.read_csv(os.path.join('tests', 'sponge', 
+    motif_df_t = pd.read_csv(os.path.join('tests', 'sponge',
         'test_motif_prior.tsv'), sep='\t', header=None)
 
     pd.testing.assert_frame_equal(motif_df, motif_df_t)

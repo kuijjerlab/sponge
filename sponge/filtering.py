@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import List, Iterable, Tuple
 
 from sponge.config import MOTIF_URL
-from sponge.file_retrieval import download_with_progress
+from sponge.data_retrieval import download_with_progress
 
 FILTER_INPUT = Tuple[str, pd.DataFrame, Iterable[str], str, int, int, float]
 
