@@ -519,7 +519,7 @@ class Sponge:
         initialisation:
 
         self.select_tfs()
-        self.find_human_homologs(prompt=False)
+        self.find_human_homologs()
         self.filter_matches(prompt=False)
         self.aggregate_matches(prompt=False)
         self.write_motif_prior()
@@ -532,7 +532,7 @@ class Sponge:
         """
 
         self.select_tfs()
-        self.find_human_homologs(prompt=False)
+        self.find_human_homologs()
         self.filter_matches(prompt=False)
         self.aggregate_matches(prompt=False)
         self.write_motif_prior()
