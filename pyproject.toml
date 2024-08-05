@@ -7,13 +7,13 @@ name = "sponge"
 authors = [
     {name = "Ladislav Hovan", email = "ladislav.hovan@ncmm.uio.no"},
 ]
-version = "0.0.3"
+version = "1.0.0"
 description = "A package to generate prior gene regulatory networks."
 readme = "README.md"
 license = {text = "GPL-3"}
 keywords = ["transcription-factors", "gene-regulatory-network"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python :: 3",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
