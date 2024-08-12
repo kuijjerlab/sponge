@@ -4,35 +4,29 @@ import pickle
 import numpy as np
 
 from datetime import datetime
-
 from pyjaspar import jaspardb
-
-from typing import Mapping
-
-from multiprocessing import Pool
-
-from math import ceil, sqrt
-
-from sponge.file_retrieval import *
-from sponge.helper_functions import *
-from sponge.filtering import *
-
 from shutil import rmtree
+from typing import Literal, Mapping
 
-FINGERPRINTS = defaultdict(Dict[str, Union[str, datetime, bool]])
+from sponge.data_retrieval import *
+from sponge.filtering import *
+from sponge.helper_functions import *
+
+FILE_DESC = Literal['homologene', 'promoter', 'jaspar_bigbed', 'ensembl']
+FINGERPRINTS = Dict[str, Dict[str, Union[str, datetime, bool]]]
 
 ### Class definition ###
 class Sponge:
     """
     Sponge class can process the data necessary for creating a prior
-    TF-gene regulatory network, along with a prior protein-protein 
+    TF-gene regulatory network, along with a prior protein-protein
     interaction network. It also contains tools to download these data,
-    so that minimal input from the user is required. The networks are 
+    so that minimal input from the user is required. The networks are
     provided in a format compatible with PANDA/LIONESS and other
     NetZoo tools.
 
     The run_default option is implemented in the constructor which will
-    run the entire pipeline after class instance initialisation using 
+    run the entire pipeline after class instance initialisation using
     the provided options and defaults where appropriate.
 
     Usage:
@@ -42,95 +36,108 @@ class Sponge:
     sponge_obj.select_tfs()
     sponge_obj.find_human_homologs()
     sponge_obj.filter_matches()
-    sponge_obj.retrieve_ppi()
-    sponge_obj.write_ppi_prior()
     sponge_obj.aggregate_matches()
     sponge_obj.write_motif_prior()
+    sponge_obj.retrieve_ppi()
+    sponge_obj.write_ppi_prior()
 
-    Most functions have options which can usually also be provided 
-    to the constructor, for more details refer to the documentation of 
+    Most functions have options which can usually also be provided
+    to the constructor, for more details refer to the documentation of
     the individual functions.
     """
 
     def __init__(
         self,
-        temp_folder: PATH = '.sponge_temp',
+        temp_folder: Path = '.sponge_temp',
         run_default: bool = False,
         jaspar_release: Optional[str] = None,
         genome_assembly: Optional[str] = None,
         n_processes: int = 1,
-        paths_to_files: Mapping[str, FILE_LIKE] = {},
+        paths_to_files: Mapping[str, Path] = {},
+        tf_names: Iterable[str] = [],
+        matrix_ids: Iterable[str] = [],
         drop_heterodimers: bool = True,
-        chromosomes: Iterable[str] = [f'chr{i}' for i in [j for j in 
-            range(1, 23)] + ['M', 'X', 'Y']],
+        chromosomes: Optional[Iterable[str]] = [f'chr{i}' for i in [j for j in
+            range(1, 23)] + ['X', 'Y']],
         tss_offset: Tuple[int, int] = (-750, 250),
         score_threshold: float = 400,
+        on_the_fly_processing: bool = False,
         protein_coding_only: bool = False,
         use_gene_names: bool = True,
         weighted: bool = False,
-        motif_outfile: FILE_LIKE = 'motif_prior.tsv',
-        ppi_outfile: FILE_LIKE = 'ppi_prior.tsv',
-        prompt: bool = True
+        motif_outfile: Path = 'motif_prior.tsv',
+        ppi_outfile: Path = 'ppi_prior.tsv',
+        prompt: bool = True,
     ):
         """
         Initialises an instance of the Sponge class.
 
         Parameters
         ----------
-        temp_folder : PATH, optional
-            The temporary folder for saving downloaded files, 
+        temp_folder : Path, optional
+            Temporary folder for saving downloaded files,
             by default '.sponge_temp'
         run_default : bool, optional
             Whether to run the default pipeline automatically after
             class instance initialisation, by default False
         jaspar_release : Optional[str], optional
-            Which JASPAR release to use or None to select the newest, 
+            Which JASPAR release to use or None to select the newest,
             by default None
         genome_assembly : Optional[str], optional
-            The genome assembly used in the provided files or None to
+            Genome assembly used in the provided files or None to
             deduce automatically during file download, by default None
             If this option is not provided it is assumed that the files
             match the default assembly of Ensembl
         n_processes : int, optional
-            The number of processes to run in parallel for the filtering
+            Number of processes to run in parallel for the filtering
             of the bigbed file, by default 1
-        paths_to_files : Mapping[str, FILE_LIKE], optional
-            A dictionary of paths to required files, keyed by their 
-            descriptions; if a path is not provided the files will be 
+        paths_to_files : Mapping[str, Path], optional
+            Dictionary of paths to required files, keyed by their
+            descriptions; if a path is not provided the files will be
             looked for in the temp folder or downloaded, by default {}
-            Available descriptions: 'homologene', 'promoter', 
-                'jaspar_bigbed', 'ensembl'
+            Available descriptions: 'promoter', 'jaspar_bigbed',
+                'ensembl'
+        tf_names : Iterable[str], optional
+            Iterable of names of transcription factors to consider, if
+            empty it is ignored, by default []
+        matrix_ids : Iterable[str], optional
+            Iterable of transcription factor JASPAR matrix IDs to
+            consider, if empty it is ignored, by default []
         drop_heterodimers : bool, optional
             Whether to drop the heterodimer motifs from consideration,
             by default True
-        chromosomes : Iterable[str], optional
-            Which chromosomes to get the promoters from, by default
-            [f'chr{i}' for i in [j for j in range(1, 23)] + 
-            ['M', 'X', 'Y']] 
+        chromosomes : Optional[Iterable[str]], optional
+            Which chromosomes to get the promoters from or None to use
+            all chromosomes present in the assembly, by default
+            [f'chr{i}' for i in [j for j in range(1, 23)] + ['X', 'Y']]
         tss_offset : Tuple[int, int], optional
-            The offset from the transcription start site to use for the
-            assignment of transcription factors to promoters, 
+            Offset from the transcription start site to use for the
+            assignment of transcription factors to promoters,
             by default (-750, 250)
         score_threshold : float, optional
-            The minimal score of a match for it to be included in the 
+            Minimal score of a match for it to be included in the
             prior, by default 400
+        on_the_fly_processing : bool, optional
+            Whether to not use the entire JASPAR bigbed file but rather
+            download TF tracks for the motifs of interest on the fly and
+            discard them afterwards, by default False
         protein_coding_only : bool, optional
-            Whether to restrict the gene selection to only protein 
+            Whether to restrict the gene selection to only protein
             coding genes, by default False
         use_gene_names : bool, optional
-            Whether to use gene names instead of Ensemble IDs in the 
+            Whether to use gene names instead of Ensemble IDs in the
             output, by default True
         weighted : bool, optional
             Whether to use weighted rather than binary prior networks,
             by default False
-        motif_outfile : FILE_LIKE, optional
-            The path to save the motif prior into, by default 
+        motif_outfile : Path, optional
+            Path to save the motif prior into, by default
             'motif_prior.tsv'
-        ppi_outfile : FILE_LIKE, optional
-            The path to save the PPI prior into, by default
+        ppi_outfile : Path, optional
+            Path to save the PPI prior into, by default
             'ppi_prior.tsv'
         prompt : bool, optional
-            Whether to prompt to confirm the file downloads, 
+            Whether to prompt to confirm the file downloads,
             by default True
         """
 
@@ -148,7 +155,10 @@ class Sponge:
         self.drop_heterodimers = drop_heterodimers
         self.chromosomes = chromosomes
         self.tss_offset = tss_offset
+        self.prov_tf_names = tf_names
+        self.prov_matrix_ids = matrix_ids
         self.score_threshold = score_threshold
+        self.on_the_fly_processing = on_the_fly_processing
         self.protein_coding_only = protein_coding_only
         self.use_gene_names = use_gene_names
         self.weighted = weighted
@@ -180,7 +190,7 @@ class Sponge:
 
     def initialise_jaspar(
         self,
-        jaspar_release: Optional[str] = None
+        jaspar_release: Optional[str] = None,
     ) -> None:
         """
         Initialises the JASPAR database object to be used for motif
@@ -189,7 +199,7 @@ class Sponge:
         Parameters
         ----------
         jaspar_release : Optional[str], optional
-            Which JASPAR release to use or None to select the newest, 
+            Which JASPAR release to use or None to select the newest,
             by default None
         """
 
@@ -225,7 +235,7 @@ class Sponge:
     ### File retrieval functions ###
     def prepare_files(
         self,
-        prompt: bool = True
+        prompt: bool = True,
     ) -> bool:
         """
         Locates or downloads the files required for the running of the
@@ -234,7 +244,7 @@ class Sponge:
         Parameters
         ----------
         prompt : bool, optional
-            Whether to prompt to confirm the file downloads, 
+            Whether to prompt to confirm the file downloads,
             by default True
 
         Returns
@@ -254,6 +264,11 @@ class Sponge:
         # Attemp to first use the provided paths
         provided = []
         for k,v in self.provided_paths.items():
+            if k == 'jaspar_bigbed' and self.on_the_fly_processing:
+                print ('On the fly processing was chosen but path to the '
+                    'JASPAR bigbed file was provided, turning off on the fly '
+                    'processing')
+                self.on_the_fly_processing = False
             if k not in FILE_DF.index:
                 print (f'Unrecognised file type: {k}, ignoring provided path')
                 continue
@@ -270,6 +285,8 @@ class Sponge:
         to_check = [file for file in FILE_DF.index if file not in provided]
         to_retrieve = {}
         for file in to_check:
+            if file == 'jaspar_bigbed' and self.on_the_fly_processing:
+                continue
             if not check_file_exists(file, self.temp_folder):
                 to_retrieve[file] = FILE_DF.loc[file, 'name']
             else:
@@ -301,16 +318,17 @@ class Sponge:
             else:
                 # Prompt was refused
                 return False
+            return True
 
 
     def retrieve_file(
         self,
-        description: str,
-        prompt: bool = True
+        description: FILE_DESC,
+        prompt: bool = True,
     ) -> Optional[str]:
         """
-        Attempts to retrieve a file corresponding to a given 
-        description. If the file is found in the temporary directory or 
+        Attempts to retrieve a file corresponding to a given
+        description. If the file is found in the temporary directory or
         has been flagged as provided it is not downloaded, but the path
         to it will be returned in any case. If the file cannot be
         retrieved (e.g. because the description is invalid), None is
@@ -318,18 +336,18 @@ class Sponge:
 
         Parameters
         ----------
-        description : str
-            The description of a file to be retrieved
-            Available descriptions: 'homologene', 'promoter', 
+        description : FILE_DESC
+            Description of a file to be retrieved
+            Available descriptions: 'homologene', 'promoter',
                 'jaspar_bigbed', 'ensembl'
         prompt : bool, optional
-            Whether to prompt to confirm the file downloads, 
+            Whether to prompt to confirm the file downloads,
             by default True
 
         Returns
         -------
         Optional[str]
-            The path to the retrieved file or None if the file was not
+            Path to the retrieved file or None if the file was not
             retrieved
 
         Raises
@@ -338,7 +356,7 @@ class Sponge:
             If self.jaspar_release is not specified prior to attempting
             to retrieve the jaspar_bigbed file
         """
-        
+
         # Just use the provided path
         if description in self.provided_paths:
             print ('Using provided file', self.provided_paths[description])
@@ -354,7 +372,7 @@ class Sponge:
             print ('Using cached file', file_path)
             print ()
         else:
-            print (f'File {FILE_DF.loc[description, "name"]} not found ' 
+            print (f'File {FILE_DF.loc[description, "name"]} not found '
                 f'in directory {self.temp_folder}')
             if prompt:
                 reply = prompt_to_confirm('Do you want to download it?')
@@ -388,16 +406,12 @@ class Sponge:
                     if self.jaspar_release is None:
                         raise ValueError('The release of jaspar has to be '
                             'specified in order to retrieve the bigbed file')
-                    to_request = to_request.format(
+                    # Hosted on two possible servers, they are both listed
+                    # in the table, new one first
+                    to_request = [tr.format(
                         year=self.jaspar_release[-4:],
-                        genome_assembly=self.assembly)
+                        genome_assembly=self.assembly) for tr in to_request]
                     version = self.jaspar_release
-                elif description == 'homologene':
-                    # The version needs to be determined via a separate request
-                    version_url = '/'.join(to_request.split('/')[:-1] + 
-                        ['RELEASE_NUMBER'])
-                    version_request = requests.get(version_url, stream=True)
-                    version = version_request.text.strip()
                 # Download the specified file
                 print (f'Downloading data into {file_path}...')
                 download_with_progress(to_request, file_path)
@@ -411,7 +425,7 @@ class Sponge:
     def update_label_in_cache(
         self,
         temp_fingerprint: FINGERPRINTS,
-        label: str
+        label: str,
     ) -> None:
         """
         Updates a given label in the cached fingerprint file.
@@ -419,10 +433,10 @@ class Sponge:
         Parameters
         ----------
         temp_fingerprint : FINGERPRINTS
-            The fingerprint to be updated, can be empty or initially
-            loaded from the cached fingerprint
+            Fingerprint to be updated, can be empty or initially loaded
+            from the cached fingerprint
         label : str
-            The label to update
+            Label to update
         """
 
         # Update the label
@@ -437,7 +451,7 @@ class Sponge:
         label: str,
         version: str,
         provided: bool = False,
-        cached: bool = False
+        cached: bool = False,
     ) -> None:
         """
         Logs the fingerprint (label, version, retrieval time) for a
@@ -447,16 +461,16 @@ class Sponge:
         Parameters
         ----------
         label : str
-            The label corresponding to the file
+            Label corresponding to the file
         version : str
-            The version of the database used to make the file
+            Version of the database used to make the file
         provided : bool, optional
-            Whether the path to the file was provided by user, 
+            Whether the path to the file was provided by user,
             by default False
         cached : bool, optional
             Whether the file was retrieved from cache, by default False
         """
-        
+
         # Update the details in the fingerprint based on the provided data
         self.fingerprint[label]['version'] = version
         self.fingerprint[label]['datetime'] = datetime.fromtimestamp(
@@ -487,8 +501,8 @@ class Sponge:
 
 
     ### Main workflow functions ###
-    def run_default_workflow(  
-        self
+    def run_default_workflow(
+        self,
     ) -> None:
         """
         Runs the default workflow by running the following functions
@@ -496,12 +510,12 @@ class Sponge:
         initialisation:
 
         self.select_tfs()
-        self.find_human_homologs(prompt=False)
+        self.find_human_homologs()
         self.filter_matches(prompt=False)
-        self.retrieve_ppi()
-        self.write_ppi_prior()
         self.aggregate_matches(prompt=False)
         self.write_motif_prior()
+        self.retrieve_ppi()
+        self.write_ppi_prior()
 
         This will result in the generation of priors as specified and
         should be used unless there is a desire to change the provided
@@ -509,17 +523,19 @@ class Sponge:
         """
 
         self.select_tfs()
-        self.find_human_homologs(prompt=False)
+        self.find_human_homologs()
         self.filter_matches(prompt=False)
-        self.retrieve_ppi()
-        self.write_ppi_prior()
         self.aggregate_matches(prompt=False)
         self.write_motif_prior()
+        self.retrieve_ppi()
+        self.write_ppi_prior()
 
 
     def select_tfs(
         self,
-        drop_heterodimers: Optional[bool] = None
+        drop_heterodimers: Optional[bool] = None,
+        tf_names: Optional[Iterable[str]] = None,
+        matrix_ids: Optional[Iterable[str]] = None,
     ) -> None:
         """
         Selects transcription factors from the newest version of the
@@ -530,6 +546,14 @@ class Sponge:
         drop_heterodimers : Optional[bool], optional
             Whether to drop heterodimer motifs or None to follow the
             option from the initialisation, by default None
+        tf_names : Optional[Iterable[str]], optional
+            Iterable of names of transcription factors to consider or
+            None to follow the option from the initialisation, if empty
+            it is ignored, by default None
+        matrix_ids : Optional[Iterable[str]], optional
+            Iterable of transcription factor JASPAR matrix IDs to
+            consider or None to follow the option from the
+            initialisation, if empty it is ignored, by default None
         """
 
         print ()
@@ -538,42 +562,35 @@ class Sponge:
 
         if drop_heterodimers is None:
             drop_heterodimers = self.drop_heterodimers
+        if tf_names is None:
+            tf_names = self.prov_tf_names
+        if matrix_ids is None:
+            matrix_ids = self.prov_matrix_ids
 
-        # All vertebrate motifs
-        motifs = self.jdb_obj.fetch_motifs(collection='CORE', 
-            tax_group='vertebrates', all_versions=True)
-        print ()
-        print ('All motif versions:', len(motifs))
-        print ('Motif base IDs:', len(set([i.base_id for i in motifs])))
+        if (matrix_ids is not None and len(matrix_ids) > 0 and
+            tf_names is not None and len(tf_names) > 0):
+            print ('Both motif IDs and TF names have been specified, will '
+                'filter on both (intersection)')
 
-        # Select latest, preferring human ones
-        latest = {}
-        for i in motifs:
-            if i.base_id not in latest:
-                latest[i.base_id] = [i.matrix_id, i.species]
-            else:
-                # Replace with newer version if the new one is human or the old 
-                # one isn't       
-                if (('9606' in i.species) or 
-                    ('9606' not in latest[i.base_id][1])):
-                    # This could be added to the logical condition above but 
-                    # this is more readable
-                    if int(i.matrix_id[-1]) > int(latest[i.base_id][0][-1]):
-                        latest[i.base_id] = [i.matrix_id, i.species]
-        motifs_latest = [i for i in motifs if 
-            i.matrix_id == latest[i.base_id][0]]
-        
+        # Latest vertebrate motifs, filter by matrix IDs if any
+        motifs = self.jdb_obj.fetch_motifs(collection='CORE',
+            tax_group='vertebrates', matrix_id=matrix_ids)
+        # Filter also by TF names if any
+        if tf_names is not None and len(tf_names) > 0:
+            tf_name_set = set(tf_names)
+            motifs_filt = [i for i in motifs if i.name in tf_name_set]
+        else:
+            motifs_filt = motifs
+        print ('Retrieved motifs:', len(motifs_filt))
+
         # Keep only one motif per TF
         # Consider dropping this requirement maybe
-        tf_to_motif = {}
-        for i in motifs_latest:
-            if i.name not in tf_to_motif:
-                tf_to_motif[i.name] = {i.matrix_id: calculate_ic(i)}
-            else:
-                tf_to_motif[i.name][i.matrix_id] = calculate_ic(i)
+        tf_to_motif = defaultdict(dict)
+        for i in motifs_filt:
+            tf_to_motif[i.name][i.matrix_id] = calculate_ic(i)
         self.tf_to_motif = tf_to_motif
-        motifs_unique = [i for i in motifs_latest if 
-            (tf_to_motif[i.name][i.matrix_id] == 
+        motifs_unique = [i for i in motifs_filt if
+            (tf_to_motif[i.name][i.matrix_id] ==
             max(tf_to_motif[i.name].values()))]
         print ('Unique motifs:', len(motifs_unique))
 
@@ -587,120 +604,67 @@ class Sponge:
 
 
     def find_human_homologs(
-        self, 
-        homologene_file: Optional[FILE_LIKE] = None,
-        prompt: bool = True
+        self,
     ) -> None:
         """
         Attempts to map all initially selected non-human transcription
         factors to their human homologs.
-
-        Parameters
-        ----------
-        homologene_file : Optional[FILE_LIKE], 
-            optional
-            The path to a homologene file or None to use cache or
-            download it, by default None
-        prompt : bool, optional
-            Whether to prompt before downloading, by default True
         """
-        
+
         print ()
         print ('--- Running find_human_homologs() ---')
-
-        if homologene_file is None:
-            homologene_file = self.retrieve_file('homologene', prompt=prompt)
-            if homologene_file is None:
-                print ('Unable to find or retrieve the homologene file, ' 
-                    'exiting')
-                return
 
         # Get the non-human motifs
         non_human_motifs = [i for i in self.motifs if '9606' not in i.species]
         print ('Non-human motifs:', len(non_human_motifs))
 
-        # Read the homologene database
-        hg_df = pd.read_csv(homologene_file, sep='\t', header=None, 
-                    names=['HG Group ID', 'TaxID', 'Gene ID', 
-                           'Gene Symbol', 'Protein GI', 'Protein Accession'])
+        # Retrieve mapping of Uniprot to GeneID
+        mapping = get_uniprot_mapping('UniProtKB_AC-ID', 'GeneID',
+            [i.acc for i in non_human_motifs])
+        # Get the human homologs from NCBI
+        print ()
+        print ('Retrieving homologs from NCBI...')
+        homologs = {}
+        suffix = '/gene/id/{gene_id}/orthologs'
+        for acc,gene_id in mapping[['from', 'to']].values:
+            r = requests.get(NCBI_URL + suffix.format(gene_id=gene_id),
+                params=dict(taxon_filter=9606))
+            r.raise_for_status()
+            table = r.json()
+            if 'reports' in table:
+                gene = table['reports'][0]['gene']
+                homologs[acc] = [gene['symbol'], gene['gene_id']]
+        # Record the version of NCBI services
+        version_r = requests.get(NCBI_URL + '/version')
+        version = version_r.json()['version']
+        self.log_fingerprint('NCBI', version)
 
         # Get the non-human motif names
         non_human_motif_names = [i.name for i in non_human_motifs]
-        # Compare against homologene
-        found_names = hg_df[hg_df['Gene Symbol'].isin([adjust_gene_name(i) for 
-            i in non_human_motif_names])]['Gene Symbol'].unique()
+        # Compare against NCBI homologs
+        found_names = [adjust_gene_name(i.name) for i in non_human_motifs
+            if i.acc[0] in homologs]
         # Find the missing ones
-        missing = (set([adjust_gene_name(i) for i in non_human_motif_names]) - 
-            set(found_names))
+        missing = (set([adjust_gene_name(i) for i in
+            non_human_motif_names]) - set(found_names))
         print ()
-        print ('Names missing from the homologene database:')
-        for i in [(i.name, i.acc) for i in non_human_motifs if 
-            i.name in missing]:
-            print (i[0], *i[1])
-
-        # Get the missing IDs from Uniprot API
-        print ()
-        print ('Retrieving matches from UniProt...')
-        mapping = get_uniprot_mapping('UniProtKB_AC-ID', 'RefSeq_Protein',
-            [i.acc[0] for i in non_human_motifs if i.name in missing])
-        mapping.columns = ['Uniprot', 'Accession']
-
-        # Create a DataFrame for matching missing entries
-        hg_df[hg_df['Protein Accession'].isin(mapping['Accession'])]
-        missing_df = pd.DataFrame([(i.name, i.acc[0]) for i in non_human_motifs 
-            if i.name in missing], columns = ['Gene Symbol', 'Uniprot'])        
-        matching_df = missing_df.join(mapping.set_index('Uniprot'), 
-            on='Uniprot').join(hg_df.set_index('Protein Accession'), 
-            on='Accession', rsuffix='_HG')
-
-        def corresponding_id(
-            name: str
-        ) -> np.array:
-            """
-            Retrieves the corresponding group ID for a given gene name 
-            from the homologene DataFrame, or matching DataFrame if it
-            is not found.
-
-            Parameters
-            ----------
-            name : str
-                The gene name of interest
-
-            Returns
-            -------
-            np.array
-                The array containing the corresponding group ID
-            """
-
-            # Choose the values of the group ID from the homologene DataFrame
-            # which correspond to the gene of interest
-            values = hg_df[hg_df['Gene Symbol'] == name]['HG Group ID'].values
-            if len(values) == 0:
-                # If none are found, use the matching DataFrame instead
-                matches = matching_df[matching_df['Gene Symbol'] == name]
-                values = matches['HG Group ID'].values
-
-            return values
+        print ('TFs for which no homolog was found:')
+        for i in non_human_motifs:
+            if i.name in missing:
+                print (i.name, *i.acc)
 
         # Create a DataFrame of corresponding names
-        corr_df = pd.DataFrame(non_human_motif_names, 
+        corr_names = {i.name: homologs[i.acc[0]][0] for i in non_human_motifs
+            if i.acc[0] in homologs}
+        corr_df = pd.DataFrame(non_human_motif_names,
             columns=['Original Name'])
         corr_df['Adjusted Name'] = corr_df['Original Name'].apply(
             adjust_gene_name)
-        corr_df['Group ID'] = corr_df['Adjusted Name'].apply(corresponding_id)
-        corr_df['Group ID'] = corr_df['Group ID'].apply(lambda x: 
-            x[0] if len(x) > 0 else np.nan)
-        corr_df['Human Name'] = corr_df['Group ID'].apply(lambda x: 
-            hg_df[(hg_df['HG Group ID'] == x) & 
-            (hg_df['TaxID'] == 9606)]['Gene Symbol'].values)
-        corr_df['Human Name'] = corr_df['Human Name'].apply(lambda x: 
-            x[0] if len(x) > 0 else '')
-        corr_df['Trivial'] = corr_df['Original Name'].apply(lambda x: 
-            x.upper()) == corr_df['Human Name']
+        corr_df['Human Name'] = corr_df['Original Name'].apply(corr_names.get)
 
         # Find duplicates
-        duplicated = corr_df[corr_df['Human Name'].duplicated(keep=False) & 
-            (corr_df['Human Name'] != '')].copy()
+        duplicated = corr_df[corr_df['Human Name'].duplicated(keep=False) &
+            ~corr_df['Human Name'].isna()].copy()
         to_print = duplicated.groupby('Human Name')['Original Name'].unique(
             ).apply(lambda x: ' '.join(x))
         print ()
@@ -709,47 +673,51 @@ class Sponge:
             print (f'{i}:', to_print.loc[i])
 
         # Calculate the information content for duplicates
-        duplicated['IC'] = duplicated['Original Name'].apply(lambda x: 
+        duplicated['IC'] = duplicated['Original Name'].apply(lambda x:
             max(self.tf_to_motif[x].values()))
         # Keep the highest IC amongst the duplicates
         to_drop = duplicated['Original Name'][duplicated.sort_values(
             'IC').duplicated('Human Name', keep='last')]
 
-        # Exlude the IDs which are already present among the human ones
-        human_motif_names = [i.name for i in self.motifs if 
+        # Exclude the IDs which are already present among the human ones
+        human_motif_names = [i.name for i in self.motifs if
             '9606' in i.species]
         corr_df['Duplicate'] = corr_df['Human Name'].isin(human_motif_names)
 
-        # Perform the final filtering - discard all duplicates and TFs without 
+        # Perform the final filtering - discard all duplicates and TFs without
         # homologs
-        corr_df_final = corr_df[(corr_df['Duplicate'] == False) & 
-            (corr_df['Human Name'] != '') & 
+        corr_df_final = corr_df[(corr_df['Duplicate'] == False) &
+            (~corr_df['Human Name'].isna()) &
             (corr_df['Original Name'].isin(to_drop) == False)]
 
         # The mapping of original to human names and the matrix IDs to be kept
-        animal_to_human = {animal_name: human_name for animal_name, human_name 
-            in zip(corr_df_final['Original Name'], 
-            corr_df_final['Human Name'])}
+        animal_to_human = {animal_name: human_name for animal_name, human_name
+            in zip(corr_df_final['Original Name'],
+                corr_df_final['Human Name'])}
         print ()
-        print ('Final number of IDs which will be replaced by human homologs:', 
+        print ('Final number of IDs which will be replaced by human homologs:',
                len(animal_to_human))
-        matrix_ids = [motif.matrix_id for motif in self.motifs if 
+        # Doing it this way ensures the ordering matches
+        matrix_ids = [motif.matrix_id for motif in self.motifs if
             (motif.name in human_motif_names or motif.name in animal_to_human)]
-        print ('Final number of total matrix IDs:', len(matrix_ids))
+        tf_names = [motif.name for motif in self.motifs if
+            (motif.name in human_motif_names or motif.name in animal_to_human)]
+        print ('Final number of all matrix IDs:', len(matrix_ids))
 
         self.animal_to_human = animal_to_human
         self.matrix_ids = matrix_ids
-        self.tf_names = human_motif_names + list(animal_to_human.keys())
+        self.tf_names = tf_names
 
 
     def filter_matches(
-        self, 
-        promoter_file: Optional[FILE_LIKE] = None, 
-        bigbed_file: Optional[FILE_LIKE] = None,
+        self,
+        promoter_file: Optional[Path] = None,
+        bigbed_file: Optional[Path] = None,
         score_threshold: Optional[float] = None,
+        on_the_fly_processing: Optional[bool] = None,
         chromosomes: Optional[Iterable[str]] = None,
         n_processes: Optional[int] = None,
-        prompt: bool = True
+        prompt: bool = True,
     ) -> None:
         """
         Filters all the binding sites in the JASPAR bigbed file to
@@ -759,26 +727,31 @@ class Sponge:
 
         Parameters
         ----------
-        promoter_file : Optional[FILE_LIKE], optional
-            The path to a promoter file or None to use cache or
+        promoter_file : Optional[Path], optional
+            Path to a promoter file or None to use cache or
             download it, by default None
-        bigbed_file : Optional[FILE_LIKE], optional
-            The path to a JASPAR bigbed file or None to use cache or
+        bigbed_file : Optional[Path], optional
+            Path to a JASPAR bigbed file or None to use cache or
             download it, by default None
         score_threshold : Optional[float], optional
-            The minimal score of a match for it to be included in the 
-            prior or None to follow the option from the initialisation, 
+            Minimal score of a match for it to be included in the
+            prior or None to follow the option from the initialisation,
             by default None
+        on_the_fly_processing : Optional[bool], optional
+            Whether to not use the entire JASPAR bigbed file but rather
+            download TF tracks for the motifs of interest on the fly and
+            discard them afterwards or None to follow the option from
+            the initialisation, by default None
         chromosomes : Optional[Iterable[str]], optional
-            Which chromosomes to get the promoters from or None to 
+            Which chromosomes to get the promoters from or None to
             follow the option from the initialisation, by default None
         n_processes : Optional[int], optional
-            The number of processes to run in parallel or None to 
+            Number of processes to run in parallel or None to
             follow the option from the initialisation, by default None
         prompt : bool, optional
             Whether to prompt before downloading, by default True
         """
-        
+
         print ()
         print ('--- Running filter_matches() ---')
 
@@ -790,14 +763,16 @@ class Sponge:
                 chromosomes = self.ucsc_to_ens.index
         if score_threshold is None:
             score_threshold = self.score_threshold
+        if on_the_fly_processing is None:
+            on_the_fly_processing = self.on_the_fly_processing
 
         if promoter_file is None:
             promoter_file = self.retrieve_file('promoter', prompt=prompt)
             if promoter_file is None:
                 print ('Unable to find or retrieve the promoter file, exiting')
                 return
-        
-        if bigbed_file is None:
+
+        if bigbed_file is None and not on_the_fly_processing:
             bigbed_file = self.retrieve_file('jaspar_bigbed', prompt=prompt)
             if bigbed_file is None:
                 print ('Unable to find or retrieve the JASPAR bigbed file, '
@@ -811,40 +786,18 @@ class Sponge:
         df_full.drop(columns=['score', 'strand'], inplace=True)
         df_full.set_index('name', inplace=True)
 
-        results_list = []
-        p = Pool(n_processes)
-
-        print ()
-        print ('Iterating over the chromosomes...')
         start_time = time.time()
-        for chrom in chromosomes:
-            st_chr = time.time()
-            df_chrom = df_full[df_full['chrom'] == chrom]
-            if len(df_chrom) == 0:
-                suffix = 'no transcripts'
-            elif len(df_chrom) == 1:
-                suffix = '1 transcript'
-            else:
-                suffix = f'{len(df_chrom)} transcripts'
-            print (f'Chromosome {chrom[3:]} with ' + suffix)
-            if len(df_chrom) == 0:
-                continue
-            # This is a heuristic approximation of the ideal chunk size
-            # Based off of performance benchmarking
-            chunk_size = ceil(sqrt(len(df_chrom) / n_processes))
-            chunk_divisions = [i for i in range(0, len(df_chrom), chunk_size)]
-            input_tuples = [(bigbed_file, df_chrom, self.tf_names, chrom, i, 
-                i+chunk_size, score_threshold) for i in chunk_divisions]
-            # Run the calculations in parallel
-            result = p.map_async(filter_edges_helper, input_tuples, 
-                chunksize=n_processes)
-            edges_chrom_list = result.get()
-            results_list += edges_chrom_list
-            elapsed_chr = time.time() - st_chr
-            print (f'Done in: {elapsed_chr // 60:n} m '
-                f'{elapsed_chr % 60:.2f} s')
+        if on_the_fly_processing:
+            results_list = iterate_motifs(df_full, chromosomes, self.tf_names,
+                self.matrix_ids, self.jaspar_release, self.assembly,
+                n_processes, score_threshold)
+            self.log_fingerprint('JASPAR_TSV', self.jaspar_release)
+        else:
+            results_list = iterate_chromosomes(df_full, bigbed_file,
+                chromosomes, self.matrix_ids, n_processes, score_threshold)
 
         elapsed = time.time() - start_time
+
         print ()
         print (f'Total time: {elapsed // 60:n} m {elapsed % 60:.2f} s')
 
@@ -852,176 +805,58 @@ class Sponge:
         # The index is irrelevant
         self.all_edges = pd.concat(results_list, ignore_index=True)
 
-    
+
     def load_matches(
         self,
-        file_path: FILE_LIKE
+        file_path: Path,
     ):
         """
         Loads the filtered matches from a file, allows the use of
-        the downstream SPONGE functions without running the steps up to 
-        and including filter_matches 
+        the downstream SPONGE functions without running the steps up to
+        and including filter_matches
 
         Parameters
         ----------
-        file_path : FILE_LIKE
-            The path to a file that contains the filtered matches 
+        file_path : Path
+            Path to a file that contains the filtered matches
             in a format compatible with what filter_matches generates
         """
 
         print ()
         print ('--- Running load_matches() ---')
-        
+
         self.all_edges = pd.read_csv(file_path, sep='\t')
 
 
-    def retrieve_ppi(
-        self
-    ) -> None:
-        """
-        Retrieves the protein-protein interaction data from the STRING
-        database for the previously identified transcription factors.
-        Stores the resulting network internally.
-        """
-        
-        print ()
-        print ('--- Running retrieve_ppi() ---')
-        
-        # Use the human names for the TFs
-        filtered_tfs = self.all_edges['TFName'].unique()
-        humanised_tfs = [self.animal_to_human[x] if x in self.animal_to_human
-            else x for x in filtered_tfs]
-        query_string = '%0d'.join(humanised_tfs)
-
-        print ('Retrieving mapping from STRING...')
-        mapping_request = requests.get(f'{STRING_URL}get_string_ids?'
-            f'identifiers={query_string}&species=9606')
-        mapping_df = pd.read_csv(BytesIO(mapping_request.content), sep='\t')
-        mapping_df['queryName'] = mapping_df['queryIndex'].apply(
-            lambda i: humanised_tfs[i])
-        # Check where the preferred name doesn't match the query
-        diff_df = mapping_df[mapping_df['queryName'] != 
-            mapping_df['preferredName']]
-        ids_to_check = np.concatenate((diff_df['queryName'], 
-            diff_df['preferredName']))
-        matching_ids = list(mapping_df[mapping_df['queryName'] == 
-            mapping_df['preferredName']]['preferredName'])
-        # Log the STRING version in the fingerprint
-        version_request = requests.get(f'{STRING_URL}version')
-        version_df = pd.read_csv(BytesIO(version_request.content), sep='\t')
-        self.log_fingerprint('STRING', version_df['string_version'])
-        
-        if len(ids_to_check) > 0:
-            # Retrieve UniProt identifiers for the genes with differing names
-            print ('Checking the conflicts in the UniProt database...')
-            uniprot_df = get_uniprot_mapping('Gene_Name', 'UniProtKB', 
-                ids_to_check).set_index('from')
-            p_to_q = {p: q for q,p in zip(diff_df['queryName'], 
-                diff_df['preferredName'])}
-            # Keep the conflicts where there is a match or where one or both
-            # of the names doesn't find an identifier
-            for p,q in p_to_q.items():
-                if (p not in uniprot_df.index or q not in uniprot_df.index
-                    or uniprot_df.loc[p, 'to'] == uniprot_df.loc[q, 'to']):
-                    matching_ids.append(p)
-        query_string_filt = '%0d'.join(matching_ids)
-
-        print ('Retrieving the network from STRING...')
-        request = requests.get(f'{STRING_URL}network?'
-            f'identifiers={query_string_filt}&species=9606')
-        ppi_df = pd.read_csv(BytesIO(request.content), sep='\t')
-
-        print ('Processing the results...')
-        ppi_df.drop(['stringId_A', 'stringId_B', 'ncbiTaxonId', 'nscore', 
-            'fscore', 'pscore', 'ascore', 'escore', 'dscore', 'tscore'], 
-            axis=1, inplace=True)
-        ppi_df.rename(columns={'preferredName_A': 'tf1', 
-            'preferredName_B': 'tf2'}, inplace=True)
-        if len(ids_to_check) > 0:
-            # Replace with names that have been queried (as used by JASPAR)
-            ppi_df['tf1'].replace(p_to_q, inplace=True)
-            ppi_df['tf2'].replace(p_to_q, inplace=True)
-        ppi_df.sort_values(by=['tf1', 'tf2'], inplace=True)
-
-        print ()
-        print ('Final number of TFs in the PPI network: '
-            f'{len(set(ppi_df["tf1"]).union(set(ppi_df["tf2"])))}')
-        print (f'Final number of edges: {len(ppi_df)}')
-
-        self.ppi_frame = ppi_df
-
-
-    def write_ppi_prior(
-        self,
-        output_path: Optional[FILE_LIKE] = None,
-        weighted: Optional[bool] = None
-    ) -> None:
-        """
-        Writes the protein-protein interaction prior network into a 
-        file.
-
-        Parameters
-        ----------
-        output_path : Optional[FILE_LIKE], optional
-            The path to write the prior into or None to follow the 
-            option from the initialisation, by default None
-        weighted : Optional[bool], optional
-            Whether to use weights for the edges as opposed to making 
-            them binary or None to follow the option from the 
-            initialisation, by default None
-        """
-        
-        print ()
-        print ('--- Running write_ppi_prior() ---')
-        
-        if output_path is None:
-            output_path = self.ppi_outfile
-        if weighted is None:
-            weighted = self.weighted
-
-        if self.ppi_frame is None:
-            print ('No motif prior has been generated yet, please run '
-                'retrieve_ppi() first')
-            return
-        
-        if weighted:
-            self.ppi_frame[['tf1', 'tf2', 'score']].to_csv(output_path, 
-                sep='\t', index=False, header=False)
-        else:
-            self.ppi_frame['edge'] = 1
-            self.ppi_frame[['tf1', 'tf2', 'edge']].to_csv(output_path, 
-                sep='\t', index=False, header=False)
-            
-
     def aggregate_matches(
         self,
-        ensembl_file: Optional[FILE_LIKE] = None,
+        ensembl_file: Optional[Path] = None,
         prompt: bool = True,
         use_gene_names: Optional[bool] = None,
-        protein_coding_only: Optional[bool] = None
+        protein_coding_only: Optional[bool] = None,
     ) -> None:
         """
-        Aggregates all the matches corresponding to individual 
+        Aggregates all the matches corresponding to individual
         transcripts into genes, creating a transcription factor - gene
         matrix. Stores the result internally.
 
         Parameters
         ----------
-        ensembl_file : Optional[FILE_LIKE], optional
-            The path to an Ensembl file or None to use cache or
+        ensembl_file : Optional[Path], optional
+            Path to an Ensembl file or None to use cache or
             download it, by default None
         prompt : bool, optional
             Whether to prompt before downloading, by default True
         use_gene_names : Optional[bool], optional
             Whether to use gene names instead of Ensembl IDs or None
-            to follow the option from the initialisation, 
+            to follow the option from the initialisation,
             by default None
         protein_coding_only : Optional[bool], optional
-            Whether to restrict the selection to only protein coding 
-            genes or None to follow the option from the initialisation, 
+            Whether to restrict the selection to only protein coding
+            genes or None to follow the option from the initialisation,
             by default None
         """
-        
+
         print ()
         print ('--- Running aggregate_matches() ---')
 
@@ -1029,11 +864,11 @@ class Sponge:
             if ensembl_file is None:
                 ensembl_file = self.retrieve_file('ensembl', prompt=prompt)
                 if ensembl_file is None:
-                    print ('Unable to find or retrieve the ensembl file, ' 
+                    print ('Unable to find or retrieve the ensembl file, '
                         'exiting')
                     return
             self.ensembl = pd.read_csv(ensembl_file, sep='\t')
-        
+
         if use_gene_names is None:
             use_gene_names = self.use_gene_names
         if protein_coding_only is None:
@@ -1044,12 +879,12 @@ class Sponge:
             'Transcript stable ID'), on='transcript')
         print ('Number of TF - transcript edges:', len(motif_df))
         if protein_coding_only:
-            motif_df = motif_df[motif_df['Gene type'] == 
+            motif_df = motif_df[motif_df['Gene type'] ==
                 'protein_coding'].copy()
         # Drop columns that are not required anymore
         motif_df.drop(columns=['Gene type', 'name'], inplace=True)
         # Humanise the TF names
-        motif_df['TFName'] = motif_df['TFName'].apply(lambda x: 
+        motif_df['TFName'] = motif_df['TFName'].apply(lambda x:
             self.animal_to_human[x] if x in self.animal_to_human else x)
         # Ignore genes without identifiers
         motif_df.dropna(subset=['Gene stable ID'], inplace=True)
@@ -1061,7 +896,7 @@ class Sponge:
         if use_gene_names:
             # Names are not unique - filtering needed
             # Fill empty gene names with IDs
-            motif_df['Gene name'] = motif_df.apply(lambda x: x['Gene name'] if 
+            motif_df['Gene name'] = motif_df.apply(lambda x: x['Gene name'] if
                 type(x['Gene name']) == str else x['Gene stable ID'], axis=1)
             # Count the number of edges for every name/ID pair
             name_id_matching = motif_df.groupby(
@@ -1076,41 +911,41 @@ class Sponge:
             motif_df.dropna(subset='Gene name', inplace=True)
             print ('Number of TF - gene edges after name conversion:',
                 len(motif_df))
-        
+
         self.motif_frame = motif_df
-        if (self.use_gene_names is not None and 
+        if (self.use_gene_names is not None and
             self.use_gene_names != use_gene_names):
             # Notify that the provided setting for gene name use has changed
             print ('Changing the use_gene_names setting to ', use_gene_names)
         # Update the setting in any case, to prevent unwanted saving issues
         self.use_gene_names = use_gene_names
-    
+
 
     def write_motif_prior(
         self,
-        output_path: Optional[FILE_LIKE] = None,
+        output_path: Optional[Path] = None,
         use_gene_names: Optional[bool] = None,
-        weighted: Optional[bool] = None
+        weighted: Optional[bool] = None,
     ) -> None:
         """
-        Writes the motif (transcription factor - gene) prior network 
+        Writes the motif (transcription factor - gene) prior network
         into a file.
 
         Parameters
         ----------
-        output_path : Optional[FILE_LIKE], optional
-            The path to write the prior into or None to follow the 
+        output_path : Optional[Path], optional
+            Path to write the prior into or None to follow the
             option from the initialisation, by default None
         use_gene_names : Optional[bool], optional
             Whether to use gene names instead of Ensembl IDs or None
-            to follow the option from the initialisation, 
+            to follow the option from the initialisation,
             by default None
         weighted : Optional[bool], optional
-            Whether to use weights for the edges as opposed to making 
-            them binary or None to follow the option from the 
+            Whether to use weights for the edges as opposed to making
+            them binary or None to follow the option from the
             initialisation, by default None
         """
-        
+
         print ()
         print ('--- Running write_motif_prior() ---')
 
@@ -1118,14 +953,14 @@ class Sponge:
             print ('No motif prior has been generated yet, please run '
                 'aggregate_matches() first')
             return
-        
+
         if output_path is None:
             output_path = self.motif_outfile
         if weighted is None:
             weighted = self.weighted
         if use_gene_names is None:
             use_gene_names = self.use_gene_names
-            
+
         if use_gene_names:
             column = 'Gene name'
         else:
@@ -1144,14 +979,133 @@ class Sponge:
                 output_path, sep='\t', index=False, header=False)
 
 
+    def retrieve_ppi(
+        self,
+    ) -> None:
+        """
+        Retrieves the protein-protein interaction data from the STRING
+        database for the previously identified transcription factors.
+        Stores the resulting network internally.
+        """
+
+        print ()
+        print ('--- Running retrieve_ppi() ---')
+
+        # Use the human names for the TFs
+        filtered_tfs = self.all_edges['TFName'].unique()
+        humanised_tfs = [self.animal_to_human[x] if x in self.animal_to_human
+            else x for x in filtered_tfs]
+        query_string = '%0d'.join(humanised_tfs)
+
+        print ('Retrieving mapping from STRING...')
+        mapping_request = requests.get(f'{STRING_URL}get_string_ids?'
+            f'identifiers={query_string}&species=9606')
+        mapping_df = pd.read_csv(BytesIO(mapping_request.content), sep='\t')
+        mapping_df['queryName'] = mapping_df['queryIndex'].apply(
+            lambda i: humanised_tfs[i])
+        # Check where the preferred name doesn't match the query
+        diff_df = mapping_df[mapping_df['queryName'] !=
+            mapping_df['preferredName']]
+        ids_to_check = np.concatenate((diff_df['queryName'],
+            diff_df['preferredName']))
+        matching_ids = list(mapping_df[mapping_df['queryName'] ==
+            mapping_df['preferredName']]['preferredName'])
+        # Log the STRING version in the fingerprint
+        version_request = requests.get(f'{STRING_URL}version')
+        version_df = pd.read_csv(BytesIO(version_request.content), sep='\t',
+            dtype=str)
+        self.log_fingerprint('STRING', version_df['string_version'].loc[0])
+
+        if len(ids_to_check) > 0:
+            # Retrieve UniProt identifiers for the genes with differing names
+            print ('Checking the conflicts in the UniProt database...')
+            uniprot_df = get_uniprot_mapping('Gene_Name', 'UniProtKB',
+                ids_to_check).set_index('from')
+            p_to_q = {p: q for q,p in zip(diff_df['queryName'],
+                diff_df['preferredName'])}
+            # Keep the conflicts where there is a match or where one or both
+            # of the names doesn't find an identifier
+            for p,q in p_to_q.items():
+                if (p not in uniprot_df.index or q not in uniprot_df.index
+                    or uniprot_df.loc[p, 'to'] == uniprot_df.loc[q, 'to']):
+                    matching_ids.append(p)
+        query_string_filt = '%0d'.join(matching_ids)
+
+        print ('Retrieving the network from STRING...')
+        request = requests.get(f'{STRING_URL}network?'
+            f'identifiers={query_string_filt}&species=9606')
+        ppi_df = pd.read_csv(BytesIO(request.content), sep='\t')
+
+        print ('Processing the results...')
+        ppi_df.drop(['stringId_A', 'stringId_B', 'ncbiTaxonId', 'nscore',
+            'fscore', 'pscore', 'ascore', 'escore', 'dscore', 'tscore'],
+            axis=1, inplace=True)
+        ppi_df.rename(columns={'preferredName_A': 'tf1',
+            'preferredName_B': 'tf2'}, inplace=True)
+        if len(ids_to_check) > 0:
+            # Replace with names that have been queried (as used by JASPAR)
+            ppi_df['tf1'].replace(p_to_q, inplace=True)
+            ppi_df['tf2'].replace(p_to_q, inplace=True)
+        ppi_df.sort_values(by=['tf1', 'tf2'], inplace=True)
+
+        print ()
+        print ('Final number of TFs in the PPI network: '
+            f'{len(set(ppi_df["tf1"]).union(set(ppi_df["tf2"])))}')
+        print (f'Final number of edges: {len(ppi_df)}')
+
+        self.ppi_frame = ppi_df
+
+
+    def write_ppi_prior(
+        self,
+        output_path: Optional[Path] = None,
+        weighted: Optional[bool] = None,
+    ) -> None:
+        """
+        Writes the protein-protein interaction prior network into a
+        file.
+
+        Parameters
+        ----------
+        output_path : Optional[Path], optional
+            Path to write the prior into or None to follow the
+            option from the initialisation, by default None
+        weighted : Optional[bool], optional
+            Whether to use weights for the edges as opposed to making
+            them binary or None to follow the option from the
+            initialisation, by default None
+        """
+
+        print ()
+        print ('--- Running write_ppi_prior() ---')
+
+        if output_path is None:
+            output_path = self.ppi_outfile
+        if weighted is None:
+            weighted = self.weighted
+
+        if self.ppi_frame is None:
+            print ('No motif prior has been generated yet, please run '
+                'retrieve_ppi() first')
+            return
+
+        if weighted:
+            self.ppi_frame[['tf1', 'tf2', 'score']].to_csv(output_path,
+                sep='\t', index=False, header=False)
+        else:
+            self.ppi_frame['edge'] = 1
+            self.ppi_frame[['tf1', 'tf2', 'edge']].to_csv(output_path,
+                sep='\t', index=False, header=False)
+
+
     def show_fingerprint(
-        self
+        self,
     ) -> None:
         """
         Prints the fingerprint for the files and databases used by this
         instance of the Sponge class.
         """
-        
+
         for k,v in self.fingerprint.items():
             if v['provided']:
                 # No information is known about this file as it was provided
@@ -1164,8 +1118,8 @@ class Sponge:
                 else:
                     # Available
                     print (f'{k}: {v["version"]}, retrieved from cache,',
-                        'originally retrieved', 
-                        parse_datetime(v['datetime']))                      
+                        'originally retrieved',
+                        parse_datetime(v['datetime']))
             else:
                 # File was retrieved by this instance, all info available
                 print (f'{k}: {v["version"]}, retrieved',
@@ -1173,11 +1127,11 @@ class Sponge:
 
 
     def clear_cache(
-        self
+        self,
     ) -> None:
         """
         Removes the temporary folder and everything in it.
         """
-        
+
         if os.path.exists(self.temp_folder):
             rmtree(self.temp_folder)

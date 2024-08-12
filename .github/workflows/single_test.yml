@@ -1,4 +1,4 @@
-name: SPONGE test on latest Ubuntu and Python 3.8
+name: SPONGE test on latest Ubuntu and Python 3.9
 
 on:
   push:
@@ -17,7 +17,7 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v4
       with:
-        python-version: 3.8
+        python-version: 3.9
 
     - name: Check Python version
       run: |
@@ -32,4 +32,4 @@ jobs:
         pip install -e .
 
     - name: Run the tests
-      run: pytest tests
+      run: pytest tests  -m 'not slow'
