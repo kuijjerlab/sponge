@@ -301,7 +301,7 @@ def iterate_motifs(
             genome_assembly=assembly) + file_name for tr in MOTIF_URL]
         # Attempt to download the TF track
         try:
-            bytes = download_with_progress(to_request)
+            bytes_tf = download_with_progress(to_request)
         except Exception:
             print ('Unable to download', file_name)
             print (f'The TF {tf} will be skipped')
@@ -310,7 +310,7 @@ def iterate_motifs(
         # Load the downloaded TF track
         MOTIF_COLS = ['chrom', 'start', 'end', 'TFName', 'p-val', 'score',
             'strand']
-        motif_df = pd.read_csv(bytes, sep='\t', names=MOTIF_COLS,
+        motif_df = pd.read_csv(bytes_tf, sep='\t', names=MOTIF_COLS,
             compression='gzip')
         motif_df.drop(columns=['p-val', 'TFName', 'strand'], inplace=True)
         motif_df = motif_df[motif_df['chrom'].isin(chromosomes)]

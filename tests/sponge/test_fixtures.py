@@ -1,9 +1,10 @@
+import bioframe
+import os
 import pytest
 
 import pandas as pd
 
 from Bio.motifs.jaspar import Motif
-
 from pyjaspar import jaspardb
 
 # A motif without any information
@@ -33,5 +34,26 @@ def all_A_motif():
 def SOX2_motif():
     jdb_obj = jaspardb(release='JASPAR2024')
     SOX2_motif = jdb_obj.fetch_motif_by_id('MA0143.1')
-    
+
     yield SOX2_motif
+
+
+# A subset of promoters on chromosome 19
+@pytest.fixture
+def chr19_promoters():
+    path_to_file = os.path.join('tests', 'sponge', 'chr19_subset.bed')
+    df = bioframe.read_table(path_to_file, schema='bed')
+    df['name'] = df['name'].apply(lambda x: x.split('.')[0])
+    df.drop(columns=['score', 'strand'], inplace=True)
+    df.set_index('name', inplace=True)
+
+    yield df
+
+
+# Part of the FOXF2 track for chromosome 19
+@pytest.fixture
+def foxf2_chr19():
+    path_to_file = os.path.join('tests', 'sponge', 'foxf2_chr19_subset.tsv')
+    df = pd.read_csv(path_to_file, sep='\t')
+
+    yield df

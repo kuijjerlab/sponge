@@ -39,8 +39,7 @@ def prompt_to_confirm(
         if key is not None:
             # This means there was a reply, but not an accepted one
             print (f'Input not recognised: {key}')
-        print (f'{question} Y/N', flush=True)
-        key = input()
+        key = input(f'{question} Y/N')
         print (key)
     print ()
 
@@ -99,7 +98,9 @@ def check_file_exists(
         Whether the file corresponding to the description exists
     """
 
-    return os.path.exists(description_to_path(description, temp_folder))
+    desc = description_to_path(description, temp_folder)
+
+    return desc is not None and os.path.exists(desc)
 
 
 def load_promoters_from_biomart(
@@ -460,20 +461,28 @@ def get_chromosome_mapping(
     """
 
     if assembly[:2] == 'hg':
-        # The mapping can be retrieved from a chromAlias.tsv file
+        # The mapping can maybe be retrieved from a chromAlias.tsv file
         print (f'Retrieving chromosome name mapping for {assembly}...')
-        f = gzip.open(download_with_progress(HG_CHROMOSOME_URL.format(
-            genome_assembly=assembly)))
-        header_fields = ['alt', 'ucsc', 'notes']
-        chrom_df = pd.read_csv(f, sep='\t', names=header_fields)
-        # This mapping is unambiguous even if things other than Ensembl
-        # are included in the index
-        ens_to_ucsc = chrom_df.set_index('alt')['ucsc']
-        # For the mapping the other way, we filter out only Ensembl to
-        # prevent multiple values for a single index
-        chrom_df_filt = chrom_df[chrom_df['notes'].apply(lambda x:
-            'ensembl' in x)]
-        ucsc_to_ens = chrom_df_filt.set_index('ucsc')['alt']
+        try:
+            f = gzip.open(download_with_progress(HG_CHROMOSOME_URL.format(
+                genome_assembly=assembly)))
+            header_fields = ['alt', 'ucsc', 'notes']
+            chrom_df = pd.read_csv(f, sep='\t', names=header_fields)
+            # This mapping is unambiguous even if things other than Ensembl
+            # are included in the index
+            ens_to_ucsc = chrom_df.set_index('alt')['ucsc']
+            # For the mapping the other way, we filter out only Ensembl to
+            # prevent multiple values for a single index
+            chrom_df_filt = chrom_df[chrom_df['notes'].apply(lambda x:
+                'ensembl' in x)]
+            ucsc_to_ens = chrom_df_filt.set_index('ucsc')['alt']
+        except requests.exceptions.HTTPError:
+            print ('Failed to retrieve mapping for the assembly', assembly)
+            print ('Using the default mapping')
+            ens_to_ucsc = DEFAULT_MAPPING
+            # Simple inversion as there is no duplication here
+            ucsc_to_ens = pd.Series(ens_to_ucsc.index,
+                index=ens_to_ucsc.values)
     else:
         # Default mapping for the 22 autosomal chromosomes + X, Y, MT
         print ('No chromosome name mapping available for the assembly',

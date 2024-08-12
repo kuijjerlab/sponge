@@ -104,7 +104,8 @@ The project is: _in progress_.
 ## Room for Improvement
 Room for improvement:
 - Add more and better tests
-- Try incorporating unipressed and pyranges
+- Try incorporating unipressed
+- Improve overlap computations
 
 To do:
 - Addition of a command line script

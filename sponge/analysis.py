@@ -44,11 +44,12 @@ def describe_prior(
 
     n_tfs = prior['tf'].nunique()
     n_genes = prior['gene'].nunique()
+    n_edges = len(prior)
 
     print ('Number of unique TFs:', n_tfs)
     print ('Number of unique genes:', n_genes)
-    print ('Number of edges:', len(prior))
-    print (f'Network density: {100 * len(prior) / (n_tfs * n_genes):.2f} %')
+    print ('Number of edges:', n_edges)
+    print (f'Network density: {100 * n_edges / (n_tfs * n_genes):.2f} %')
 
 
 def plot_confusion_matrix(
@@ -82,7 +83,7 @@ def plot_confusion_matrix(
             ax.text(i, j, f'{data[i][j]:,d}\n{s_data[i][j]:.2f} %',
                 ha='center', va='center',
                 c='white' if s_data[i][j] > 50 else 'black')
-       
+
     return ax
 
 
