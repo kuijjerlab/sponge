@@ -22,6 +22,7 @@ dependencies = [
     "biomart",
     "numpy",
     "pandas",
+    "pybbi",
     "pyjaspar",
     "scikit-learn",
     "tqdm",
