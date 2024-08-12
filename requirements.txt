@@ -2,7 +2,7 @@ bioframe
 biomart
 numpy
 pandas
-pybbi
+pyBigWig
 pyjaspar
 scikit-learn
 tqdm
