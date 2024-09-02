@@ -67,11 +67,12 @@ def test_filter_edges(input, expected_length, chr19_promoters):
 
 
 @pytest.mark.parametrize('input, expected_length', [
-    ((os.path.join('tests', 'sponge', 'chr19_subset.bb'), ['chr1', 'chr19'],
-        ['MA0036.4', 'MA0030.2', 'MA0147.4']), 55),
+    ((os.path.join('tests', 'sponge', 'chr19_subset.bb'),
+        ['MA0036.4', 'MA0030.2', 'MA0147.4'], ['chr1', 'chr19']), 55),
 ])
 def test_iterate_chromosomes(input, expected_length, chr19_promoters):
-    df_list = filter_f.iterate_chromosomes(chr19_promoters, *input)
+    df_list = filter_f.iterate_chromosomes(input[0], chr19_promoters,
+        *input[1:])
 
     assert sum(len(df) for df in df_list) == expected_length
 
@@ -90,7 +91,7 @@ def test_process_motif(chr19_promoters, foxf2_chr19):
 
 @pytest.mark.network
 @pytest.mark.parametrize('input, expected_length', [
-    ((['chr1', 'chr19'], ['FOXF2'], ['MA0030.2'], 'JASPAR2024', 'hg38'), 51),
+    ((['FOXF2'], ['MA0030.2'], ['chr1', 'chr19'], 'JASPAR2024', 'hg38'), 51),
 ])
 def test_iterate_motifs(input, expected_length, chr19_promoters):
     df_list = filter_f.iterate_motifs(chr19_promoters, *input)

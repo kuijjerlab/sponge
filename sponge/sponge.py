@@ -12,7 +12,7 @@ from sponge.data_retrieval import *
 from sponge.filtering import *
 from sponge.helper_functions import *
 
-FILE_DESC = Literal['homologene', 'promoter', 'jaspar_bigbed', 'ensembl']
+FILE_DESC = Literal['promoter', 'jaspar_bigbed', 'ensembl']
 FINGERPRINTS = Dict[str, Dict[str, Union[str, datetime, bool]]]
 
 ### Class definition ###
@@ -338,8 +338,8 @@ class Sponge:
         ----------
         description : FILE_DESC
             Description of a file to be retrieved
-            Available descriptions: 'homologene', 'promoter',
-                'jaspar_bigbed', 'ensembl'
+            Available descriptions: 'promoter', 'jaspar_bigbed',
+                'ensembl'
         prompt : bool, optional
             Whether to prompt to confirm the file downloads,
             by default True
@@ -788,13 +788,13 @@ class Sponge:
 
         start_time = time.time()
         if on_the_fly_processing:
-            results_list = iterate_motifs(df_full, chromosomes, self.tf_names,
-                self.matrix_ids, self.jaspar_release, self.assembly,
-                n_processes, score_threshold)
+            results_list = iterate_motifs(df_full, self.tf_names,
+                self.matrix_ids, chromosomes, self.jaspar_release,
+                self.assembly, n_processes, score_threshold)
             self.log_fingerprint('JASPAR_TSV', self.jaspar_release)
         else:
-            results_list = iterate_chromosomes(df_full, bigbed_file,
-                chromosomes, self.matrix_ids, n_processes, score_threshold)
+            results_list = iterate_chromosomes(bigbed_file, df_full,
+                self.matrix_ids, chromosomes, n_processes, score_threshold)
 
         elapsed = time.time() - start_time
 
