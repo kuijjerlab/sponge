@@ -79,10 +79,10 @@ def filter_edges(
 
 
 def iterate_chromosomes(
-    promoter_df: pd.DataFrame,
-    bigbed_file: Path,
-    chromosomes: List[str],
+    bb_ref: Path,
+    bed_df: pd.DataFrame,
     matrix_ids: List[str],
+    chromosomes: List[str],
     n_processes: int = 1,
     score_threshold: float = 400,
 ) -> List[pd.DataFrame]:
@@ -93,14 +93,14 @@ def iterate_chromosomes(
 
     Parameters
     ----------
-    promoter_df : pd.DataFrame
+    bb_ref : Path
+        Path to a bigbed file that stores all possible matches
+    bed_df : pd.DataFrame
         Pandas DataFrame containing the regions of interest
-    bigbed_file : Path
-        Path to a JASPAR bigbed file
-    chromosomes : List[str]
-        List of chromosomes to use
     matrix_ids : List[str]
         List of matrix IDs of transcription factors to use
+    chromosomes : List[str]
+        List of chromosomes to use
     n_processes : int, optional
         Number of processes to run in parallel, by default 1
     score_threshold : float, optional
@@ -120,7 +120,7 @@ def iterate_chromosomes(
     print ('Iterating over the chromosomes...')
     for chrom in chromosomes:
         st_chr = time.time()
-        df_chrom = promoter_df[promoter_df['chrom'] == chrom]
+        df_chrom = bed_df[bed_df['chrom'] == chrom]
         if len(df_chrom) == 0:
             suffix = 'no transcripts'
         elif len(df_chrom) == 1:
@@ -134,7 +134,7 @@ def iterate_chromosomes(
         # Based off of performance benchmarking
         chunk_size = ceil(sqrt(len(df_chrom) / n_processes))
         chunk_divisions = [i for i in range(0, len(df_chrom), chunk_size)]
-        input_tuples = [(bigbed_file, df_chrom, matrix_ids, chrom, i,
+        input_tuples = [(bb_ref, df_chrom, matrix_ids, chrom, i,
             i+chunk_size, score_threshold) for i in chunk_divisions]
         # Run the calculations in parallel
         result = p.starmap_async(filter_edges, input_tuples,
@@ -149,7 +149,7 @@ def iterate_chromosomes(
 
 def process_chromosome(
     motifs_chrom: pd.DataFrame,
-    transcript_df: pd.DataFrame,
+    bed_df: pd.DataFrame,
     score_threshold: float = 400,
 ) -> pd.DataFrame:
     """
@@ -161,7 +161,7 @@ def process_chromosome(
     motifs_chrom : pd.DataFrame
         Pandas DataFrame containing the detected TF binding sites
         in a single chromosome
-    transcript_df : pd.DataFrame
+    bed_df : pd.DataFrame
         Pandas DataFrame containing the regions of interest in a single
         chromosome
     score_threshold : float, optional
@@ -176,9 +176,9 @@ def process_chromosome(
 
     df = pd.DataFrame()
 
-    for t in transcript_df.index:
+    for t in bed_df.index:
         # Retrieve the start and end points
-        start,end = transcript_df.loc[t][['start', 'end']]
+        start,end = bed_df.loc[t][['start', 'end']]
         # Find the corresponding TF binding sites using binary search
         id_start = motifs_chrom['start'].searchsorted(start, 'left')
         id_end = motifs_chrom['end'].searchsorted(end, 'right')
@@ -229,6 +229,7 @@ def process_motif(
     """
 
     p = Pool(n_processes)
+
     # Find out chromosome boundaries, relying on continuity
     chrom_info = motif_df.reset_index().groupby('chrom')
     chrom_mins = chrom_info['index'].min()
@@ -248,10 +249,10 @@ def process_motif(
 
 
 def iterate_motifs(
-    promoter_df: pd.DataFrame,
-    chromosomes: List[str],
+    bed_df: pd.DataFrame,
     tf_names: List[str],
     matrix_ids: List[str],
+    chromosomes: List[str],
     jaspar_release: str,
     assembly: str,
     n_processes: int = 1,
@@ -263,16 +264,16 @@ def iterate_motifs(
 
     Parameters
     ----------
-    promoter_df : pd.DataFrame
+    bed_df : pd.DataFrame
         Pandas DataFrame containing the regions of interest
-    chromosomes : List[str]
-        List of chromosomes to use
     tf_names : List[str]
         List of names of transcription factors to use, ordered the same
         way as matrix_ids
     matrix_ids : List[str]
         List of matrix IDs of transcription factors to use, ordered the
         same way as tf_names
+    chromosomes : List[str]
+        List of chromosomes to use
     jaspar_release : str
         JASPAR release used
     assembly : str
@@ -319,8 +320,7 @@ def iterate_motifs(
         motif_df['score'] = motif_df['score'].astype(int).apply(
             lambda x: min(x, BIGBED_MAX_SCORE))
         # Process the individual TF track
-        result = process_motif(motif_df, promoter_df, score_threshold,
-            n_processes)
+        result = process_motif(motif_df, bed_df, score_threshold, n_processes)
         result['name'] = m_id
         result['TFName'] = tf
         # Append the resulting pandas DataFrame to the list
