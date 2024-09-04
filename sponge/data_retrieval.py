@@ -8,9 +8,10 @@ from biomart import BiomartServer
 from collections import defaultdict
 from io import BytesIO
 from pathlib import Path
-from sponge.config import *
 from tqdm import tqdm
 from typing import Optional, Union, Iterable, Tuple, Dict, List
+
+from sponge.config import *
 
 ### Functions ###
 def prompt_to_confirm(
