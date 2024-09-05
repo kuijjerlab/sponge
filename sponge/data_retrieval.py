@@ -40,7 +40,7 @@ def prompt_to_confirm(
         if key is not None:
             # This means there was a reply, but not an accepted one
             print (f'Input not recognised: {key}')
-        key = input(f'{question} Y/N')
+        key = input(f'{question} Y/N: ')
         print (key)
     print ()
 

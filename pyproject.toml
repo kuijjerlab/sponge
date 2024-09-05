@@ -31,6 +31,9 @@ dependencies = [
     "tqdm",
 ]
 
+[project.scripts]
+netzoopy-sponge = "sponge.cli:cli"
+
 [project.urls]
 Repository = "https://github.com/ladislav-hovan/sponge"
 

@@ -1,12 +1,8 @@
 #!/usr/bin/env python
 
-import argparse
+### Imports ###
+from sponge.cli import cli
 
-from sponge import Sponge
-
+### Main body ###
 if __name__ == '__main__':
-    sponge_obj = Sponge(
-        run_default=True,
-
-    )
-    sponge_obj.show_fingerprint()
+    cli()
