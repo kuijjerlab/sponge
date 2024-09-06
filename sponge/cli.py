@@ -10,17 +10,21 @@ def process_file_paths(
     fp_list: List[str],
 ) -> Dict[str, str]:
     """
-    
+    Converts a list of descriptor to path assignments to a dictionary,
+    invalid assignments result in a warning and are skipped.
+    Valid form: valid_descriptor=non-empty/path/to/file
+    Only one assignment operator (=) can be present.
+    Valid descriptors are: promoter, jaspar_bigbed, ensembl
 
     Parameters
     ----------
     fp_list : List[str]
-        _description_
+        List of descriptor to path assignments to parse
 
     Returns
     -------
     Dict[str, str]
-        _description_
+        Dictionary linking valid file descriptors to paths
     """
 
     processed = {}
@@ -49,10 +53,26 @@ def process_file_paths(
 def cli(
 ) -> None:
     """
-    
+    Command line interface to the SPONGE class. All options can be
+    specified, except run_default which is fixed to True. Execute
+    with the --help option for more details.
     """
 
-    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
+    DESCRIPTION = """
+    SPONGE - Simple Prior Omics Network GEnerator.
+    Generates prior motif and PPI networks, usable by other NetZoo tools
+    (most notably PANDA).
+    Uses the Ensembl, JASPAR, NCBI and STRING databases.
+    Developed by Ladislav Hovan (ladislav.hovan@ncmm.uio.no).
+    """
+    EPILOG = """
+    Code available under GPL-3.0 license:
+    https://github.com/ladislav-hovan/sponge
+    """
+
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter,
+        description=DESCRIPTION, epilog=EPILOG)
+
     parser.add_argument('-t', '--temp-folder', dest='temp_folder',
         help='folder to save temporary files to',
         default='.sponge_temp', metavar='DIR')
