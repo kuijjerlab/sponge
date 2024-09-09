@@ -57,8 +57,7 @@ class Sponge:
         tf_names: Iterable[str] = [],
         matrix_ids: Iterable[str] = [],
         drop_heterodimers: bool = True,
-        chromosomes: Optional[Iterable[str]] = [f'chr{i}' for i in [j for j in
-            range(1, 23)] + ['X', 'Y']],
+        chromosomes: Optional[Iterable[str]] = DEFAULT_CHROMOSOMES,
         tss_offset: Tuple[int, int] = (-750, 250),
         score_threshold: float = 400,
         on_the_fly_processing: bool = False,
@@ -108,8 +107,8 @@ class Sponge:
             by default True
         chromosomes : Optional[Iterable[str]], optional
             Which chromosomes to get the promoters from or None to use
-            all chromosomes present in the assembly, by default
-            [f'chr{i}' for i in [j for j in range(1, 23)] + ['X', 'Y']]
+            all chromosomes present in the assembly, by default all
+            autosomes and X and Y
         tss_offset : Tuple[int, int], optional
             Offset from the transcription start site to use for the
             assignment of transcription factors to promoters,

@@ -8,9 +8,10 @@ from biomart import BiomartServer
 from collections import defaultdict
 from io import BytesIO
 from pathlib import Path
-from sponge.config import *
 from tqdm import tqdm
 from typing import Optional, Union, Iterable, Tuple, Dict, List
+
+from sponge.config import *
 
 ### Functions ###
 def prompt_to_confirm(
@@ -39,7 +40,7 @@ def prompt_to_confirm(
         if key is not None:
             # This means there was a reply, but not an accepted one
             print (f'Input not recognised: {key}')
-        key = input(f'{question} Y/N')
+        key = input(f'{question} Y/N: ')
         print (key)
     print ()
 

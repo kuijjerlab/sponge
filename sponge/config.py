@@ -32,6 +32,9 @@ HG_CHROMOSOME_URL = ('https://hgdownload.soe.ucsc.edu/goldenPath/'
 # Synonyms for genome assembly versions
 ASSEMBLY_SYNONYM = {'GRCh38': 'hg38', 'GRCh37': 'hg19', 'T2T-CHM13v2.0': 'hs1'}
 
+# Default chromosomes to use
+DEFAULT_CHROMOSOMES = [f'chr{i}' for i in list(range(1, 23)) + ['X', 'Y']]
+
 # Default chromosome name mapping from Ensembl to UCSC
 index = [str(i) for i in range(1, 23)] + ['X', 'Y', 'MT']
 values = ['chrM' if i == 'MT' else f'chr{i}' for i in index]

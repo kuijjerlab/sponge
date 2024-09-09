@@ -2,6 +2,9 @@
 requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+packages = ["sponge"]
+
 [project]
 name = "sponge"
 authors = [
@@ -27,6 +30,9 @@ dependencies = [
     "scikit-learn",
     "tqdm",
 ]
+
+[project.scripts]
+netzoopy-sponge = "sponge.cli:cli"
 
 [project.urls]
 Repository = "https://github.com/ladislav-hovan/sponge"
