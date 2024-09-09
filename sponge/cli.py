@@ -113,7 +113,7 @@ def cli(
     parser.add_argument('-pco', '--protein-coding-only', dest='pco',
         help='whether to only include protein coding genes in the prior',
         action='store_true')
-    parser.add_argument('-ugs', '--use-gene-ids', dest='use_gene_ids',
+    parser.add_argument('-ugi', '--use-gene-ids', dest='use_gene_ids',
         help='whether to use gene IDs instead of gene names',
         action='store_true')
     parser.add_argument('-w', '--weighted', dest='weighted',
