@@ -1,0 +1,566 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="213.17986mm"
+   height="161.90657mm"
+   viewBox="0 0 213.17986 161.90657"
+   version="1.1"
+   id="svg1"
+   inkscape:version="1.3.2 (091e20e, 2023-11-25, custom)"
+   sodipodi:docname="fig_1a.svg"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="mm"
+     inkscape:zoom="1.0520974"
+     inkscape:cx="412.98459"
+     inkscape:cy="254.25404"
+     inkscape:window-width="2560"
+     inkscape:window-height="1377"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="layer1" />
+  <defs
+     id="defs1">
+    <marker
+       style="overflow:visible"
+       id="TriangleStart"
+       refX="2"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="TriangleStart"
+       markerWidth="5.3244081"
+       markerHeight="6.155385"
+       viewBox="0 0 5.3244081 6.1553851"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.5)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path135" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="marker7205"
+       refX="2"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="TriangleStart"
+       markerWidth="5.3244081"
+       markerHeight="6.155385"
+       viewBox="0 0 5.3244081 6.1553851"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.5)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path7203" />
+    </marker>
+    <marker
+       style="overflow:visible"
+       id="marker7073"
+       refX="2"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="TriangleStart"
+       markerWidth="5.3244081"
+       markerHeight="6.155385"
+       viewBox="0 0 5.3244081 6.1553851"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.5)"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:context-stroke;stroke-width:1pt"
+         d="M 5.77,0 -2.88,5 V -5 Z"
+         id="path7071" />
+    </marker>
+  </defs>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(4.2333331,-81.227084)">
+    <g
+       id="g285"
+       transform="translate(5.111119,86.882863)">
+      <g
+         id="g253">
+        <rect
+           style="fill:#ff9955;stroke:#ff6600;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           id="rect668"
+           width="60.32251"
+           height="32.907944"
+           x="67.084221"
+           y="-5.1557794" />
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.43255px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;white-space:pre;inline-size:35.1047;display:inline;fill:#000000;stroke:none;stroke-width:0.27351;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           x="105.38451"
+           y="17.723856"
+           id="text2265"
+           transform="matrix(1.0967729,0,0,1.0969314,-18.482363,-15.09824)"><tspan
+             x="105.38451"
+             y="17.723856"
+             id="tspan45"><tspan
+               style="font-weight:bold"
+               id="tspan44">Filtering</tspan></tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.14604px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;white-space:pre;inline-size:50.4212;display:inline;fill:#000000;stroke:none;stroke-width:0.09117;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           x="40.327492"
+           y="25.448881"
+           id="text2395"
+           transform="matrix(1.0967729,0,0,1.0969314,52.989878,-10.916542)"><tspan
+             x="40.327492"
+             y="25.448881"
+             id="tspan46">Discard heterodimers</tspan></text>
+      </g>
+      <g
+         id="g252">
+        <rect
+           style="fill:#ff9955;stroke:#ff6600;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           id="rect668-8"
+           width="60.322506"
+           height="32.907944"
+           x="-8.8444519"
+           y="-5.1557789" />
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;fill:#000000;stroke:none;stroke-width:0.3;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           x="21.313173"
+           y="4.3433003"
+           id="text2265-2"
+           transform="scale(0.99992771,1.0000723)"><tspan
+             sodipodi:role="line"
+             id="tspan2263-2"
+             style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:7.05556px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;fill:#000000;stroke:none;stroke-width:0.3;stroke-dasharray:none"
+             x="21.313173"
+             y="4.3433003">TF selection</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.14604px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;white-space:pre;inline-size:50.4212;display:inline;fill:#000000;stroke:none;stroke-width:0.09117;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           x="40.327492"
+           y="25.448881"
+           id="text2395-7"
+           transform="matrix(1.0967729,0,0,1.0969314,-23.028363,-10.916542)"><tspan
+             x="40.327492"
+             y="25.448881"
+             id="tspan47">Select vertebrate<tspan
+   y="25.448881"
+   id="tspan48"> </tspan></tspan><tspan
+             x="40.327492"
+             y="31.881432"
+             id="tspan49">motifs from JASPAR</tspan></text>
+      </g>
+      <g
+         id="g249">
+        <rect
+           style="fill:#ff9955;stroke:#ff6600;stroke-width:1.00001;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           id="rect668-8-8"
+           width="60.322498"
+           height="15.357029"
+           x="-8.8444471"
+           y="140.39342" />
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.47683px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;white-space:pre;inline-size:46.9029;display:inline;fill:#000000;stroke:none;stroke-width:0.275394;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           x="41.25433"
+           y="148.28738"
+           id="text2265-2-6"
+           transform="matrix(1.0935814,0,0,1.08514,-23.842663,-11.152209)"><tspan
+             x="41.25433"
+             y="148.28738"
+             id="tspan55"><tspan
+               style="font-weight:bold"
+               id="tspan50">Initia</tspan><tspan
+               style="font-weight:bold;-inkscape-font-specification:'Cambria Bold'"
+               id="tspan51">l s</tspan><tspan
+               style="font-weight:bold;-inkscape-font-specification:'Cambria Bold'"
+               id="tspan52">ta</tspan><tspan
+               style="font-weight:bold;-inkscape-font-specification:'Cambria Bold'"
+               id="tspan53">g</tspan><tspan
+               style="font-weight:bold"
+               id="tspan54">e</tspan></tspan></text>
+      </g>
+      <g
+         id="g254">
+        <rect
+           style="fill:#ff9955;stroke:#ff6600;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           id="rect668-2"
+           width="60.32251"
+           height="32.907944"
+           x="143.01289"
+           y="-5.1557794" />
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.43255px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;white-space:pre;inline-size:48.1826;display:inline;fill:#000000;stroke:none;stroke-width:0.27351;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           x="105.75581"
+           y="17.723854"
+           id="text2265-5"
+           transform="matrix(1.0967729,0,0,1.0969314,57.127148,-15.098238)"><tspan
+             x="105.75581"
+             y="17.723854"
+             id="tspan57"><tspan
+               style="font-weight:bold"
+               id="tspan56">Homolog search</tspan></tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.14604px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;white-space:pre;inline-size:50.4212;display:inline;fill:#000000;stroke:none;stroke-width:0.09117;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           x="40.327492"
+           y="25.448881"
+           id="text2395-4"
+           transform="matrix(1.0967729,0,0,1.0969314,128.77662,-10.916542)"><tspan
+             x="40.327492"
+             y="25.448881"
+             id="tspan58">Find human homologs<tspan
+   y="25.448881"
+   id="tspan59"> </tspan></tspan></text>
+      </g>
+      <g
+         id="g282">
+        <rect
+           style="fill:#5f8dd3;stroke:#2c5aa0;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           id="rect668-2-9"
+           width="60.322353"
+           height="32.907791"
+           x="143.01297"
+           y="43.360661" />
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.43255px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;white-space:pre;inline-size:48.1826;display:inline;fill:#000000;stroke:none;stroke-width:0.9117;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           x="105.75581"
+           y="17.723854"
+           id="text2265-5-3"
+           transform="matrix(1.0967729,0,0,1.0969314,57.04447,33.415798)"><tspan
+             x="105.75581"
+             y="17.723854"
+             id="tspan61"><tspan
+               style="font-weight:bold"
+               id="tspan60">Motif filtering</tspan></tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.14604px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;white-space:pre;inline-size:50.4212;display:inline;fill:#000000;stroke:none;stroke-width:0.9117;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           x="40.327492"
+           y="25.448881"
+           id="text2395-4-5"
+           transform="matrix(1.0967729,0,0,1.0969314,128.77662,37.597496)"><tspan
+             x="40.327492"
+             y="25.448881"
+             id="tspan62">Filter the binding sites<tspan
+   y="25.448881"
+   id="tspan63"> </tspan></tspan><tspan
+             x="40.327492"
+             y="31.881432"
+             id="tspan64">in promoters</tspan></text>
+      </g>
+      <g
+         id="g250">
+        <g
+           id="g9555"
+           style="stroke-width:0.917982"
+           transform="matrix(1.0935814,0,0,1.08514,-21.095978,-12.641819)">
+          <rect
+             style="fill:#5f8dd3;stroke:#2c5aa0;stroke-width:0.917982;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+             id="rect668-2-9-9"
+             width="55.156303"
+             height="14.156303"
+             x="80.636429"
+             y="141.02602" />
+        </g>
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.47683px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;white-space:pre;inline-size:48.1826;display:inline;fill:#000000;stroke:none;stroke-width:0.275394;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           x="105.75581"
+           y="17.723854"
+           id="text2265-5-3-1"
+           transform="matrix(1.0935814,0,0,1.08514,-18.446939,130.53437)"><tspan
+             x="105.75581"
+             y="17.723854"
+             id="tspan66"><tspan
+               style="font-weight:bold"
+               id="tspan65">Motif stage</tspan></tspan></text>
+      </g>
+      <g
+         id="g255">
+        <rect
+           style="fill:#5fd35f;stroke:#2ca02c;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           id="rect668-2-4"
+           width="60.32251"
+           height="32.907944"
+           x="67.084221"
+           y="43.360584" />
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.43255px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;white-space:pre;inline-size:48.1826;display:inline;fill:#000000;stroke:none;stroke-width:0.27351;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           x="105.75581"
+           y="17.723854"
+           id="text2265-5-0"
+           transform="matrix(1.0967729,0,0,1.0969314,-18.899704,33.418847)"><tspan
+             x="105.75581"
+             y="17.723854"
+             id="tspan68"><tspan
+               style="font-weight:bold"
+               id="tspan67">STRING query</tspan></tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.14604px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;white-space:pre;inline-size:50.4212;display:inline;fill:#000000;stroke:none;stroke-width:0.09117;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           x="40.327492"
+           y="25.448881"
+           id="text2395-4-3"
+           transform="matrix(1.0967729,0,0,1.0969314,52.860352,37.600544)"><tspan
+             x="40.327492"
+             y="25.448881"
+             id="tspan69">Search for TF<tspan
+   y="25.448881"
+   id="tspan70"> </tspan></tspan><tspan
+             x="40.327492"
+             y="31.881432"
+             id="tspan71">interactions<tspan
+   y="31.881432"
+   id="tspan72"> </tspan></tspan></text>
+      </g>
+      <g
+         id="g251">
+        <rect
+           style="fill:#5fd35f;stroke:#2ca02c;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           id="rect668-2-4-6"
+           width="60.32251"
+           height="15.357039"
+           x="143.01289"
+           y="140.39342" />
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.43255px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;white-space:pre;inline-size:48.1826;display:inline;fill:#000000;stroke:none;stroke-width:0.9117;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           x="105.75581"
+           y="17.723854"
+           id="text2265-5-0-8"
+           transform="matrix(1.0967729,0,0,1.0969314,57.139205,130.20978)"><tspan
+             x="105.75581"
+             y="17.723854"
+             id="tspan74"><tspan
+               style="font-weight:bold"
+               id="tspan73">PPI stage</tspan></tspan></text>
+      </g>
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:4.93889px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;white-space:pre;inline-size:50.4212;display:inline;fill:#000000;stroke:none;stroke-width:0.09117;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+         x="40.327492"
+         y="25.448881"
+         id="text2395-4-7"
+         transform="matrix(1.0967729,0,0,1.0969314,52.89429,86.11725)"><tspan
+           x="40.327492"
+           y="25.448881"
+           id="tspan75"> </tspan></text>
+      <g
+         id="g283">
+        <rect
+           style="fill:#5f8dd3;stroke:#2c5aa0;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           id="rect668-2-7"
+           width="60.32251"
+           height="32.907944"
+           x="67.084221"
+           y="91.876945" />
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.43255px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;white-space:pre;inline-size:48.1826;display:inline;fill:#000000;stroke:none;stroke-width:0.27351;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           x="105.75581"
+           y="17.723854"
+           id="text2265-5-7"
+           transform="matrix(1.0967729,0,0,1.0969314,-18.884201,81.935552)"><tspan
+             x="105.75581"
+             y="17.723854"
+             id="tspan77"><tspan
+               style="font-weight:bold"
+               id="tspan76">Name matching</tspan></tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.14604px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;white-space:pre;inline-size:39.8193;display:inline;fill:#000000;stroke:none;stroke-width:0.09117;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           x="40.327492"
+           y="25.448881"
+           id="text2395-4-31-0"
+           transform="matrix(1.0967729,0,0,1.0969314,52.851778,86.154285)"><tspan
+             x="40.327492"
+             y="25.448881"
+             id="tspan78">Convert to names,<tspan
+   y="25.448881"
+   id="tspan79"> </tspan></tspan><tspan
+             x="40.327492"
+             y="31.881432"
+             id="tspan80">drop duplicates</tspan></text>
+      </g>
+      <g
+         id="g284">
+        <rect
+           style="fill:#5f8dd3;stroke:#2c5aa0;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           id="rect668-2-8"
+           width="60.32251"
+           height="32.907944"
+           x="143.01289"
+           y="91.876945" />
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:6.39716px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;white-space:pre;inline-size:51.0745;display:inline;fill:#000000;stroke:none;stroke-width:0.906684;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           x="105.75581"
+           y="17.723854"
+           id="text2265-5-2"
+           transform="matrix(1.1010909,0,0,1.1047526,56.670584,81.864665)"><tspan
+             x="105.75581"
+             y="17.723854"
+             id="tspan82"><tspan
+               style="font-weight:bold"
+               id="tspan81">Data aggregation</tspan></tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:5.11773px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;white-space:pre;inline-size:50.4212;display:inline;fill:#000000;stroke:none;stroke-width:0.906684;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           x="40.327492"
+           y="25.448881"
+           id="text2395-4-31"
+           transform="matrix(1.1010909,0,0,1.1047526,128.58487,86.07618)"><tspan
+             x="40.327492"
+             y="25.448881"
+             id="tspan83">Process transcript<tspan
+   y="25.448881"
+   id="tspan84"> </tspan></tspan><tspan
+             x="40.327492"
+             y="31.846044"
+             id="tspan85">matches to genes<tspan
+   y="31.846044"
+   id="tspan86"> </tspan></tspan></text>
+      </g>
+      <path
+         style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#TriangleStart)"
+         d="m 173.17415,27.752164 0,15.608497"
+         id="path4163"
+         inkscape:connector-type="polyline"
+         inkscape:connector-curvature="0"
+         inkscape:connection-start="#rect668-2"
+         inkscape:connection-end="#rect668-2-9" />
+      <path
+         style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker7205)"
+         d="M 143.01297,59.814556 H 127.40673"
+         id="path4165"
+         inkscape:connector-type="polyline"
+         inkscape:connector-curvature="0"
+         inkscape:connection-start="#rect668-2-9"
+         inkscape:connection-end="#rect668-2-4" />
+      <path
+         style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker7073)"
+         d="m 51.478054,11.298193 15.606167,0"
+         id="path6832"
+         inkscape:connector-type="polyline"
+         inkscape:connector-curvature="0"
+         inkscape:connection-start="#rect668-8"
+         inkscape:connection-end="#rect668" />
+      <path
+         style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker7205)"
+         d="m 127.40673,11.298193 h 15.60616"
+         id="path6834"
+         inkscape:connector-type="polyline"
+         inkscape:connector-curvature="0"
+         inkscape:connection-start="#rect668"
+         inkscape:connection-end="#rect668-2" />
+      <g
+         id="g246">
+        <path
+           style="fill:#5fd35f;stroke:#2ca02c;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           id="path6629"
+           sodipodi:type="arc"
+           sodipodi:cx="21.316793"
+           sodipodi:cy="59.814548"
+           sodipodi:rx="21.387056"
+           sodipodi:ry="16.453962"
+           sodipodi:start="4.7250514"
+           sodipodi:end="4.7170339"
+           sodipodi:arc-type="arc"
+           d="M 21.587598,43.361905 A 21.387056,16.453962 0 0 1 42.702635,59.989912 21.387056,16.453962 0 0 1 21.131719,76.267895 21.387056,16.453962 0 0 1 -0.06979012,59.705142 21.387056,16.453962 0 0 1 21.416134,43.360764"
+           clip-path="none"
+           sodipodi:open="true" />
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;fill:#17280b;stroke:none;stroke-width:0.3;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           x="21.201208"
+           y="61.465599"
+           id="text6996"
+           transform="scale(0.99992771,1.0000723)"><tspan
+             sodipodi:role="line"
+             id="tspan6994"
+             style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:7.05556px;font-family:Cambria;-inkscape-font-specification:Cambria;fill:#000000;stroke:none;stroke-width:0.3;stroke-dasharray:none"
+             x="21.201208"
+             y="61.465599">PPI prior</tspan></text>
+      </g>
+      <g
+         id="g248">
+        <path
+           style="fill:#5f8dd3;stroke:#2c5aa0;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           id="path6629-5"
+           sodipodi:type="arc"
+           sodipodi:cx="21.316782"
+           sodipodi:cy="108.3309"
+           sodipodi:rx="21.38702"
+           sodipodi:ry="16.453936"
+           sodipodi:start="4.7352226"
+           sodipodi:end="4.7225736"
+           sodipodi:arc-type="arc"
+           d="M 21.805083,91.881256 A 21.38702,16.453936 0 0 1 42.699664,108.65455 21.38702,16.453936 0 0 1 20.963717,124.7826 21.38702,16.453936 0 0 1 -0.06833321,108.1113 21.38702,16.453936 0 0 1 21.534597,91.87782"
+           sodipodi:open="true" />
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:7.05556px;font-family:Cambria;-inkscape-font-specification:Cambria;text-align:center;text-anchor:middle;fill:#17280b;stroke:none;stroke-width:0.3;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none"
+           x="21.206375"
+           y="110.05597"
+           id="text7000"
+           transform="scale(0.99992772,1.0000723)"><tspan
+             sodipodi:role="line"
+             id="tspan6998"
+             style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:7.05556px;font-family:Cambria;-inkscape-font-specification:Cambria;fill:#000000;stroke:none;stroke-width:0.3;stroke-dasharray:none"
+             x="21.206375"
+             y="110.05597">Motif prior</tspan></text>
+      </g>
+      <path
+         style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker7205)"
+         d="m 173.60273,76.027748 0.0596,15.852226"
+         id="path7069"
+         inkscape:connector-type="polyline"
+         inkscape:connector-curvature="0" />
+      <path
+         style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker7205);paint-order:normal"
+         d="m 67.084221,59.814555 -24.380553,-10e-7"
+         id="path6828"
+         inkscape:connector-type="polyline"
+         inkscape:connector-curvature="0"
+         inkscape:connection-start="#rect668-2-4"
+         inkscape:connection-end="#path6629" />
+      <path
+         style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker7205)"
+         d="m 67.084221,108.33092 -24.380802,0"
+         id="path6830"
+         inkscape:connector-type="polyline"
+         inkscape:connector-curvature="0"
+         inkscape:connection-start="#rect668-2-7"
+         inkscape:connection-end="#path6629-5" />
+      <path
+         style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1;marker-end:url(#marker7205)"
+         d="M 143.01289,108.33092 H 127.40673"
+         id="path18558"
+         inkscape:connector-type="polyline"
+         inkscape:connector-curvature="0" />
+    </g>
+  </g>
+</svg>
