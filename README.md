@@ -11,6 +11,7 @@ factors.
   - [Features](#features)
   - [Setup](#setup)
   - [Usage](#usage)
+    - [File formats](#file-formats)
   - [Project Status](#project-status)
   - [Room for Improvement](#room-for-improvement)
   - [Acknowledgements](#acknowledgements)
@@ -61,15 +62,30 @@ The features already available are:
 ## Setup
 The requirements are provided in a `requirements.txt` file.
 
+SPONGE can be installed via pip:
+
+``` bash
+pip install netzoopy-sponge
+```
+
+Alternatively, it can be installed by downloading this repository and
+then installing with pip (possibly in interactive mode):
+
+``` bash
+git clone https://github.com/ladislav-hovan/sponge.git
+cd sponge
+pip install -e .
+```
+
 
 ## Usage
 SPONGE comes with a `netzoopy-sponge` command line script:
 
 ``` bash
 # Get information about the available options
-$ netzoopy-sponge --help
+netzoopy-sponge --help
 # Run the pipeline
-$ netzoopy-sponge
+netzoopy-sponge
 ```
 
 The script comes with a lot of options, but the defaults are designed
@@ -130,6 +146,60 @@ the database are considered, but it becomes competitive when only
 a subset is used.
 The physical storage footprint is much reduced.
 The option is enabled with `on_the_fly_processing=True`.
+
+
+### File formats
+Users are free to provide their own files for the list of regions of
+interest (key name `promoter`, default name `promoters.bed`), mapping
+of transcripts to genes (`ensembl`: `ensembl.tsv`) and the list of
+predicted TF binding sites (`jaspar_bigbed`: `JASPAR.bb`).
+By default, if the paths are not provided through the keyword
+`paths_to_files`, SPONGE attempts to locate these files in the temporary
+folder under the default names.
+If it fails to do so, it will proceed to download them.
+
+List of regions of interest expects a bed file in the 6 column format
+without a header, for example:
+
+```
+chr1    11119   12119   ENST00000456328 0       +
+chr1    11260   12260   ENST00000450305 0       +
+chr1    17186   18186   ENST00000619216 0       -
+chr1    24636   25636   ENST00000488147 0       -
+```
+
+Mapping of transcripts to genes expects a four column tsv file with
+a defined header, as an example:
+
+```
+Transcript stable ID    Gene stable ID  Gene name       Gene type
+ENST00000387314 ENSG00000210049 MT-TF   Mt_tRNA
+ENST00000389680 ENSG00000211459 MT-RNR1 Mt_rRNA
+ENST00000387342 ENSG00000210077 MT-TV   Mt_tRNA
+ENST00000387347 ENSG00000210082 MT-RNR2 Mt_rRNA
+ENST00000386347 ENSG00000209082 MT-TL1  Mt_tRNA
+ENST00000361390 ENSG00000198888 MT-ND1  protein_coding
+```
+
+The `Transcript stable ID` field will be used to match regions of
+interest.
+Finally, the predicted TF binding sites are expected in a binary bigbed
+file, with the following format when decoded:
+
+```
+chrom   start      end      name  score strand TFName
+chr1   10000    10006  MA0467.3    276      -    Crx
+chr1   10000    10006  MA0648.2    233      +    GSC
+chr1   10000    10006  MA0682.3    231      +  PITX1
+chr1   10000    10006  MA0711.2    198      +   OTX1
+chr1   10000    10006  MA0714.2    246      +  PITX3
+```
+
+Effectively, it is an extended bed format with a header, which uses
+the `name` column to provide JASPAR matrix ID and the `TFName` column
+to provide the actual name of the transcription factor.
+However, currently SPONGE expects a bigbed file and will not work with
+a bed file.
 
 
 ## Project Status
