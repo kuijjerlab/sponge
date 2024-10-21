@@ -2,12 +2,14 @@ name: SPONGE test on latest Ubuntu and Python 3.9
 
 on:
   push:
-    branches: [ devel ]
+    branches:
+    - devel
   pull_request:
-    branches: [ devel ]
+    branches:
+    - devel
 
 jobs:
-  sponge-test:        
+  sponge-test:
     runs-on: ubuntu-latest
 
     steps:

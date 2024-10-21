@@ -2,9 +2,11 @@ name: SPONGE test on a combination of Python versions and OS
 
 on:
   push:
-    branches: [ main ]
+    branches:
+    - main
   pull_request:
-    branches: [ main ]
+    branches:
+    - main
 
 jobs:
   os-python-compatibility:
@@ -12,7 +14,7 @@ jobs:
       matrix:
         os: [ 'ubuntu-latest', 'macos-latest' ]
         python: [ '3.9', '3.10', '3.11' ]
-        
+
     runs-on: ${{ matrix.os }}
 
     steps:
