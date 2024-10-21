@@ -2,25 +2,27 @@ name: SPONGE test on a combination of Python versions and OS
 
 on:
   push:
-    branches: [ main ]
+    branches:
+    - main
   pull_request:
-    branches: [ main ]
+    branches:
+    - main
 
 jobs:
   os-python-compatibility:
     strategy:
       matrix:
         os: [ 'ubuntu-latest', 'macos-latest' ]
-        python: [ '3.9', '3.10', '3.11' ]
-        
+        python: [ '3.9', '3.10', '3.11', '3.12' ]
+
     runs-on: ${{ matrix.os }}
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: ${{ matrix.python }}
 
