@@ -4,7 +4,8 @@ import time
 import os
 import gzip
 
-from biomart import BiomartServer
+import xml.etree.ElementTree as et
+
 from collections import defaultdict
 from io import BytesIO
 from pathlib import Path
@@ -183,6 +184,41 @@ def download_with_progress(
         return BytesIO(stream.getvalue())
 
 
+def create_xml_query(
+    dataset_name: str,
+    requested_fields: Iterable[str],
+) -> str:
+    
+    # Build up the XML query
+    xml_query = et.Element('Query', attrib=dict(virtualSchemaName='default', 
+        formatter='TSV', header='1', uniqueRows='0', count='',
+        datasetConfigVersion='0.6'))
+    dataset = et.SubElement(xml_query, 'Dataset', 
+        attrib=dict(name=dataset_name, interface='default'))
+    for field in requested_fields:
+        _ = et.SubElement(dataset, 'Attribute', attrib=dict(name=field))
+    # Convert to a string with a declaration
+    query_string = et.tostring(xml_query, xml_declaration=True,
+        encoding='unicode')
+
+    return query_string
+
+
+def retrieve_ensembl_data(
+    dataset_name: str,
+    requested_fields: Iterable[str],
+) -> BytesIO:
+    
+    xml_query = create_xml_query(dataset_name, requested_fields)
+    REQUEST_STRING = '/martservice?query='
+    link = ENSEMBL_URL + REQUEST_STRING + xml_query
+    r = requests.get(link, stream=True)
+    r.raise_for_status()
+    bytes = download_with_progress(r)
+
+    return bytes
+
+
 def load_promoters_from_biomart(
     file_path: Path,
     filter_basic: bool = True,
@@ -227,9 +263,6 @@ def load_promoters_from_biomart(
 
     answer = {}
 
-    # Select the right dataset from BioMart
-    bm_server = BiomartServer(ENSEMBL_URL)
-    ensembl = bm_server.datasets['hsapiens_gene_ensembl']
     # Attributes to retrieve
     attributes = ['ensembl_transcript_id', 'transcript_gencode_basic',
         'chromosome_name', 'transcription_start_site', 'strand']
@@ -239,11 +272,10 @@ def load_promoters_from_biomart(
             'gene_biotype']
     print ('Retrieving response to query...')
     # Submit and retrieve the response
-    response = ensembl.search({'attributes': attributes}, header=1)
-    buffer = download_with_progress(response)
+    buffer = retrieve_ensembl_data('hsapiens_gene_ensembl', attributes)
 
     # Save the database version into the dictionary
-    answer['version'] = ensembl.display_name
+    answer['version'] = get_ensembl_version()
     # Dictionary of types for conversion from the response, default strings
     dtype_dict = defaultdict(lambda: str)
     # Change the types that are not strings but integers
@@ -317,19 +349,15 @@ def load_ensembl_from_biomart(
 
     answer = {}
 
-    # Select the right dataset from BioMart
-    bm_server = BiomartServer(ENSEMBL_URL)
-    ensembl = bm_server.datasets['hsapiens_gene_ensembl']
     # Attributes to retrieve
     attributes = ['ensembl_transcript_id', 'ensembl_gene_id',
         'external_gene_name', 'gene_biotype']
     print ('Retrieving response to query...')
     # Submit and retrieve the response
-    response = ensembl.search({'attributes': attributes}, header=1)
-    buffer = download_with_progress(response)
+    buffer = retrieve_ensembl_data('hsapiens_gene_ensembl', attributes)
 
     # Save the database version into the dictionary
-    answer['version'] = ensembl.display_name
+    answer['version'] = get_ensembl_version()
     # Convert the response into a DataFrame
     df = pd.read_csv(buffer, sep='\t')
 
@@ -412,6 +440,19 @@ def get_uniprot_mapping(
     return results_df
 
 
+def get_ensembl_version(
+) -> str:
+    
+    # Request the assembly information from Ensembl REST
+    REQUEST_STRING = "/info/assembly/homo_sapiens?"
+    r = requests.get(ENSEMBL_REST + REQUEST_STRING, 
+        headers={ "Content-Type" : "application/json"})
+    r.raise_for_status()
+    decoded = r.json()
+
+    return decoded['assembly_name']
+
+
 def get_ensembl_assembly(
 ) -> str:
     """
@@ -424,14 +465,8 @@ def get_ensembl_assembly(
         Simple synonym of the genome assembly used by Ensembl
     """
 
-    # Request the assembly information from Ensembl REST
-    REQUEST_STRING = "/info/assembly/homo_sapiens?"
-    r = requests.get(ENSEMBL_REST + REQUEST_STRING, 
-        headers={ "Content-Type" : "application/json"})
-    r.raise_for_status()
-    # Get the assembly name
-    decoded = r.json()
-    version_string = decoded['assembly_name']
+    # Get the full assembly name
+    version_string = get_ensembl_version()
     # Remove the update part
     version_major = version_string.split('.')[0]
 
