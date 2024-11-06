@@ -474,33 +474,6 @@ def get_ensembl_assembly(
     return ASSEMBLY_SYNONYM[version_major]
 
 
-# def get_ensembl_assembly(
-# ) -> str:
-#     """
-#     Returns the simple synonym of the genome assembly used by the
-#     Ensembl server (e.g. hg38).
-
-#     Returns
-#     -------
-#     str
-#         Simple synonym of the genome assembly used by Ensembl
-#     """
-
-#     # Select the Ensembl dataset from BioMart and get the display name
-#     bm_server = BiomartServer(ENSEMBL_URL)
-#     r = bm_server.get_request(type='datasets', mart='ENSEMBL_MART_ENSEMBL')
-#     table = pd.read_csv(BytesIO(r.content), sep='\t', usecols=[1, 2],
-#         header=None).set_index(1)
-#     display_name = table.loc['hsapiens_gene_ensembl', 2]
-#     # Isolate the version from the bracket
-#     version_string = display_name.split('(')[-1].split(')')[0]
-#     # Remove the update part
-#     version_major = version_string.split('.')[0]
-
-#     # Return the simplified synonym (e.g. hg38 instead of GRCh38):
-#     return ASSEMBLY_SYNONYM[version_major]
-
-
 def get_chromosome_mapping(
     assembly: str,
 ) -> Tuple[pd.Series, pd.Series]:

@@ -22,7 +22,6 @@ classifiers = [
 ]
 dependencies = [
     "bioframe",
-    "biomart",
     "numpy",
     "pandas",
     "pybbi",
