@@ -167,7 +167,7 @@ def test_download_with_progress(input, compare_to, tmp_path):
 def test_create_xml_query(input):
     xml_query = data_f.create_xml_query(*input)
 
-    assert xml_query[:38] == "<?xml version='1.0' encoding='UTF-8'?>"
+    assert xml_query[:38].lower() == "<?xml version='1.0' encoding='utf-8'?>"
     assert xml_query.count('Attribute') == len(input[1])
 
 
