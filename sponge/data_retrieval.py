@@ -4,7 +4,8 @@ import time
 import os
 import gzip
 
-from biomart import BiomartServer
+import xml.etree.ElementTree as et
+
 from collections import defaultdict
 from io import BytesIO
 from pathlib import Path
@@ -104,164 +105,6 @@ def check_file_exists(
     return desc is not None and os.path.exists(desc)
 
 
-def load_promoters_from_biomart(
-    file_path: Path,
-    filter_basic: bool = True,
-    chromosomes: Optional[Iterable[str]] =
-        [str(i) for i in range(1,23)] + ['X', 'Y'],
-    chromosome_mapping: pd.Series = DEFAULT_MAPPING,
-    tss_offset: Tuple[int, int] = (-750, 250),
-    keep_ensembl: bool = True,
-) -> Dict[str, Union[str, pd.DataFrame]]:
-    """
-    Generates the promoter file from the data retrieved from the Ensembl
-    BioMart server. Optionally also keeps a subset of the data as a
-    DataFrame for downstream use.
-
-    Parameters
-    ----------
-    file_path : Path
-        Path to where the resulting file should be saved
-    filter_basic : bool, optional
-        Whether to filter for only the GENCODE basic transcripts,
-        by default True
-    chromosomes : Optional[Iterable[str]], optional
-        Iterable of chromosomes to be considered or None to consider
-        all, by default [str(i) for i in range(1,23)] + ['X', 'Y']
-    chromosome_mapping : pd.Series, optional
-        Mapping of Ensembl chromosome names to the UCSC ones, by
-        default a simple mapping of only the main chromosomes
-    tss_offset : Tuple[int, int], optional
-        Offset from the transcription start site to define the
-        promoter region, by default (-750, 250)
-    keep_ensembl : bool, optional
-        Whether to return the Ensembl DataFrame with a subset of the
-        data (gene and transcript IDs, gene name, gene type),
-        by default True
-
-    Returns
-    -------
-    Dict[str, Union[str, pd.DataFrame]]
-        Dictionary containing the version of the database used and
-        optionally the Ensembl DataFrame
-    """
-
-    answer = {}
-
-    # Select the right dataset from BioMart
-    bm_server = BiomartServer(ENSEMBL_URL)
-    ensembl = bm_server.datasets['hsapiens_gene_ensembl']
-    # Attributes to retrieve
-    attributes = ['ensembl_transcript_id', 'transcript_gencode_basic',
-        'chromosome_name', 'transcription_start_site', 'strand']
-    # Extra attributes that matter only for the Ensembl DataFrame
-    if keep_ensembl:
-        attributes += ['ensembl_gene_id', 'external_gene_name',
-            'gene_biotype']
-    print ('Retrieving response to query...')
-    # Submit and retrieve the response
-    response = ensembl.search({'attributes': attributes}, header=1)
-    buffer = download_with_progress(response)
-
-    # Save the database version into the dictionary
-    answer['version'] = ensembl.display_name
-    # Dictionary of types for conversion from the response, default strings
-    dtype_dict = defaultdict(lambda: str)
-    # Change the types that are not strings but integers
-    dtype_dict['Transcription start site (TSS)'] = int
-    dtype_dict['Strand'] = int
-    # Convert the response into a DataFrame
-    df = pd.read_csv(buffer, sep='\t', dtype=dtype_dict)
-
-    print ('Filtering and modifying dataframe...')
-    if filter_basic:
-        # Filter only for GENCODE basic
-        df = df[df['GENCODE basic annotation'] == 'GENCODE basic'].copy()
-        df.drop(columns='GENCODE basic annotation', inplace=True)
-    if chromosomes is not None:
-        # Filter only for selected chromosomes
-        df = df[df['Chromosome/scaffold name'].isin(chromosomes)]
-    # Convert chromosome names to match with other inputs
-    df['Chromosome'] = df['Chromosome/scaffold name'].apply(lambda x:
-        chromosome_mapping[x])
-    # Convert strand to +/-
-    df['Strand'] = df['Strand'].apply(lambda x: '+' if x > 0 else '-')
-    # Calculate the start based on the given offset from TSS
-    # The calculation is strand dependent
-    df['Start'] = df.apply(lambda row:
-        row['Transcription start site (TSS)'] + tss_offset[0]
-        if row['Strand'] == '+'
-        else row['Transcription start site (TSS)'] - tss_offset[1],
-        axis=1)
-    # End is always greater than start, this way it is strand independent
-    df['End'] = df['Start'] + (tss_offset[1] - tss_offset[0])
-    # Score column has to be provided for a valid bed file
-    df['Score'] = 0
-    # Order promoters by chromosome and start
-    df.sort_values(['Chromosome', 'Start'], inplace=True)
-
-    # Columns to be saved into a file
-    columns = ['Chromosome', 'Start', 'End', 'Transcript stable ID',
-        'Score', 'Strand']
-    print (f'Saving data to {file_path}...')
-    # Save the file
-    df[columns].to_csv(file_path, sep='\t', header=False, index=False)
-    print ()
-    if keep_ensembl:
-        # Keep the Ensembl DataFrame in the return dictionary
-        answer['ensembl'] = df[['Gene stable ID', 'Transcript stable ID',
-            'Gene name', 'Gene type']]
-
-    return answer
-
-
-def load_ensembl_from_biomart(
-    file_path: Path,
-) -> Dict[str, Union[str, pd.DataFrame]]:
-    """
-    Generates the Ensembl file which maps transcripts to genes and
-    stores gene names and types from the data retrieved from the Ensembl
-    BioMart server. Returns the database version and the file
-    content as a DataFrame.
-
-    Parameters
-    ----------
-    file_path : Path
-        Path to where the resulting file should be saved
-
-    Returns
-    -------
-    Dict[str, Union[str, pd.DataFrame]]
-        Dictionary containing the version of the database used and
-        the Ensembl DataFrame
-    """
-
-    answer = {}
-
-    # Select the right dataset from BioMart
-    bm_server = BiomartServer(ENSEMBL_URL)
-    ensembl = bm_server.datasets['hsapiens_gene_ensembl']
-    # Attributes to retrieve
-    attributes = ['ensembl_transcript_id', 'ensembl_gene_id',
-        'external_gene_name', 'gene_biotype']
-    print ('Retrieving response to query...')
-    # Submit and retrieve the response
-    response = ensembl.search({'attributes': attributes}, header=1)
-    buffer = download_with_progress(response)
-
-    # Save the database version into the dictionary
-    answer['version'] = ensembl.display_name
-    # Convert the response into a DataFrame
-    df = pd.read_csv(buffer, sep='\t')
-
-    # Save the file
-    df.to_csv(file_path, sep='\t', index=False)
-    # Keep the DataFrame in the return dictionary
-    answer['ensembl'] = df
-
-    return answer
-
-
 def download_with_progress(
     url: Union[List[str], str, requests.models.Response],
     file_path: Optional[Path] = None,
@@ -341,6 +184,223 @@ def download_with_progress(
         return BytesIO(stream.getvalue())
 
 
+def create_xml_query(
+    dataset_name: str,
+    requested_fields: Iterable[str],
+) -> str:
+    """
+    Formulates an XML query to retrieve specified field from a dataset
+    using Ensembl BioMart.
+
+    Parameters
+    ----------
+    dataset_name : str
+        Name of the dataset
+    requested_fields : Iterable[str]
+        Fields to be retrieved
+
+    Returns
+    -------
+    str
+        Formulated XML query
+    """
+
+    # Build up the XML query
+    xml_query = et.Element('Query', attrib=dict(virtualSchemaName='default',
+        formatter='TSV', header='1', uniqueRows='0', count='',
+        datasetConfigVersion='0.6'))
+    dataset = et.SubElement(xml_query, 'Dataset',
+        attrib=dict(name=dataset_name, interface='default'))
+    for field in requested_fields:
+        _ = et.SubElement(dataset, 'Attribute', attrib=dict(name=field))
+    # Convert to a string with a declaration
+    query_string = et.tostring(xml_query, xml_declaration=True,
+        encoding='unicode')
+
+    return query_string
+
+
+def retrieve_ensembl_data(
+    dataset_name: str,
+    requested_fields: Iterable[str],
+) -> BytesIO:
+    """
+    Retrieves specified fields from an Ensembl dataset by querying
+    BioMart.
+
+    Parameters
+    ----------
+    dataset_name : str
+        Name of the dataset
+    requested_fields : Iterable[str]
+        Fields to be retrieved
+
+    Returns
+    -------
+    BytesIO
+        Bytes retrieved from the server
+    """
+
+    xml_query = create_xml_query(dataset_name, requested_fields)
+    REQUEST_STRING = '/martservice?query='
+    link = ENSEMBL_URL + REQUEST_STRING + xml_query
+    r = requests.get(link, stream=True)
+    r.raise_for_status()
+    bytes = download_with_progress(r)
+
+    return bytes
+
+
+def load_promoters_from_biomart(
+    file_path: Path,
+    filter_basic: bool = True,
+    chromosomes: Optional[Iterable[str]] =
+        [str(i) for i in range(1, 23)] + ['X', 'Y'],
+    chromosome_mapping: pd.Series = DEFAULT_MAPPING,
+    tss_offset: Tuple[int, int] = (-750, 250),
+    keep_ensembl: bool = True,
+) -> Dict[str, Union[str, pd.DataFrame]]:
+    """
+    Generates the promoter file from the data retrieved from the Ensembl
+    BioMart server. Optionally also keeps a subset of the data as a
+    DataFrame for downstream use.
+
+    Parameters
+    ----------
+    file_path : Path
+        Path to where the resulting file should be saved
+    filter_basic : bool, optional
+        Whether to filter for only the GENCODE basic transcripts,
+        by default True
+    chromosomes : Optional[Iterable[str]], optional
+        Iterable of chromosomes to be considered or None to consider
+        all, by default [str(i) for i in range(1,23)] + ['X', 'Y']
+    chromosome_mapping : pd.Series, optional
+        Mapping of Ensembl chromosome names to the UCSC ones, by
+        default a simple mapping of only the main chromosomes
+    tss_offset : Tuple[int, int], optional
+        Offset from the transcription start site to define the
+        promoter region, by default (-750, 250)
+    keep_ensembl : bool, optional
+        Whether to return the Ensembl DataFrame with a subset of the
+        data (gene and transcript IDs, gene name, gene type),
+        by default True
+
+    Returns
+    -------
+    Dict[str, Union[str, pd.DataFrame]]
+        Dictionary containing the version of the database used and
+        optionally the Ensembl DataFrame
+    """
+
+    answer = {}
+
+    # Attributes to retrieve
+    attributes = ['ensembl_transcript_id', 'transcript_gencode_basic',
+        'chromosome_name', 'transcription_start_site', 'strand']
+    # Extra attributes that matter only for the Ensembl DataFrame
+    if keep_ensembl:
+        attributes += ['ensembl_gene_id', 'external_gene_name',
+            'gene_biotype']
+    print ('Retrieving response to query...')
+    # Submit and retrieve the response
+    buffer = retrieve_ensembl_data('hsapiens_gene_ensembl', attributes)
+
+    # Save the database version into the dictionary
+    answer['version'] = get_ensembl_version()
+    # Dictionary of types for conversion from the response, default strings
+    dtype_dict = defaultdict(lambda: str)
+    # Change the types that are not strings but integers
+    dtype_dict['Transcription start site (TSS)'] = int
+    dtype_dict['Strand'] = int
+    # Convert the response into a DataFrame
+    df = pd.read_csv(buffer, sep='\t', dtype=dtype_dict)
+
+    print ('Filtering and modifying dataframe...')
+    if filter_basic:
+        # Filter only for GENCODE basic
+        df = df[df['GENCODE basic annotation'] == 'GENCODE basic'].copy()
+        df.drop(columns='GENCODE basic annotation', inplace=True)
+    if chromosomes is not None:
+        # Filter only for selected chromosomes
+        df = df[df['Chromosome/scaffold name'].isin(chromosomes)]
+    # Convert chromosome names to match with other inputs
+    df['Chromosome'] = df['Chromosome/scaffold name'].apply(lambda x:
+        chromosome_mapping[x])
+    # Convert strand to +/-
+    df['Strand'] = df['Strand'].apply(lambda x: '+' if x > 0 else '-')
+    # Calculate the start based on the given offset from TSS
+    # The calculation is strand dependent
+    df['Start'] = df.apply(lambda row:
+        row['Transcription start site (TSS)'] + tss_offset[0]
+        if row['Strand'] == '+'
+        else row['Transcription start site (TSS)'] - tss_offset[1],
+        axis=1)
+    # End is always greater than start, this way it is strand independent
+    df['End'] = df['Start'] + (tss_offset[1] - tss_offset[0])
+    # Score column has to be provided for a valid bed file
+    df['Score'] = 0
+    # Order promoters by chromosome and start
+    df.sort_values(['Chromosome', 'Start'], inplace=True)
+
+    # Columns to be saved into a file
+    columns = ['Chromosome', 'Start', 'End', 'Transcript stable ID',
+        'Score', 'Strand']
+    print (f'Saving data to {file_path}...')
+    # Save the file
+    df[columns].to_csv(file_path, sep='\t', header=False, index=False)
+    print ()
+    if keep_ensembl:
+        # Keep the Ensembl DataFrame in the return dictionary
+        answer['ensembl'] = df[['Gene stable ID', 'Transcript stable ID',
+            'Gene name', 'Gene type']]
+
+    return answer
+
+
+def load_ensembl_from_biomart(
+    file_path: Path,
+) -> Dict[str, Union[str, pd.DataFrame]]:
+    """
+    Generates the Ensembl file which maps transcripts to genes and
+    stores gene names and types from the data retrieved from the Ensembl
+    BioMart server. Returns the database version and the file
+    content as a DataFrame.
+
+    Parameters
+    ----------
+    file_path : Path
+        Path to where the resulting file should be saved
+
+    Returns
+    -------
+    Dict[str, Union[str, pd.DataFrame]]
+        Dictionary containing the version of the database used and
+        the Ensembl DataFrame
+    """
+
+    answer = {}
+
+    # Attributes to retrieve
+    attributes = ['ensembl_transcript_id', 'ensembl_gene_id',
+        'external_gene_name', 'gene_biotype']
+    print ('Retrieving response to query...')
+    # Submit and retrieve the response
+    buffer = retrieve_ensembl_data('hsapiens_gene_ensembl', attributes)
+
+    # Save the database version into the dictionary
+    answer['version'] = get_ensembl_version()
+    # Convert the response into a DataFrame
+    df = pd.read_csv(buffer, sep='\t')
+
+    # Save the file
+    df.to_csv(file_path, sep='\t', index=False)
+    # Keep the DataFrame in the return dictionary
+    answer['ensembl'] = df
+
+    return answer
+
+
 def get_uniprot_mapping(
     from_db: str,
     to_db: str,
@@ -412,6 +472,28 @@ def get_uniprot_mapping(
     return results_df
 
 
+def get_ensembl_version(
+) -> str:
+    """
+    Returns the full version of the genome assembly used by the
+    Ensembl server (e.g. GRCh38).
+
+    Returns
+    -------
+    str
+        Full version of the genome assembly used by Ensembl
+    """
+
+    # Request the assembly information from Ensembl REST
+    REQUEST_STRING = "/info/assembly/homo_sapiens?"
+    r = requests.get(ENSEMBL_REST + REQUEST_STRING,
+        headers={ "Content-Type" : "application/json"})
+    r.raise_for_status()
+    decoded = r.json()
+
+    return decoded['assembly_name']
+
+
 def get_ensembl_assembly(
 ) -> str:
     """
@@ -424,14 +506,8 @@ def get_ensembl_assembly(
         Simple synonym of the genome assembly used by Ensembl
     """
 
-    # Select the Ensembl dataset from BioMart and get the display name
-    bm_server = BiomartServer(ENSEMBL_URL)
-    r = bm_server.get_request(type='datasets', mart='ENSEMBL_MART_ENSEMBL')
-    table = pd.read_csv(BytesIO(r.content), sep='\t', usecols=[1, 2],
-        header=None).set_index(1)
-    display_name = table.loc['hsapiens_gene_ensembl', 2]
-    # Isolate the version from the bracket
-    version_string = display_name.split('(')[-1].split(')')[0]
+    # Get the full assembly name
+    version_string = get_ensembl_version()
     # Remove the update part
     version_major = version_string.split('.')[0]
 

@@ -23,6 +23,7 @@ MOTIF_URL = ['https://frigg.uio.no/JASPAR/JASPAR_TFBSs/{year}/'
     'http://expdata.cmmt.ubc.ca/JASPAR/downloads/UCSC_tracks/{year}/'
     '{genome_assembly}/']
 ENSEMBL_URL = 'http://www.ensembl.org/biomart'
+ENSEMBL_REST = 'https://rest.ensembl.org'
 MAPPING_URL = 'https://rest.uniprot.org/idmapping/'
 STRING_URL = 'https://string-db.org/api/tsv/'
 NCBI_URL = 'https://api.ncbi.nlm.nih.gov/datasets/v2alpha/'
