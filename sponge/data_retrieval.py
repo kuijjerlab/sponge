@@ -188,12 +188,28 @@ def create_xml_query(
     dataset_name: str,
     requested_fields: Iterable[str],
 ) -> str:
-    
+    """
+    Formulates an XML query to retrieve specified field from a dataset
+    using Ensembl BioMart.
+
+    Parameters
+    ----------
+    dataset_name : str
+        Name of the dataset
+    requested_fields : Iterable[str]
+        Fields to be retrieved
+
+    Returns
+    -------
+    str
+        Formulated XML query
+    """
+
     # Build up the XML query
-    xml_query = et.Element('Query', attrib=dict(virtualSchemaName='default', 
+    xml_query = et.Element('Query', attrib=dict(virtualSchemaName='default',
         formatter='TSV', header='1', uniqueRows='0', count='',
         datasetConfigVersion='0.6'))
-    dataset = et.SubElement(xml_query, 'Dataset', 
+    dataset = et.SubElement(xml_query, 'Dataset',
         attrib=dict(name=dataset_name, interface='default'))
     for field in requested_fields:
         _ = et.SubElement(dataset, 'Attribute', attrib=dict(name=field))
@@ -208,7 +224,23 @@ def retrieve_ensembl_data(
     dataset_name: str,
     requested_fields: Iterable[str],
 ) -> BytesIO:
-    
+    """
+    Retrieves specified fields from an Ensembl dataset by querying
+    BioMart.
+
+    Parameters
+    ----------
+    dataset_name : str
+        Name of the dataset
+    requested_fields : Iterable[str]
+        Fields to be retrieved
+
+    Returns
+    -------
+    BytesIO
+        Bytes retrieved from the server
+    """
+
     xml_query = create_xml_query(dataset_name, requested_fields)
     REQUEST_STRING = '/martservice?query='
     link = ENSEMBL_URL + REQUEST_STRING + xml_query
@@ -442,10 +474,19 @@ def get_uniprot_mapping(
 
 def get_ensembl_version(
 ) -> str:
-    
+    """
+    Returns the full version of the genome assembly used by the
+    Ensembl server (e.g. GRCh38).
+
+    Returns
+    -------
+    str
+        Full version of the genome assembly used by Ensembl
+    """
+
     # Request the assembly information from Ensembl REST
     REQUEST_STRING = "/info/assembly/homo_sapiens?"
-    r = requests.get(ENSEMBL_REST + REQUEST_STRING, 
+    r = requests.get(ENSEMBL_REST + REQUEST_STRING,
         headers={ "Content-Type" : "application/json"})
     r.raise_for_status()
     decoded = r.json()
