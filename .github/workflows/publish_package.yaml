@@ -1,4 +1,4 @@
-name: Publishing a package for a tagged version of SPONGE
+name: SPONGE GHCR package
 
 on:
   push:

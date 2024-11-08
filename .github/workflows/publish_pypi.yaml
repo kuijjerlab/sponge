@@ -1,4 +1,4 @@
-name: Publishing a tagged version of SPONGE on PyPI
+name: SPONGE PyPI upload
 
 on:
   push:

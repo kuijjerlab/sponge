@@ -1,3 +1,8 @@
+[![master](https://github.com/ladislav-hovan/sponge/actions/workflows/test_full.yaml/badge.svg?branch=main)](https://github.com/ladislav-hovan/sponge/actions/workflows/test_full.yaml)
+[![devel](https://github.com/ladislav-hovan/sponge/actions/workflows/test_single.yaml/badge.svg?branch=devel)](https://github.com/ladislav-hovan/sponge/actions/workflows/test_single.yaml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
+
 # SPONGE - Simple Prior Omics Network GEnerator
 The SPONGE package generates human prior gene regulatory networks and
 protein-protein interaction networks for the involved transcription
