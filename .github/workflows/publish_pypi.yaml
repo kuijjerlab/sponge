@@ -1,9 +1,9 @@
 name: SPONGE PyPI upload
 
 on:
-  push:
-    tags:
-    - v*
+  release:
+    types:
+    - created
 
 jobs:
   pypi-publish:

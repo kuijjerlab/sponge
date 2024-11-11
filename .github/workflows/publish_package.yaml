@@ -1,9 +1,11 @@
 name: SPONGE GHCR package
 
 on:
-  push:
-    tags:
-    - v*
+  workflow_run:
+    workflows:
+    - SPONGE PyPI upload
+    types:
+    - completed
 
 env:
   IMAGE_NAME: netzoopy_sponge
@@ -11,6 +13,8 @@ env:
 jobs:
   push:
     runs-on: ubuntu-latest
+
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     permissions:
       packages: write

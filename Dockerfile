@@ -18,26 +18,10 @@ RUN adduser \
     --shell "/bin/bash" \
     appuser
 
-# Download dependencies as a separate step to take advantage of Docker's caching
-# Leverage a cache mount to /root/.cache/pip to speed up subsequent builds
-# Leverage a bind mount to requirements.txt to avoid having to copy them into this layer
-RUN --mount=type=cache,target=/root/.cache/pip \
-    --mount=type=bind,source=requirements.txt,target=requirements.txt \
-    python -m pip install -r requirements.txt
-
-# Copy the source code into the container
-COPY . /sponge_src
-
-# Install the application
-RUN python -m pip install -e /sponge_src
-
-# Test the application
-WORKDIR /sponge_src
-RUN python -m pip install pytest
-RUN pytest -m "not slow"
+# Install SPONGE
+RUN python -m pip install netzoopy-sponge
 
 # Clean up some space
-RUN python -m pip uninstall -y pytest
 RUN rm -rf /root/.cache/pip
 
 # Create the working directory
