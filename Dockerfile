@@ -31,8 +31,9 @@ RUN chown appuser /app
 # Switch to the non-privileged user to run the application
 USER appuser
 
-# Run the bash shell
-CMD ["bash"]
+# Create an entry point
+ENTRYPOINT ["netzoopy-sponge", "-y"]
+CMD ["--help"]
 
 # Labels
 LABEL org.opencontainers.image.source=https://github.com/ladislav-hovan/sponge
