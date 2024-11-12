@@ -1105,6 +1105,9 @@ class Sponge:
         instance of the Sponge class.
         """
 
+        print ()
+        print ('--- Running show_fingerprint() ---')
+
         for k,v in self.fingerprint.items():
             if v['provided']:
                 # No information is known about this file as it was provided
