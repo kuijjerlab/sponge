@@ -1,5 +1,5 @@
-[![master](https://github.com/ladislav-hovan/sponge/actions/workflows/test_full.yaml/badge.svg?branch=main)](https://github.com/ladislav-hovan/sponge/actions/workflows/test_full.yaml)
-[![devel](https://github.com/ladislav-hovan/sponge/actions/workflows/test_single.yaml/badge.svg?branch=devel)](https://github.com/ladislav-hovan/sponge/actions/workflows/test_single.yaml)
+[![master](https://github.com/ladislav-hovan/sponge/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/ladislav-hovan/sponge/actions/workflows/test.yaml)
+[![devel](https://github.com/ladislav-hovan/sponge/actions/workflows/test.yaml/badge.svg?branch=devel)](https://github.com/ladislav-hovan/sponge/actions/workflows/test.yaml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 
@@ -17,6 +17,7 @@ factors.
   - [Setup](#setup)
   - [Usage](#usage)
     - [File formats](#file-formats)
+    - [Container](#container)
   - [Project Status](#project-status)
   - [Room for Improvement](#room-for-improvement)
   - [Acknowledgements](#acknowledgements)
@@ -205,6 +206,21 @@ the `name` column to provide JASPAR matrix ID and the `TFName` column
 to provide the actual name of the transcription factor.
 However, currently SPONGE expects a bigbed file and will not work with
 a bed file.
+
+
+### Container
+SPONGE releases are also provided as Docker containers.
+The most basic way of running would involve mounting a directory to the
+`/data` directory on the container, where networks will be written by
+default:
+
+``` bash
+docker run --mount type=bind,source="$(pwd)"/output,target=/data ghcr.io/ladislav-hovan/netzoopy_sponge:latest
+```
+
+Help can be requested with the `--help` argument.
+For the most part the arguments match those of the `netzoopy-sponge`
+command line script, but interactive prompts are disabled.
 
 
 ## Project Status

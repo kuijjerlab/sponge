@@ -31,9 +31,9 @@ RUN chown appuser /app
 # Switch to the non-privileged user to run the application
 USER appuser
 
-# Create an entry point
+# Create an entry point - ensure interactive input is never requested
 ENTRYPOINT ["netzoopy-sponge", "-y"]
-CMD ["--help"]
+CMD []
 
 # Labels
 LABEL org.opencontainers.image.source=https://github.com/ladislav-hovan/sponge
