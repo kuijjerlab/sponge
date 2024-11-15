@@ -30,7 +30,7 @@ jobs:
     - name: Log in to registry
       run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-    - name: Push image
+    - name: Push images
       run: |
         IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
 
@@ -38,14 +38,19 @@ jobs:
         IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
 
         # This strips the git ref prefix from the version.
-        VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+        VERSION=$(echo "${{ github.event.workflow_run.head_branch }}" | sed -e 's,.*/\(.*\),\1,')
 
         # This strips the "v" prefix from the tag name.
-        [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+        [[ $VERSION =~ v[0-9]+.[0-9]+.[0-9]+ ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
 
-        # This uses the Docker `latest` tag convention.
-        [ "$VERSION" == "main" ] && VERSION=latest
+        # Show the derived image ID and version
         echo IMAGE_ID=$IMAGE_ID
         echo VERSION=$VERSION
+
+        # Push the with the version tag
         docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
         docker push $IMAGE_ID:$VERSION
+
+        # Push with the latest tag
+        docker tag $IMAGE_NAME $IMAGE_ID:latest
+        docker push $IMAGE_ID:latest

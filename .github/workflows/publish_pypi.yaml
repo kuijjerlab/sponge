@@ -3,7 +3,7 @@ name: SPONGE PyPI upload
 on:
   release:
     types:
-    - created
+    - released
 
 jobs:
   pypi-publish:
