@@ -4,7 +4,7 @@ import pytest
 
 import pandas as pd
 
-from sponge.sponge import Sponge
+from sponge.old_sponge import Sponge
 from sponge.test_fixtures import *
 
 ### Unit tests ###
