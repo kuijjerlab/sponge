@@ -2,5 +2,5 @@
 
 
 ### Class definition ###
-class Logger:
+class VersionLogger:
     pass

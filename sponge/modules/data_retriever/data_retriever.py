@@ -1,12 +1,12 @@
 ### Imports ###
-from sponge.modules.logger import Logger
+from sponge.modules.version_logger import VersionLogger
 
 ### Class definition ###
 class DataRetriever:
     
     def __init__(
         self,
-        logger: Logger,
+        version_logger: VersionLogger,
     ):
         
         pass

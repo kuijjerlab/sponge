@@ -1,0 +1,1 @@
+from sponge.modules.version_logger.version_logger import VersionLogger
