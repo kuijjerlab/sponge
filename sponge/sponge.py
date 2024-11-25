@@ -14,6 +14,6 @@ class Sponge:
     ):
 
         self.config = ConfigReader().config
-        self.version_logger = VersionLogger()
+        self.version_logger = VersionLogger(temp_folder)
 
-        self.input_data = DataRetriever(self.logger)
+        self.input_data = DataRetriever(self.version_logger)

@@ -7,6 +7,7 @@ from typing import Optional
 
 ### Class definition ###
 class ConfigReader:
+    _default_configfile = 'config.yaml'
 
     def __init__(
         self,
@@ -14,9 +15,9 @@ class ConfigReader:
     ):
         
         if config_path is None:
-            # Find the config.yaml file in the module directory
+            # Find the config file in the module directory
             file_dir = Path(__file__).parents[0]
-            config_path = os.path.join(file_dir, 'config.yaml')
+            config_path = os.path.join(file_dir, self._default_configfile)
         
         with open(config_path, 'r') as f:
             self.config = yaml.safe_load(f)
