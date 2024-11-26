@@ -11,9 +11,15 @@ class Sponge:
     def __init__(
         self,
         temp_folder: Path = '.sponge_temp/',
+        config_file: Path = 'user_config.yaml',
     ):
 
-        self.config = ConfigReader().config
+        # Load the file with internal module inputs
+        self.core_config = ConfigReader()
+        # Load the user-provided config file (or use defaults if it doesn't
+        # exist)
+        self.user_config = ConfigReader(config_file, temp_folder)
         self.version_logger = VersionLogger(temp_folder)
 
-        self.input_data = DataRetriever(self.version_logger)
+        self.input_data = DataRetriever(temp_folder, self.core_config,
+            self.version_logger)

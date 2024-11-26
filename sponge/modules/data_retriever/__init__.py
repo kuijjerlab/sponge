@@ -1,1 +1,2 @@
 from sponge.modules.data_retriever.data_retriever import DataRetriever
+from sponge.modules.data_retriever.motif_retriever import MotifRetriever

@@ -4,6 +4,7 @@ import yaml
 
 from collections import defaultdict
 from pathlib import Path
+from typing import Optional
 from yaml.error import MarkedYAMLError
 
 ### Class definition ###
@@ -15,10 +16,13 @@ class VersionLogger:
     def __init__(
         self,
         temp_folder: Path,
+        log_filename: Optional[str] = None,
     ):
 
         os.makedirs(temp_folder, exist_ok=True)
-        self.log_file = os.path.join(temp_folder, self._log_filename)
+        if log_filename is None:
+            log_filename = self._log_filename
+        self.log_file = os.path.join(temp_folder, log_filename)
 
         self.data = defaultdict(dict)
         if os.path.exists(self.log_file):
