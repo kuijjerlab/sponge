@@ -23,23 +23,22 @@ class VersionLogger:
         self.data = defaultdict(dict)
         if os.path.exists(self.log_file):
             try:
-                for k,v in yaml.safe_load(open(self.log_file)).items():
-                    self.data[k] = v
-            except AttributeError:
+                self.data = defaultdict(dict,
+                    yaml.safe_load(open(self.log_file)))
+            except TypeError:
                 # Most likely means an empty log file, ignore
                 pass
             except MarkedYAMLError:
                 print ('There seems to be an issue with the fingeprint file. '
                     f'We recommend deleting the temporary folder {temp_folder}'
-                    ' to fix the issue.')
+                    ' to fix the issue.')         
 
 
     def __del__(
         self
     ):
 
-        temp_dict = { k: v for k,v in self.data.items() }
-        yaml.safe_dump(temp_dict, open(self.log_file, 'w'))
+        yaml.safe_dump(dict(self.data), open(self.log_file, 'w'))
 
 
     def __getitem__(
