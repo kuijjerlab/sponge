@@ -31,11 +31,11 @@ class VersionLogger:
             except MarkedYAMLError:
                 print ('There seems to be an issue with the fingeprint file. '
                     f'We recommend deleting the temporary folder {temp_folder}'
-                    ' to fix the issue.')         
+                    ' to fix the issue.')
 
 
     def __del__(
-        self
+        self,
     ):
 
         yaml.safe_dump(dict(self.data), open(self.log_file, 'w'))
