@@ -7,10 +7,12 @@ from typing import Any, Optional
 
 ### Class definition ###
 class ConfigReader:
+    # Variables
     _default_core_config = 'config.yaml'
     _default_user_config = 'user_config.yaml'
     _log_filename = 'last_user_config.yaml'
 
+    # Functions
     def __init__(
         self,
         config_path: Optional[Path] = None,
@@ -18,7 +20,7 @@ class ConfigReader:
     ):
 
         self.temp_folder = temp_folder
-        
+
         file_dir = Path(__file__).parents[0]
         if config_path is None:
             # Find the config file in the module directory
@@ -34,7 +36,7 @@ class ConfigReader:
     def __del__(
         self,
     ):
-        
+
         if self.temp_folder is not None:
             log_file = os.path.join(self.temp_folder, self._log_filename)
             yaml.safe_dump(self.config, open(log_file, 'w'))

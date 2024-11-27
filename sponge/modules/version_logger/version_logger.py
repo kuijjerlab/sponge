@@ -33,16 +33,19 @@ class VersionLogger:
                 # Most likely means an empty log file, ignore
                 pass
             except MarkedYAMLError:
-                print ('There seems to be an issue with the fingeprint file. '
+                print(
+                    'There seems to be an issue with the fingeprint file. '
                     f'We recommend deleting the temporary folder {temp_folder}'
-                    ' to fix the issue.')
+                    ' to fix the issue.'
+                )
 
 
     def __del__(
         self,
     ):
 
-        yaml.safe_dump(dict(self.data), open(self.log_file, 'w'))
+        if len(self.data) > 0:
+            yaml.safe_dump(dict(self.data), open(self.log_file, 'w'))
 
 
     def __getitem__(
