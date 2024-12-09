@@ -71,3 +71,28 @@ class VersionLogger:
     ) -> None:
 
         del self.data[key]
+
+    
+    def write_provided(
+        self,
+        key: str,
+    ) -> None:
+        
+        pass
+
+
+    def update_cached(
+        self,
+        key: str,
+    ) -> None:
+        
+        pass
+
+
+    def write_retrieved(
+        self,
+        key: str,
+        version: str,
+    ) -> None:
+        
+        pass
