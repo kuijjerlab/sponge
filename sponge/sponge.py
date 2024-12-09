@@ -22,4 +22,4 @@ class Sponge:
         self.version_logger = VersionLogger(temp_folder)
 
         self.input_data = DataRetriever(temp_folder, self.core_config,
-            self.version_logger)
+            self.user_config, self.version_logger)

@@ -1,2 +1,8 @@
+on_the_fly_processing: False
+genome_assembly: "hg38"
 motif:
-  jaspar_version: 'JASPAR2024'
+  jaspar_release: "JASPAR2024"
+  # tfbs_file: JASPAR.bb
+# For testing
+always_true: True
+always_false: False

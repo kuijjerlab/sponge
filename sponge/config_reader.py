@@ -3,7 +3,7 @@ import os
 import yaml
 
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, List, Optional, Union
 
 ### Class definition ###
 class ConfigReader:
@@ -65,3 +65,61 @@ class ConfigReader:
     ) -> None:
 
         del self.config[key]
+
+
+    def __contains__(
+        self,
+        key: str,
+    ) -> bool:
+
+        return key in self.config
+
+
+    def _retrieve_level(
+        self,
+        keys: List[str],
+    ) -> dict:
+
+        curr = self.config
+        for k in keys:
+            curr = curr[k]
+
+        return curr
+
+
+    def is_true(
+        self,
+        key: Union[str, List[str]],
+    ) -> bool:
+
+        return self.exists(key) and bool(self.get_value(key))
+
+
+    def exists(
+        self,
+        key: Union[str, List[str]],
+    ) -> bool:
+
+        if type(key) == str:
+            key = [key]
+
+        try:
+            last_level = self._retrieve_level(key[:-1])
+        except KeyError:
+            return False
+
+        return key[-1] in last_level
+
+
+    def get_value(
+        self,
+        key: Union[str, List[str]],
+    ) -> str:
+
+        if type(key) == str:
+            key = [key]
+
+        # Can throw KeyErrors on purpose
+        last_level = self._retrieve_level(key[:-1])
+
+        return last_level[key[-1]]
