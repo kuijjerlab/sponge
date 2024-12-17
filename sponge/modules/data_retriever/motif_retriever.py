@@ -4,11 +4,12 @@ import os
 from pathlib import Path
 
 from sponge.config_reader import ConfigReader
+from sponge.modules.data_retriever.file_retriever import FileRetriever
 from sponge.modules.utils import download_with_progress
 from sponge.modules.version_logger import VersionLogger
 
 ### Class definition ###
-class MotifRetriever:
+class MotifRetriever(FileRetriever):
     _default_filename = 'jaspar.bb'
 
     def __init__(
@@ -18,30 +19,40 @@ class MotifRetriever:
         user_config: ConfigReader,
         version_logger: VersionLogger,
     ):
-        
-        # TODO: Announce what is being retrieved
 
-        # Check if on the fly download was requested 
-        # (in which case we don't do anything)
         if user_config.is_true('on_the_fly_processing'):
-            # TODO: Report
+            print ('Retrieval of tfbs_file is skipped as on the fly '
+                'processing was requested.')
             return
-        temp_filename = os.path.join(temp_folder, self._default_filename)
-        # Check existence of user-provided bigbed file
+
+        path_to_file = None
         if user_config.exists(['motif', 'tfbs_file']):
-            # TODO: Report
-            version_logger.write_provided('jaspar_bibged')
-        # Check for a cached bigbed file
-        elif os.path.exists(temp_filename):
-            # TODO: Report
-            version_logger.update_cached('jaspar_bigbed')
-        # Retrieve a bigbed file from JASPAR
-        else:
-            # TODO: Report on file retrieval
-            jaspar_release = user_config.get_value(['motif', 'jaspar_release'])
-            year = jaspar_release[-4:]
-            assembly = user_config.get_value('genome_assembly')
-            urls_to_try = [url.format(year=year, genome_assembly=assembly)
-                for url in core_config['url']['motif']['full']]
-            download_with_progress(urls_to_try, temp_filename)
-            version_logger.write_retrieved('jaspar_bigbed', jaspar_release)
+            path_to_file = user_config.get_value(['motif', 'tfbs_file'])
+        temp_filename = os.path.join(temp_folder, self._default_filename)
+
+        self.jaspar_release = user_config.get_value(
+            ['motif', 'jaspar_release'])
+        self.genome_assembly = user_config.get_value('genome_assembly')
+        self.urls = core_config['url']['motif']['full']
+
+        super().__init__(
+            key='jaspar_tfbs',
+            temp_filename=temp_filename,
+            version_logger=version_logger,
+            path_to_file=path_to_file,
+        )
+
+
+    def retrieve_file(
+        self,
+        temp_filename: Path,
+        *args,
+        **kwargs,
+    ) -> str:
+
+        year = self.jaspar_release[-4:]
+        urls_to_try = [url.format(year=year,
+            genome_assembly=self.genome_assembly) for url in self.urls]
+        download_with_progress(urls_to_try, temp_filename)
+
+        return self.jaspar_release

@@ -1,5 +1,7 @@
 ### Imports ###
+import datetime
 import os
+import time
 import yaml
 
 from collections import defaultdict
@@ -72,21 +74,57 @@ class VersionLogger:
 
         del self.data[key]
 
-    
+
+    def __contains__(
+        self,
+        key: str,
+    ) -> bool:
+
+        return key in self.data
+
+
+    def _reset_entry(
+        self,
+        key: str,
+    ) -> None:
+
+        # Remove if present
+        if key in self.data:
+            del self.data[key]
+
+        self.data[key]['datetime'] = datetime.datetime.fromtimestamp(
+            time.time())
+
+
     def write_provided(
         self,
         key: str,
     ) -> None:
-        
-        pass
+
+        self._reset_entry(key)
+
+        self.data[key]['provided'] = True
+        self.data[key]['version'] = 'unknown'
+
+
+    def write_default(
+        self,
+        key: str,
+    ) -> None:
+
+        self._reset_entry(key)
+        # Datetime is set here again
+        self.data[key]['datetime'] = 'unknown'
+        self.data[key]['version'] = 'unknown'
 
 
     def update_cached(
         self,
         key: str,
     ) -> None:
-        
-        pass
+
+        # Only update cache label, don't change anything else
+        self.data[key]['cached'] = True
 
 
     def write_retrieved(
@@ -94,5 +132,7 @@ class VersionLogger:
         key: str,
         version: str,
     ) -> None:
-        
-        pass
+
+        self._reset_entry(key)
+
+        self.data[key]['version'] = version
