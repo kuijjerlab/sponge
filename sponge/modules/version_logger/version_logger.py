@@ -92,8 +92,8 @@ class VersionLogger:
         if key in self.data:
             del self.data[key]
 
-        self.data[key]['datetime'] = datetime.datetime.fromtimestamp(
-            time.time())
+        raw_dt = datetime.datetime.fromtimestamp(time.time())
+        self.data[key]['datetime'] = raw_dt.replace(microsecond=0)
 
 
     def write_provided(
