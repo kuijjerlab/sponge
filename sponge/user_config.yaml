@@ -3,6 +3,11 @@ genome_assembly: "hg38"
 motif:
   jaspar_release: "JASPAR2024"
   tfbs_file: .sponge_temp/JASPAR.bb
+region:
+  # region_file:
+  filter_basic: True
+  # chromosomes:  # Default is all autosomes + X, Y
+  tss_offset: [-750, 250]
 # For testing
 always_true: True
 always_false: False

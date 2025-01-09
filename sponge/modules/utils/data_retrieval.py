@@ -1,10 +1,12 @@
 ### Imports ###
 import requests
 
+import xml.etree.ElementTree as et
+
 from io import BytesIO
 from pathlib import Path
 from tqdm import tqdm
-from typing import List, Optional, Union
+from typing import Iterable, List, Optional, Union
 
 ### Functions ###
 def download_with_progress(
@@ -84,3 +86,96 @@ def download_with_progress(
 
     if file_path is None:
         return BytesIO(stream.getvalue())
+
+
+def create_xml_query(
+    dataset_name: str,
+    requested_fields: Iterable[str],
+) -> str:
+    """
+    Formulates an XML query to retrieve specified field from a dataset
+    using Ensembl BioMart.
+
+    Parameters
+    ----------
+    dataset_name : str
+        Name of the dataset
+    requested_fields : Iterable[str]
+        Fields to be retrieved
+
+    Returns
+    -------
+    str
+        Formulated XML query
+    """
+
+    # Build up the XML query
+    xml_query = et.Element('Query', attrib=dict(virtualSchemaName='default',
+        formatter='TSV', header='1', uniqueRows='0', count='',
+        datasetConfigVersion='0.6'))
+    dataset = et.SubElement(xml_query, 'Dataset',
+        attrib=dict(name=dataset_name, interface='default'))
+    for field in requested_fields:
+        _ = et.SubElement(dataset, 'Attribute', attrib=dict(name=field))
+    # Convert to a string with a declaration
+    query_string = et.tostring(xml_query, xml_declaration=True,
+        encoding='unicode')
+
+    return query_string
+
+
+def retrieve_ensembl_data(
+    dataset_name: str,
+    requested_fields: Iterable[str],
+    ensembl_url: str,
+) -> BytesIO:
+    """
+    TODO: Update docstring
+    Retrieves specified fields from an Ensembl dataset by querying
+    BioMart.
+
+    Parameters
+    ----------
+    dataset_name : str
+        Name of the dataset
+    requested_fields : Iterable[str]
+        Fields to be retrieved
+
+    Returns
+    -------
+    BytesIO
+        Bytes retrieved from the server
+    """
+
+    xml_query = create_xml_query(dataset_name, requested_fields)
+    REQUEST_STRING = '/martservice?query='
+    link = ensembl_url + REQUEST_STRING + xml_query
+    r = requests.get(link, stream=True)
+    r.raise_for_status()
+    bytes = download_with_progress(r)
+
+    return bytes
+
+
+def get_ensembl_version(
+    ensembl_rest: str,
+) -> str:
+    """
+    TODO: Update docstring
+    Returns the full version of the genome assembly used by the
+    Ensembl server (e.g. GRCh38).
+
+    Returns
+    -------
+    str
+        Full version of the genome assembly used by Ensembl
+    """
+
+    # Request the assembly information from Ensembl REST
+    REQUEST_STRING = "/info/assembly/homo_sapiens?"
+    r = requests.get(ensembl_rest + REQUEST_STRING,
+        headers={ "Content-Type" : "application/json"})
+    r.raise_for_status()
+    decoded = r.json()
+
+    return decoded['assembly_name']

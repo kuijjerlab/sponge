@@ -17,13 +17,13 @@ class FileRetriever:
     ):
 
         print ()
-        print (f'--- Attempting to locate {key} file ---')
+        print (f'--- Attempting to locate {key} ---')
 
         # Check existence of a user-provided file
         if path_to_file is not None:
             print (f'Using a user-provided file: {path_to_file}')
             if not os.path.exists(path_to_file):
-                raise FileNotFoundError('could not locate file: '
+                raise FileNotFoundError('Could not locate file: '
                     f'{path_to_file}')
             version_logger.write_provided(key)
         # Check for a cached file
@@ -44,8 +44,6 @@ class FileRetriever:
     def retrieve_file(
         self,
         temp_filename: Path,
-        *args,
-        **kwargs,
     ) -> str:
 
         # Intended to be overloaded in derived classes

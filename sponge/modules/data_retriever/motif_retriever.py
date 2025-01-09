@@ -10,7 +10,7 @@ from sponge.modules.version_logger import VersionLogger
 
 ### Class definition ###
 class MotifRetriever(FileRetriever):
-    _default_filename = 'jaspar.bb'
+    _default_filename = 'tfbs.bb'
 
     def __init__(
         self,
@@ -36,7 +36,7 @@ class MotifRetriever(FileRetriever):
         self.urls = core_config['url']['motif']['full']
 
         super().__init__(
-            key='jaspar_tfbs',
+            key='tfbs_file',
             temp_filename=temp_filename,
             version_logger=version_logger,
             path_to_file=path_to_file,
@@ -46,8 +46,6 @@ class MotifRetriever(FileRetriever):
     def retrieve_file(
         self,
         temp_filename: Path,
-        *args,
-        **kwargs,
     ) -> str:
 
         year = self.jaspar_release[-4:]
