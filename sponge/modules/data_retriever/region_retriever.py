@@ -64,20 +64,21 @@ class RegionRetriever(FileRetriever):
         dtype_dict['Strand'] = int
         # Convert the response into a DataFrame
         df = pd.read_csv(buffer, sep='\t', dtype=dtype_dict)
-        print (df)
 
         print ('Filtering and modifying dataframe...')
         if self.settings['filter_basic']:
             # Filter only for GENCODE basic
             df = df[df['GENCODE basic annotation'] == 'GENCODE basic'].copy()
             df.drop(columns='GENCODE basic annotation', inplace=True)
+        print (df)
+        # Convert chromosome names to match with other inputs
+        df['Chromosome'] = df['Chromosome/scaffold name'].apply(lambda x:
+            self.mapping[x])
         chromosomes = self.settings['chromosomes']
         if chromosomes is not None:
             # Filter only for selected chromosomes
             df = df[df['Chromosome/scaffold name'].isin(chromosomes)]
-        # Convert chromosome names to match with other inputs
-        df['Chromosome'] = df['Chromosome/scaffold name'].apply(lambda x:
-            self.mapping[x])
+        print (df)
         # Convert strand to +/-
         df['Strand'] = df['Strand'].apply(lambda x: '+' if x > 0 else '-')
         # Calculate the start based on the given offset from TSS
@@ -95,10 +96,10 @@ class RegionRetriever(FileRetriever):
 
         # Columns to be saved into a file
         columns = ['Chromosome', 'Start', 'End', 'Transcript stable ID',
-            'Strand', 'Gene stable ID', 'Gene name', 'Gene type']
+            'Gene stable ID', 'Gene name', 'Gene type']
         print (f'Saving data to: {temp_filename}')
         # Save the file
-        df[columns].to_csv(temp_filename, sep='\t', header=False, index=False)
+        df[columns].to_csv(temp_filename, sep='\t', index=False)
         print ()
 
         return get_ensembl_version(self.rest)
