@@ -34,7 +34,7 @@ dependencies = [
 netzoopy-sponge = "sponge.cli:cli"
 
 [project.urls]
-Repository = "https://github.com/ladislav-hovan/sponge"
+Repository = "https://github.com/kuijjerlab/sponge"
 
 [tool.pytest.ini_options]
 markers = [
