@@ -1,8 +1,10 @@
+### Imports ###
 import os
 import pytest
 
 import pandas as pd
 
+### Fixtures ###
 # Core config fixture
 from sponge.config_reader import ConfigReader
 
@@ -10,7 +12,7 @@ from sponge.config_reader import ConfigReader
 def core_config():
     return ConfigReader()
 
-
+### Unit tests ###
 # Data retrieval functions
 import sponge.modules.utils.data_retrieval as data_f
 
@@ -79,3 +81,21 @@ def test_get_chromosome_mapping(input, expected_type, core_config):
         core_config['url']['chrom_mapping'])
 
     assert type(mapping) == expected_type
+
+
+# ConfigReader class
+
+
+# VersionLogger class
+
+
+# FileRetriever class
+
+
+# TFBSRetriever class
+
+
+# RegionRetriever class
+
+
+# DataRetriever class

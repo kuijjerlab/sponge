@@ -9,7 +9,7 @@ from sponge.modules.utils import download_with_progress
 from sponge.modules.version_logger import VersionLogger
 
 ### Class definition ###
-class MotifRetriever(FileRetriever):
+class TFBSRetriever(FileRetriever):
     _default_filename = 'tfbs.bb'
 
     def __init__(

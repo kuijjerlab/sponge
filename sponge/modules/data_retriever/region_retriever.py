@@ -109,7 +109,8 @@ class RegionRetriever(FileRetriever):
             'Gene stable ID', 'Gene name', 'Gene type']
         print (f'Saving data to: {temp_filename}')
         # Save the file
-        df[columns].to_csv(temp_filename, sep='\t', index=False)
+        self.df = df[columns]
+        self.df.to_csv(temp_filename, sep='\t', index=False)
         print ()
 
         return get_ensembl_version(self.rest)
