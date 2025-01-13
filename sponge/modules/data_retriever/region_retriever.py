@@ -8,7 +8,8 @@ from pathlib import Path
 
 from sponge.config_reader import ConfigReader
 from sponge.modules.data_retriever.file_retriever import FileRetriever
-from sponge.modules.utils import get_ensembl_version, retrieve_ensembl_data
+from sponge.modules.utils import get_ensembl_version, retrieve_ensembl_data, \
+    get_chromosome_mapping
 from sponge.modules.version_logger import VersionLogger
 
 ### Class definition ###
@@ -31,6 +32,8 @@ class RegionRetriever(FileRetriever):
         self.xml = core_config['url']['region']['xml']
         self.rest = core_config['url']['region']['rest']
         self.mapping = core_config['default_mapping']
+        self.assembly = user_config['genome_assembly']
+        self.mapping_url = core_config['url']['chrom_mapping']
 
         self.settings = user_config['region']
         if 'chromosomes' not in self.settings:
@@ -70,15 +73,22 @@ class RegionRetriever(FileRetriever):
             # Filter only for GENCODE basic
             df = df[df['GENCODE basic annotation'] == 'GENCODE basic'].copy()
             df.drop(columns='GENCODE basic annotation', inplace=True)
-        print (df)
         # Convert chromosome names to match with other inputs
+        # Attempt to retrieve mapping
+        mapping = get_chromosome_mapping(self.assembly, self.mapping_url)
+        if mapping is not None:
+            # Managed to retrieve it, overwrite the default
+            self.mapping = mapping
         df['Chromosome'] = df['Chromosome/scaffold name'].apply(lambda x:
-            self.mapping[x])
+            self.mapping[x] if x in self.mapping else None)
+        not_mapped = df['Chromosome'].isna().sum()
+        if not_mapped > 0:
+            print (f'Discarding {not_mapped} regions on unmapped chromosomes.')
+            df.dropna(subset=['Chromosome'], inplace=True)
         chromosomes = self.settings['chromosomes']
         if chromosomes is not None:
             # Filter only for selected chromosomes
-            df = df[df['Chromosome/scaffold name'].isin(chromosomes)]
-        print (df)
+            df = df[df['Chromosome'].isin(chromosomes)]
         # Convert strand to +/-
         df['Strand'] = df['Strand'].apply(lambda x: '+' if x > 0 else '-')
         # Calculate the start based on the given offset from TSS

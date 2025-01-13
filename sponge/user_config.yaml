@@ -6,7 +6,7 @@ motif:
 region:
   # region_file:
   filter_basic: True
-  # chromosomes:  # Default is all autosomes + X, Y
+  # chromosomes:  # Default is all autosomes + X, Y; leave empty for all
   tss_offset: [-750, 250]
 # For testing
 always_true: True
