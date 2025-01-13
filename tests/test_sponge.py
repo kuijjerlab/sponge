@@ -3,14 +3,22 @@ import pytest
 
 import pandas as pd
 
+# Core config fixture
+from sponge.config_reader import ConfigReader
+
+@pytest.fixture
+def core_config():
+    return ConfigReader()
+
+
 # Data retrieval functions
 import sponge.modules.utils.data_retrieval as data_f
 
 @pytest.mark.network
 @pytest.mark.parametrize('input, compare_to', [
-    (('https://raw.githubusercontent.com/ladislav-hovan/sponge/main/LICENSE',
+    (('https://raw.githubusercontent.com/kuijjerlab/sponge/main/LICENSE',
         'LICENSE'), 'LICENSE'),
-    (('https://raw.githubusercontent.com/ladislav-hovan/sponge/main/LICENSE',
+    (('https://raw.githubusercontent.com/kuijjerlab/sponge/main/LICENSE',
         None), 'LICENSE'),
 ])
 def test_download_with_progress(input, compare_to, tmp_path):
@@ -42,7 +50,8 @@ def test_create_xml_query(input):
     ['hsapiens_gene_ensembl', ['ensembl_transcript_id', 'ensembl_gene_id']],
     ['hsapiens_gene_ensembl', ['ensembl_transcript_id']],
 ])
-def test_retrieve_ensembl_data(input):
+def test_retrieve_ensembl_data(input, core_config):
+    input.append(core_config['url']['region']['xml'])
     df = pd.read_csv(data_f.retrieve_ensembl_data(*input), sep='\t')
 
     assert type(df) == pd.DataFrame
@@ -50,9 +59,23 @@ def test_retrieve_ensembl_data(input):
 
 
 @pytest.mark.network
-def test_get_ensembl_version():
-    version_string = data_f.get_ensembl_version()
+def test_get_ensembl_version(core_config):
+    version_string = data_f.get_ensembl_version(
+        core_config['url']['region']['rest'])
     split_version = version_string.split('.')
 
     assert len(split_version) == 2
     assert split_version[0] == 'GRCh38'
+
+
+@pytest.mark.network
+@pytest.mark.parametrize('input, expected_type', [
+    ('hg38', pd.Series),
+    ('random_assembly', type(None)),
+    ('hg1992', type(None)),
+])
+def test_get_chromosome_mapping(input, expected_type, core_config):
+    mapping = data_f.get_chromosome_mapping(input,
+        core_config['url']['chrom_mapping'])
+
+    assert type(mapping) == expected_type
