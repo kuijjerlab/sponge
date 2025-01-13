@@ -132,7 +132,6 @@ def retrieve_ensembl_data(
     ensembl_url: str,
 ) -> BytesIO:
     """
-    TODO: Update docstring
     Retrieves specified fields from an Ensembl dataset by querying
     BioMart.
 
@@ -142,6 +141,8 @@ def retrieve_ensembl_data(
         Name of the dataset
     requested_fields : Iterable[str]
         Fields to be retrieved
+    ensembl_url : str
+        URL for BioMart
 
     Returns
     -------
@@ -163,9 +164,13 @@ def get_ensembl_version(
     ensembl_rest: str,
 ) -> str:
     """
-    TODO: Update docstring
     Returns the full version of the genome assembly used by the
     Ensembl server (e.g. GRCh38).
+
+    Parameters
+    ----------
+    ensembl_rest : str
+        URL for the REST interface of Ensembl
 
     Returns
     -------
@@ -188,7 +193,6 @@ def get_chromosome_mapping(
     mapping_url: str,
 ) -> Tuple[pd.Series, pd.Series]:
     """
-    TODO: Update docstring
     Returns a tuple with two pandas Series which can be used to map
     Ensembl chromosome names to UCSC (first Series) and vice versa
     (second Series) for a provided genome assembly. If it is not
@@ -199,6 +203,8 @@ def get_chromosome_mapping(
     ----------
     assembly : str
         Assembly for which to provide the mapping (e.g. hg38)
+    mapping_url : str
+        URL to retrieve chromosome mapping from
 
     Returns
     -------
