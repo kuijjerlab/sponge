@@ -6,7 +6,7 @@ import pandas as pd
 from collections import defaultdict
 from pathlib import Path
 
-from sponge.config_reader import ConfigReader
+from sponge.config_manager import ConfigManager
 from sponge.modules.data_retriever.file_retriever import FileRetriever
 from sponge.modules.utils import get_ensembl_version, retrieve_ensembl_data, \
     get_chromosome_mapping
@@ -19,8 +19,8 @@ class RegionRetriever(FileRetriever):
     def __init__(
         self,
         temp_folder: Path,
-        core_config: ConfigReader,
-        user_config: ConfigReader,
+        core_config: ConfigManager,
+        user_config: ConfigManager,
         version_logger: VersionLogger,
     ):
 

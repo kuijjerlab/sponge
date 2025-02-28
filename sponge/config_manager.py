@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, List, Optional, Union
 
 ### Class definition ###
-class ConfigReader:
+class ConfigManager:
     # Variables
     _default_core_config = 'config.yaml'
     _default_user_config = 'user_config.yaml'

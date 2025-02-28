@@ -3,7 +3,7 @@ import os
 
 from pathlib import Path
 
-from sponge.config_reader import ConfigReader
+from sponge.config_manager import ConfigManager
 from sponge.modules.data_retriever.file_retriever import FileRetriever
 from sponge.modules.utils import download_with_progress
 from sponge.modules.version_logger import VersionLogger
@@ -15,8 +15,8 @@ class TFBSRetriever(FileRetriever):
     def __init__(
         self,
         temp_folder: Path,
-        core_config: ConfigReader,
-        user_config: ConfigReader,
+        core_config: ConfigManager,
+        user_config: ConfigManager,
         version_logger: VersionLogger,
     ):
 

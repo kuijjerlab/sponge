@@ -6,11 +6,11 @@ import pandas as pd
 
 ### Fixtures ###
 # Core config fixture
-from sponge.config_reader import ConfigReader
+from sponge.config_manager import ConfigManager
 
 @pytest.fixture
 def core_config():
-    return ConfigReader()
+    return ConfigManager()
 
 ### Unit tests ###
 # Data retrieval functions
