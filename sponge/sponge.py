@@ -24,7 +24,7 @@ class Sponge:
         # Retrieve necessary files if required
         self.retrieve_data()
         # Run the default workflow if selected
-        if self.user_config.is_true('default_workflow'):
+        if not self.user_config.is_false('default_workflow'):
             self.select_motifs()
             self.filter_tfbs()
             self.retrieve_ppi()

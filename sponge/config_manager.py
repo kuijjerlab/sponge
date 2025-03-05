@@ -91,8 +91,44 @@ class ConfigManager:
         self,
         key: Union[str, List[str]],
     ) -> bool:
+        """
+        Return if the key is present and evaluates to True. It is mostly
+        useful for parameters which are implied False by default.
+
+        Parameters
+        ----------
+        key : Union[str, List[str]]
+            Key to be investigated, nested key can be provided as a list
+
+        Returns
+        -------
+        bool
+            Whether the key exists and is True
+        """
 
         return self.exists(key) and bool(self.get_value(key))
+
+
+    def is_false(
+        self,
+        key: Union[str, List[str]],
+    ) -> bool:
+        """
+        Return if the key is present and evaluates to False. It is
+        mostly useful for parameters which are implied True by default.
+
+        Parameters
+        ----------
+        key : Union[str, List[str]]
+            Key to be investigated, nested key can be provided as a list
+
+        Returns
+        -------
+        bool
+            Whether the key exists and is False
+        """
+
+        return self.exists(key) and not bool(self.get_value(key))
 
 
     def exists(
