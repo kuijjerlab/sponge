@@ -1,4 +1,4 @@
-default_workflow: True
+# default_workflow: False  # True by default
 on_the_fly_processing: False
 genome_assembly: "hg38"
 motif:
