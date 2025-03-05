@@ -21,18 +21,15 @@ class Sponge:
         # exist)
         self.user_config = ConfigManager(config_file, temp_folder)
         self.version_logger = VersionLogger(temp_folder)
-
-        self.input_data = DataRetriever(temp_folder, self.core_config,
-            self.user_config, self.version_logger)
-        
-        # TODO: Use the retrieved data
-        # Motif selection
-
-        # Match filtering
-
-        # PPI retrieval
-
-        # File output
+        # Retrieve necessary files if required
+        self.retrieve_data()
+        # Run the default workflow if selected
+        if self.user_config.is_true('default_workflow'):
+            self.select_motifs()
+            self.filter_tfbs()
+            self.retrieve_ppi()
+            self.write_output_files()
+        # Otherwise, let the user call the functions individually
 
 
     def retrieve_data(
@@ -42,3 +39,35 @@ class Sponge:
         
         self.input_data = DataRetriever(self.temp_folder, self.core_config,
             self.user_config, self.version_logger)
+        
+    
+    def select_motifs(
+        self,
+        **kwargs,
+    ):
+        
+        pass
+
+
+    def filter_tfbs(
+        self,
+        **kwargs,
+    ):
+        
+        pass
+
+
+    def retrieve_ppi(
+        self,
+        **kwargs,
+    ):
+        
+        pass
+
+
+    def write_output_files(
+        self,
+        **kwargs,
+    ):
+        
+        pass
