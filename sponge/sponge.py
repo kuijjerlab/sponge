@@ -3,11 +3,12 @@ from pathlib import Path
 
 from sponge.config_manager import ConfigManager
 from sponge.modules.data_retriever import DataRetriever
+from sponge.modules.motif_selector import MotifSelector
 from sponge.modules.version_logger import VersionLogger
 
 ### Class definition ###
 class Sponge:
-
+    # Functions
     def __init__(
         self,
         temp_folder: Path = '.sponge_temp/',
@@ -36,24 +37,30 @@ class Sponge:
         self,
         **kwargs,
     ):
-        
-        self.input_data = DataRetriever(self.temp_folder, self.core_config,
+
+        data = DataRetriever(self.temp_folder, self.core_config,
             self.user_config, self.version_logger)
-        
-    
+        # Then keep all the necessary information
+        self.tfbs_path = data.tfbs.actual_path
+        self.regions_path = data.regions.actual_path
+
+
     def select_motifs(
         self,
         **kwargs,
     ):
-        
-        pass
+
+        motifs = MotifSelector()
+        motifs.select_tfs()
+        motifs.find_homologs()
+        # Then keep all the necessary information
 
 
     def filter_tfbs(
         self,
         **kwargs,
     ):
-        
+
         pass
 
 
@@ -61,7 +68,7 @@ class Sponge:
         self,
         **kwargs,
     ):
-        
+
         pass
 
 
@@ -69,5 +76,5 @@ class Sponge:
         self,
         **kwargs,
     ):
-        
+
         pass

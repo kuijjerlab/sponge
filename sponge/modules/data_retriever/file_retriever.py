@@ -26,6 +26,7 @@ class FileRetriever:
                 raise FileNotFoundError('Could not locate file: '
                     f'{path_to_file}')
             version_logger.write_provided(key)
+            self.actual_path = path_to_file
         # Check for a cached file
         elif os.path.exists(temp_filename):
             if key not in version_logger:
@@ -34,11 +35,13 @@ class FileRetriever:
                 version_logger.write_default(key)
             print ('Reusing a cached file.')
             version_logger.update_cached(key)
+            self.actual_path = temp_filename
         # Retrieve a file
         else:
             print ('Retrieving the file...')
             version = self.retrieve_file(temp_filename)
             version_logger.write_retrieved(key, version)
+            self.actual_path = temp_filename
 
 
     def retrieve_file(

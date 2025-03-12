@@ -23,6 +23,7 @@ class TFBSRetriever(FileRetriever):
         if user_config.is_true('on_the_fly_processing'):
             print ('Retrieval of tfbs_file is skipped as on the fly '
                 'processing was requested.')
+            self.actual_path = None
             return
 
         path_to_file = None
