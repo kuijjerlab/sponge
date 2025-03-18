@@ -16,7 +16,7 @@ url:
     rest: "https://rest.ensembl.org"
   protein: "https://rest.uniprot.org/idmapping/"
   ppi: "https://string-db.org/api/tsv/"
-  homology: "https://api.ncbi.nlm.nih.gov/datasets/v2alpha/"
+  homology: "https://api.ncbi.nlm.nih.gov/datasets/v2/"
   chrom_mapping: "https://hgdownload.soe.ucsc.edu/goldenPath/\
                   {genome_assembly}/database/chromAlias.txt.gz"
 

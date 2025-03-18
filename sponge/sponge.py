@@ -40,7 +40,7 @@ class Sponge:
 
         data = DataRetriever(self.temp_folder, self.core_config,
             self.user_config, self.version_logger)
-        # Then keep all the necessary information
+
         self.tfbs_path = data.tfbs.actual_path
         self.regions_path = data.regions.actual_path
 
@@ -50,10 +50,15 @@ class Sponge:
         **kwargs,
     ):
 
-        motifs = MotifSelector()
+        motifs = MotifSelector(self.core_config, self.user_config,
+            self.version_logger)
         motifs.select_tfs()
         motifs.find_homologs()
-        # Then keep all the necessary information
+
+        self.motifs = motifs.motifs
+        self.animal_to_human = motifs.animal_to_human
+        self.matrix_ids = motifs.matrix_ids
+        self.tf_names = motifs.tf_names
 
 
     def filter_tfbs(

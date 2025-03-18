@@ -1,9 +1,13 @@
-# default_workflow: False  # True by default
+default_workflow: False  # True by default
 on_the_fly_processing: False
 genome_assembly: "hg38"
 motif:
   jaspar_release: "JASPAR2024"
   tfbs_file: ".sponge_temp/JASPAR.bb"
+  # tf_names:
+  # matrix_ids:
+  unique_motifs: False
+  drop_heterodimers: True
 region:
   # region_file:
   filter_basic: True
