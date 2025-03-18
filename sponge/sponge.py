@@ -3,6 +3,7 @@ from pathlib import Path
 
 from sponge.config_manager import ConfigManager
 from sponge.modules.data_retriever import DataRetriever
+from sponge.modules.match_filter import MatchFilter
 from sponge.modules.motif_selector import MotifSelector
 from sponge.modules.version_logger import VersionLogger
 
@@ -43,6 +44,7 @@ class Sponge:
 
         self.tfbs_path = data.tfbs.actual_path
         self.regions_path = data.regions.actual_path
+        self.chromosomes = data.regions.settings['chromosomes']
 
 
     def select_motifs(
@@ -66,7 +68,12 @@ class Sponge:
         **kwargs,
     ):
 
-        pass
+        match_filter = MatchFilter(self.core_config, self.user_config,
+            self.version_logger, self.tfbs_path, self.regions_path)
+        match_filter.filter_matches(self.tf_names, self.matrix_ids,
+            chromosomes=self.chromosomes)
+
+        self.all_edges = match_filter.all_edges
 
 
     def retrieve_ppi(

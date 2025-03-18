@@ -89,6 +89,8 @@ class RegionRetriever(FileRetriever):
         if chromosomes is not None:
             # Filter only for selected chromosomes
             df = df[df['Chromosome'].isin(chromosomes)]
+        else:
+            self.settings['chromosomes'] = list(df['Chromosome'].unique())
         # Convert strand to +/-
         df['Strand'] = df['Strand'].apply(lambda x: '+' if x > 0 else '-')
         # Calculate the start based on the given offset from TSS

@@ -3,13 +3,18 @@ on_the_fly_processing: False
 genome_assembly: "hg38"
 motif:
   jaspar_release: "JASPAR2024"
-  tfbs_file: ".sponge_temp/JASPAR.bb"
-  # tf_names:
+  tfbs_file: "publication_priors/2024/.sponge_temp/JASPAR.bb"
+  tf_names: ["SOX2", "GATA2", "MYC"]
   # matrix_ids:
   unique_motifs: False
   drop_heterodimers: True
 region:
   # region_file:
   filter_basic: True
-  # chromosomes:  # Default is all autosomes + X, Y; leave empty for all
+  # If chromosomes is not defined: all autosomes + X, Y
+  # If chromosomes is defined as empty (None): all chromosomes
+  chromosomes: ["chr19"]
   tss_offset: [-750, 250]
+filter:
+  n_processes: 16
+  score_threshold: 400

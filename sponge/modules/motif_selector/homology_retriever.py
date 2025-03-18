@@ -50,7 +50,7 @@ class HomologyRetriever:
         # Record the version of NCBI services
         version_r = requests.get(self.ncbi_url + '/version')
         version = version_r.json()['version']
-        self.version_logger.write_retrieved('NCBI', version)
+        self.version_logger.write_retrieved('ncbi_homologs', version)
 
         # Get the non-human motif names
         non_human_motif_names = [i.name for i in non_human_motifs]
