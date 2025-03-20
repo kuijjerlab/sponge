@@ -4,7 +4,6 @@ from sponge.modules.version_logger import VersionLogger
 
 from .homology_retriever import HomologyRetriever
 from .jaspar_retriever import JasparRetriever
-from .protein_id_mapper import ProteinIDMapper
 
 ### Class definition ###
 class MotifSelector:
@@ -36,17 +35,9 @@ class MotifSelector:
         self,
     ):
 
-        mapper = ProteinIDMapper(self.core_config)
-        # Retrieve mapping of Uniprot to GeneID
-        all_ids = set()
-        for motif in self.motifs:
-            for id in motif.acc:
-                all_ids.add(id)
-        mapping = mapper.get_uniprot_mapping('UniProtKB_AC-ID', 'GeneID',
-            list(all_ids))
         homologs = HomologyRetriever(self.core_config, self.user_config,
             self.version_logger)
-        homologs.find_homologs(self.motifs, self.tf_to_motif, mapping)
+        homologs.find_homologs(self.motifs, self.tf_to_motif)
 
         self.animal_to_human = homologs.animal_to_human
         self.matrix_ids = homologs.matrix_ids

@@ -7,6 +7,8 @@ from sponge.config_manager import ConfigManager
 from sponge.modules.utils import adjust_gene_name
 from sponge.modules.version_logger import VersionLogger
 
+from .protein_id_mapper import ProteinIDMapper
+
 ### Class definition ###
 class HomologyRetriever:
     # Functions
@@ -17,7 +19,8 @@ class HomologyRetriever:
         version_logger: VersionLogger,
     ):
 
-        self.unique_motifs = user_config['motif']['unique_motifs']
+        self.core_config = core_config
+        self.unique_motifs = user_config.is_true(['motif', 'unique_motifs'])
         self.ncbi_url = core_config['url']['homology']
         self.version_logger = version_logger
 
@@ -26,7 +29,6 @@ class HomologyRetriever:
         self,
         motifs,
         tf_to_motif,
-        mapping,
     ) -> None:
 
         # TODO: Replace mentions of human to make later expansion easier
@@ -34,6 +36,15 @@ class HomologyRetriever:
         non_human_motifs = [i for i in motifs if '9606' not in i.species]
         print ()
         print ('Non-human motifs:', len(non_human_motifs))
+
+        # Retrieve mapping of Uniprot to GeneID
+        all_ids = set()
+        for motif in non_human_motifs:
+            for id in motif.acc:
+                all_ids.add(id)
+        mapper = ProteinIDMapper(self.core_config)
+        mapping = mapper.get_uniprot_mapping('UniProtKB_AC-ID', 'GeneID',
+            list(all_ids))
 
         # Get the human homologs from NCBI
         print ('Retrieving homologs from NCBI...')
@@ -70,7 +81,7 @@ class HomologyRetriever:
         corr_names = {
             motif.name: '::'.join([homologs[acc][0] for acc in motif.acc])
             for motif in non_human_motifs
-            if motif.name in found_names
+            if not False in [acc in homologs for acc in motif.acc]
         }
         corr_df = pd.DataFrame(non_human_motif_names,
             columns=['Original Name'])

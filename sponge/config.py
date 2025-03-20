@@ -26,7 +26,7 @@ ENSEMBL_URL = 'http://www.ensembl.org/biomart'
 ENSEMBL_REST = 'https://rest.ensembl.org'
 MAPPING_URL = 'https://rest.uniprot.org/idmapping/'
 STRING_URL = 'https://string-db.org/api/tsv/'
-NCBI_URL = 'https://api.ncbi.nlm.nih.gov/datasets/v2alpha/'
+NCBI_URL = 'https://api.ncbi.nlm.nih.gov/datasets/v2/'
 HG_CHROMOSOME_URL = ('https://hgdownload.soe.ucsc.edu/goldenPath/'
     '{genome_assembly}/database/chromAlias.txt.gz')
 

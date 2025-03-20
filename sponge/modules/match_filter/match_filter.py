@@ -61,9 +61,6 @@ class MatchFilter:
             follow the option from the initialisation, by default None
         """
 
-        print ()
-        print ('--- Running filter_matches() ---')
-
         if n_processes is None:
             n_processes = self.settings['n_processes']
         if chromosomes is None:
@@ -71,6 +68,7 @@ class MatchFilter:
         if score_threshold is None:
             score_threshold = self.settings['score_threshold']
 
+        print ()
         print ('Loading the regions file...')
         df_full = bioframe.read_table(self.regions_path, header=0)
         df_full.set_index('Transcript stable ID', inplace=True)

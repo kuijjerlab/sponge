@@ -1,1 +1,2 @@
 from sponge.modules.motif_selector.motif_selector import MotifSelector
+from sponge.modules.motif_selector.protein_id_mapper import ProteinIDMapper
