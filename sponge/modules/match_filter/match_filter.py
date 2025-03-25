@@ -75,7 +75,7 @@ class MatchFilter:
 
         start_time = time.time()
         if self.tfbs_path is None:
-            results_list = iterate_motifs(df_full, tf_names,
+            results_list = iterate_motifs(self.url, df_full, tf_names,
                 matrix_ids, chromosomes, self.jaspar_release,
                 self.assembly, n_processes, score_threshold)
             self.version_logger.write_retrieved('tfbs_file',

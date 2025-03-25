@@ -5,12 +5,12 @@ import pandas as pd
 
 from pathlib import Path
 from sklearn.metrics import classification_report, confusion_matrix
-
-MOTIF_COLS = ['tf', 'gene', 'edge']
+from typing import List
 
 ### Functions ###
 def load_prior(
     path: Path,
+    col_names: List[str] = ['tf', 'gene', 'edge']
 ) -> pd.DataFrame:
     """
     Loads a motif prior file into a pandas DataFrame
@@ -26,7 +26,7 @@ def load_prior(
         The processed pandas DataFrame
     """
 
-    return pd.read_csv(path, sep='\t', header=None, names=MOTIF_COLS)
+    return pd.read_csv(path, sep='\t', header=None, names=col_names)
 
 
 def describe_prior(

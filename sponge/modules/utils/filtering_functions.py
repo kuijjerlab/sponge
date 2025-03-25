@@ -9,8 +9,7 @@ from multiprocessing import Pool
 from pathlib import Path
 from typing import List, Iterable, Tuple
 
-from sponge.config import MOTIF_URL
-from sponge.data_retrieval import download_with_progress
+from sponge.modules.utils.data_retrieval import download_with_progress
 
 FILTER_INPUT = Tuple[str, pd.DataFrame, Iterable[str], str, int, int, float]
 
@@ -249,6 +248,7 @@ def process_motif(
 
 
 def iterate_motifs(
+    motif_url: str,
     bed_df: pd.DataFrame,
     tf_names: List[str],
     matrix_ids: List[str],
@@ -299,7 +299,7 @@ def iterate_motifs(
         file_name = f'{m_id}.tsv.gz'
         to_request = [tr.format(
             year=jaspar_release[-4:],
-            genome_assembly=assembly) + file_name for tr in MOTIF_URL]
+            genome_assembly=assembly) + file_name for tr in motif_url]
         # Attempt to download the TF track
         try:
             bytes_tf = download_with_progress(to_request)

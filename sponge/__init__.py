@@ -1,1 +1,1 @@
-from .old_sponge import Sponge
+from .sponge import Sponge
