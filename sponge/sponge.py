@@ -4,10 +4,10 @@ from pathlib import Path
 from sponge.config_manager import ConfigManager
 from sponge.modules.data_retriever import DataRetriever
 from sponge.modules.file_writer import FileWriter
+from sponge.modules.match_aggregator import MatchAggregator
 from sponge.modules.match_filter import MatchFilter
 from sponge.modules.motif_selector import MotifSelector
 from sponge.modules.ppi_retriever import PPIRetriever
-from sponge.modules.utils import aggregate_matches
 from sponge.modules.version_logger import VersionLogger
 
 ### Class definition ###
@@ -104,16 +104,20 @@ class Sponge:
         
         writer = FileWriter()
 
-        edges = aggregate_matches(self.all_edges, self.regions_path,
-            self.animal_to_human,
+        aggregator = MatchAggregator(self.all_edges, self.regions_path,
+            self.animal_to_human)
+        aggregator.aggregate_matches(
             self.user_config['motif_output']['use_gene_names'],
-            self.user_config['motif_output']['protein_coding_only'])
+            self.user_config['motif_output']['protein_coding_only'],
+        )
+        edges = aggregator.edges
+        
         motif_weight = 'edge'
         if self.user_config.is_true(['motif_output', 'weighted']):
             motif_weight = 'weight'
-        label = 'Gene name'
+        label = 'Gene stable ID'
         if not self.user_config.is_false(['motif_output', 'use_gene_names']):
-            label = 'Gene stable ID'
+            label = 'Gene name'
         writer.write_network_file(edges, ['TFName', label], motif_weight,
             self.user_config['motif_output']['file_name'])
 

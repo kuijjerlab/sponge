@@ -10,7 +10,7 @@ from typing import List
 ### Functions ###
 def load_prior(
     path: Path,
-    col_names: List[str] = ['tf', 'gene', 'edge']
+    names: List[str] = ['tf', 'gene', 'edge']
 ) -> pd.DataFrame:
     """
     Loads a motif prior file into a pandas DataFrame
@@ -26,7 +26,7 @@ def load_prior(
         The processed pandas DataFrame
     """
 
-    return pd.read_csv(path, sep='\t', header=None, names=col_names)
+    return pd.read_csv(path, sep='\t', header=None, names=names)
 
 
 def describe_prior(
@@ -124,6 +124,11 @@ def compare_priors(
     print ()
     print ('Number of common TFs:', len(common_tfs))
     print ('Number of common genes:', len(common_genes))
+    print ()
+
+    if len(common_tfs) == 0 or len(common_genes) == 0:
+        print ('No possible edges in common, skipping the analysis.')
+        return
 
     common_index = pd.MultiIndex.from_product([sorted(common_tfs),
         sorted(common_genes)])
@@ -133,7 +138,6 @@ def compare_priors(
         common_index, fill_value=0)
     comp_df = prior_1_mod.join(prior_2_mod, lsuffix='_1', rsuffix='_2')
 
-    print ()
     print ('Network density in common TF/genes for the first prior:',
         f'{100 * comp_df["edge_1"].mean():.2f} %')
     print ('Network density in common TF/genes for the second prior:',

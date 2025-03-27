@@ -8,7 +8,7 @@ from io import BytesIO
 from typing import Iterable
 
 from sponge.config_manager import ConfigManager
-from sponge.modules.motif_selector import ProteinIDMapper
+from sponge.modules.protein_id_mapper import ProteinIDMapper
 from sponge.modules.version_logger import VersionLogger
 
 ### Class definition ###

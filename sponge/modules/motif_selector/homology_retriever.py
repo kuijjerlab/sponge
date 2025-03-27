@@ -7,7 +7,7 @@ from sponge.config_manager import ConfigManager
 from sponge.modules.utils import adjust_gene_name
 from sponge.modules.version_logger import VersionLogger
 
-from .protein_id_mapper import ProteinIDMapper
+from sponge.modules.protein_id_mapper import ProteinIDMapper
 
 ### Class definition ###
 class HomologyRetriever:
