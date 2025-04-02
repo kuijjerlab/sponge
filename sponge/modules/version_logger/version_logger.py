@@ -47,7 +47,8 @@ class VersionLogger:
     ):
 
         if len(self.data) > 0:
-            yaml.safe_dump(dict(self.data), open(self.log_file, 'w'))
+            yaml.safe_dump(dict(self.data),
+                open(self.log_file, 'w', encoding='utf-8'))
 
 
     def __getitem__(

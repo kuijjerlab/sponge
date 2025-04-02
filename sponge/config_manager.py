@@ -39,7 +39,7 @@ class ConfigManager:
 
         if self.temp_folder is not None:
             log_file = os.path.join(self.temp_folder, self._log_filename)
-            yaml.safe_dump(self.config, open(log_file, 'w'))
+            yaml.safe_dump(self.config, open(log_file, 'w', encoding='utf-8'))
 
 
     def __getitem__(
