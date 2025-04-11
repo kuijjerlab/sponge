@@ -10,6 +10,14 @@ from sponge.modules.motif_selector import MotifSelector
 from sponge.modules.ppi_retriever import PPIRetriever
 from sponge.modules.version_logger import VersionLogger
 
+# General TODOs:
+# TODO: For most class definitions, refactor out passing the entire config
+# (just the relevant parts)
+# TODO: Potentially refactor out VersionLogger too
+# Ideally a wrapper would be implemented that would log the version
+# Requires the classes to store the version information after retrieval
+# Would this mess up the accuracy of the timestamp?
+
 ### Class definition ###
 class Sponge:
     # Functions
@@ -36,12 +44,14 @@ class Sponge:
             self.write_output_files()
         # Otherwise, let the user call the functions individually
 
-
+    # TODO: Add proper arguments to the functions to potentially overwrite
+    # the ones from the config file
     def retrieve_data(
         self,
         **kwargs,
     ):
 
+        # Maybe construct first and then call
         data = DataRetriever(self.temp_folder, self.core_config,
             self.user_config, self.version_logger)
 
@@ -101,9 +111,6 @@ class Sponge:
         **kwargs,
     ):
 
-        
-        writer = FileWriter()
-
         aggregator = MatchAggregator(self.all_edges, self.regions_path,
             self.animal_to_human)
         aggregator.aggregate_matches(
@@ -112,6 +119,8 @@ class Sponge:
         )
         edges = aggregator.edges
         
+        writer = FileWriter()
+
         motif_weight = 'edge'
         if self.user_config.is_true(['motif_output', 'weighted']):
             motif_weight = 'weight'

@@ -3,6 +3,7 @@ from argparse import ArgumentDefaultsHelpFormatter, ArgumentParser
 
 from sponge import Sponge
 
+# TODO: Adapt the whole thing to the new version of SPONGE
 ### Functions ###
 def cli(
 ) -> None:

@@ -1,12 +1,12 @@
 default_workflow: True  # True by default
-on_the_fly_processing: False  # False by default
+on_the_fly_processing: True  # False by default
 genome_assembly: "hg38"
 motif:
-  # jaspar_release:  # Default is newest release
+  jaspar_release: JASPAR2024  # Default is newest release
   # tfbs_file:
   # If neither tf_names nor matrix_ids are specified,
   # all vertebrate TFs are selected
-  # tf_names:
+  tf_names: ["GATA2", "FOXF2", "JUN"]
   # matrix_ids:
   unique_motifs: False  # False by default
   drop_heterodimers: True  # True by default
@@ -15,7 +15,7 @@ region:
   filter_basic: True  # True by default
   # If chromosomes is not defined: all autosomes + X, Y
   # If chromosomes is specified as empty (None): all chromosomes
-  # chromosomes:
+  chromosomes: ["chr21"]
   tss_offset: [-750, 250]
 filter:
   n_processes: 16
