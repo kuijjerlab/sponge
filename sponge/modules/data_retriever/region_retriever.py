@@ -47,9 +47,8 @@ class RegionRetriever(FileRetriever):
         )
 
 
-    def retrieve_file(
+    def _retrieve_region(
         self,
-        temp_filename: Path,
     ) -> str:
 
         # Attributes to retrieve
@@ -109,10 +108,17 @@ class RegionRetriever(FileRetriever):
         # Columns to be saved into a file
         columns = ['Chromosome', 'Start', 'End', 'Transcript stable ID',
             'Gene stable ID', 'Gene name', 'Gene type']
-        print (f'Saving data to: {temp_filename}')
+        print (f'Saving data to: {self.temp_filename}')
         # Save the file
         self.df = df[columns]
-        self.df.to_csv(temp_filename, sep='\t', index=False)
+        self.df.to_csv(self.temp_filename, sep='\t', index=False)
         print ()
 
         return get_ensembl_version(self.rest)
+
+
+    def retrieve_file(
+        self,
+    ) -> None:
+
+        super().retrieve_file(self._retrieve_region)

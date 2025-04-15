@@ -15,21 +15,28 @@ class ConfigManager:
     # Functions
     def __init__(
         self,
-        config_path: Optional[Path] = None,
+        config: Union[Path, dict, None] = None,
         temp_folder: Optional[Path] = None,
     ):
 
         self.temp_folder = temp_folder
 
         file_dir = Path(__file__).parents[0]
-        if config_path is None:
+        if config is None:
             # Find the config file in the module directory
-            config_path = os.path.join(file_dir, self._default_core_config)
-        if not os.path.isfile(config_path):
+            config = os.path.join(file_dir, self._default_core_config)
+        elif type(config) == dict:
+            # Directly use the provided dictionary
+            self.config = config
+            return
+        elif not os.path.isfile(config):
             # Use the default user config file
-            config_path = os.path.join(file_dir, self._default_user_config)
+            print ('Using the default settings.')
+            print ()
+            config = os.path.join(file_dir, self._default_user_config)
 
-        with open(config_path, 'r') as f:
+        # Load the config file
+        with open(config, 'r') as f:
             self.config = yaml.safe_load(f)
 
 

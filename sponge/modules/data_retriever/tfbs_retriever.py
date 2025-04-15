@@ -20,11 +20,7 @@ class TFBSRetriever(FileRetriever):
         version_logger: VersionLogger,
     ):
 
-        if user_config.is_true('on_the_fly_processing'):
-            print ('Retrieval of tfbs_file is skipped as on the fly '
-                'processing was requested.')
-            self.actual_path = None
-            return
+        self.on_the_fly = user_config.is_true('on_the_fly_processing')
 
         path_to_file = None
         if user_config.exists(['motif', 'tfbs_file']):
@@ -44,14 +40,25 @@ class TFBSRetriever(FileRetriever):
         )
 
 
-    def retrieve_file(
+    def _retrieve_tfbs(
         self,
-        temp_filename: Path,
     ) -> str:
 
         year = self.jaspar_release[-4:]
         urls_to_try = [url.format(year=year,
             genome_assembly=self.genome_assembly) for url in self.urls]
-        download_with_progress(urls_to_try, temp_filename)
+        download_with_progress(urls_to_try, self.temp_filename)
 
         return self.jaspar_release
+
+
+    def retrieve_file(
+        self,
+    ) -> None:
+
+        if self.on_the_fly:
+            print ('Retrieval of tfbs_file is skipped as on the fly '
+                'processing was requested.')
+            self.actual_path = None
+        else:
+            super().retrieve_file(self._retrieve_tfbs)

@@ -1,5 +1,6 @@
 ### Imports ###
 from pathlib import Path
+from typing import Union
 
 from sponge.config_manager import ConfigManager
 from sponge.modules.data_retriever import DataRetriever
@@ -24,7 +25,7 @@ class Sponge:
     def __init__(
         self,
         temp_folder: Path = '.sponge_temp/',
-        config_file: Path = 'user_config.yaml',
+        config: Union[Path, dict] = 'user_config.yaml',
     ):
 
         self.temp_folder = temp_folder
@@ -32,7 +33,7 @@ class Sponge:
         self.core_config = ConfigManager()
         # Load the user-provided config file (or use defaults if it doesn't
         # exist)
-        self.user_config = ConfigManager(config_file, temp_folder)
+        self.user_config = ConfigManager(config, temp_folder)
         self.version_logger = VersionLogger(temp_folder)
         # Retrieve necessary files if required
         self.retrieve_data()
@@ -51,9 +52,9 @@ class Sponge:
         **kwargs,
     ):
 
-        # Maybe construct first and then call
         data = DataRetriever(self.temp_folder, self.core_config,
             self.user_config, self.version_logger)
+        data.retrieve_data()
 
         self.tfbs_path = data.tfbs.actual_path
         self.regions_path = data.regions.actual_path

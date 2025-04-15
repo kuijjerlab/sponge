@@ -137,12 +137,10 @@ def run_integration_test_common(
     settings = yaml.safe_load(open(config_file, 'r'))
     settings['motif_output']['file_name'] = motif_output
     settings['ppi_output']['file_name'] = ppi_output
-    test_config = os.path.join(tmp_path, 'user_config.yaml')
-    yaml.safe_dump(settings, open(test_config, 'w', encoding='utf-8'))
 
     # Using the default user config file
     _ = Sponge(
-        config_file=test_config,
+        config=settings,
         temp_folder=os.path.join(tmp_path, '.sponge_temp'),
     )
 

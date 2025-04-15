@@ -18,10 +18,18 @@ class DataRetriever:
         version_logger: VersionLogger,
     ):
 
-        # Retrieve the following:
-        # JASPAR bigbed file if appropriate
+        # JASPAR bigbed file (if appropriate)
         self.tfbs = TFBSRetriever(temp_folder, core_config, user_config,
             version_logger)
-        # Regions of interest (promoters) along with their mapping to genes
+        # Regions of interest (promoters by default)
+        # along with their mapping to genes
         self.regions = RegionRetriever(temp_folder, core_config, user_config,
             version_logger)
+
+    
+    def retrieve_data(
+        self,
+    ) -> None:
+        
+        self.tfbs.retrieve_file()
+        self.regions.retrieve_file()
