@@ -21,14 +21,18 @@ class ConfigManager:
         temp_folder: Optional[Path] = None,
     ):
         """
-        
+        Loads and manages configuration, which can be obtained from a
+        YAML file or a dictionary.
 
         Parameters
         ----------
         config : Union[Path, dict, None], optional
-            _description_, by default None
+            Path to a YAML file, dictionary with the configuration, or
+            None to use the core configuration, by default None
         temp_folder : Optional[Path], optional
-            _description_, by default None
+            The folder where the configuration should be saved after
+            the deletion of the object or None to not save it,
+            by default None
         """
 
         self.temp_folder = temp_folder
@@ -181,6 +185,21 @@ class ConfigManager:
         self,
         keys: List[str],
     ) -> Union[dict, str]:
+        """
+        Retrieves the level from the managed configuration specified by
+        the list of keys.
+
+        Parameters
+        ----------
+        keys : List[str]
+            List of keys specifying the successive levels in the managed
+            configuration
+
+        Returns
+        -------
+        Union[dict, str]
+            Level retrieved by the keys
+        """
 
         curr = self.config
         for k in keys:
@@ -193,6 +212,21 @@ class ConfigManager:
         self,
         key: Union[str, List[str]],
     ) -> bool:
+        """
+        Determines if the given key or list of keys refers to an
+        existing entry in the managed configuration.
+
+        Parameters
+        ----------
+        key : Union[str, List[str]]
+            Key or list of keys specifying the successive levels in the
+            managed configuration
+
+        Returns
+        -------
+        bool
+            Whether the specified entry exists
+        """
 
         if type(key) == str:
             key = [key]
@@ -208,7 +242,22 @@ class ConfigManager:
     def get_value(
         self,
         key: Union[str, List[str]],
-    ) -> str:
+    ) -> Union[str, dict]:
+        """
+        Retrieves the value of the entry in the managed configuration
+        specified by the given key or list of keys.
+
+        Parameters
+        ----------
+        key : Union[str, List[str]]
+            Key or list of keys specifying the successive levels in the
+            managed configuration
+
+        Returns
+        -------
+        str
+            Value retrieved
+        """
 
         if type(key) == str:
             key = [key]
