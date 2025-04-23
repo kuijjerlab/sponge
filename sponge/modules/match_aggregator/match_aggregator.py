@@ -6,7 +6,7 @@ from pathlib import Path
 
 ### Class definition ###
 class MatchAggregator:
-    # Functions
+    # Methods
     def __init__(
         self,
         match_df: pd.DataFrame,
@@ -49,8 +49,7 @@ class MatchAggregator:
         # Add the Ensembl data (gene names) to the edges previously found
         motif_df = self.match_df.join(other=self.ensembl.set_index(
             'Transcript stable ID'), on='transcript')
-        print ()
-        print ('Number of TF - transcript edges:', len(motif_df))
+        print ('\nNumber of TF - transcript edges:', len(motif_df))
         if protein_coding_only:
             motif_df = motif_df[motif_df['Gene type'] ==
                 'protein_coding'].copy()

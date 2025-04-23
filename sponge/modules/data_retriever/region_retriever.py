@@ -10,7 +10,6 @@ from sponge.config_manager import ConfigManager
 from sponge.modules.data_retriever.file_retriever import FileRetriever
 from sponge.modules.utils import get_ensembl_version, retrieve_ensembl_data, \
     get_chromosome_mapping
-from sponge.modules.version_logger import VersionLogger
 
 ### Class definition ###
 class RegionRetriever(FileRetriever):
@@ -21,7 +20,6 @@ class RegionRetriever(FileRetriever):
         temp_folder: Path,
         core_config: ConfigManager,
         user_config: ConfigManager,
-        version_logger: VersionLogger,
     ):
 
         path_to_file = None
@@ -42,7 +40,6 @@ class RegionRetriever(FileRetriever):
         super().__init__(
             key='region_file',
             temp_filename=temp_filename,
-            version_logger=version_logger,
             path_to_file=path_to_file,
         )
 
@@ -112,7 +109,6 @@ class RegionRetriever(FileRetriever):
         # Save the file
         self.df = df[columns]
         self.df.to_csv(self.temp_filename, sep='\t', index=False)
-        print ()
 
         return get_ensembl_version(self.rest)
 

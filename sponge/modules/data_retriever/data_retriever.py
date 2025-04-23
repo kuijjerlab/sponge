@@ -9,7 +9,7 @@ from .tfbs_retriever import TFBSRetriever
 
 ### Class definition ###
 class DataRetriever:
-    # Functions
+    # Methods
     def __init__(
         self,
         temp_folder: Path,
@@ -19,17 +19,18 @@ class DataRetriever:
     ):
 
         # JASPAR bigbed file (if appropriate)
-        self.tfbs = TFBSRetriever(temp_folder, core_config, user_config,
-            version_logger)
+        self.tfbs = TFBSRetriever(temp_folder, core_config, user_config)
         # Regions of interest (promoters by default)
         # along with their mapping to genes
-        self.regions = RegionRetriever(temp_folder, core_config, user_config,
-            version_logger)
+        self.regions = RegionRetriever(temp_folder, core_config, user_config)
+        # Register the classes for version logging
+        version_logger.register_class(self.tfbs)
+        version_logger.register_class(self.regions)
 
-    
+
     def retrieve_data(
         self,
     ) -> None:
-        
+
         self.tfbs.retrieve_file()
         self.regions.retrieve_file()

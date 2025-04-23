@@ -6,7 +6,6 @@ from pathlib import Path
 from sponge.config_manager import ConfigManager
 from sponge.modules.data_retriever.file_retriever import FileRetriever
 from sponge.modules.utils import download_with_progress
-from sponge.modules.version_logger import VersionLogger
 
 ### Class definition ###
 class TFBSRetriever(FileRetriever):
@@ -17,10 +16,9 @@ class TFBSRetriever(FileRetriever):
         temp_folder: Path,
         core_config: ConfigManager,
         user_config: ConfigManager,
-        version_logger: VersionLogger,
     ):
 
-        self.on_the_fly = user_config.is_true('on_the_fly_processing')
+        self.on_the_fly = user_config['on_the_fly_processing']
 
         path_to_file = None
         if user_config.exists(['motif', 'tfbs_file']):
@@ -35,7 +33,6 @@ class TFBSRetriever(FileRetriever):
         super().__init__(
             key='tfbs_file',
             temp_filename=temp_filename,
-            version_logger=version_logger,
             path_to_file=path_to_file,
         )
 

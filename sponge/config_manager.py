@@ -3,7 +3,9 @@ import os
 import yaml
 
 from pathlib import Path
-from typing import Any, List, Optional, Union
+from typing import List, Optional, Union
+
+from sponge.modules.utils import recursive_update
 
 ### Class definition ###
 class ConfigManager:
@@ -12,37 +14,55 @@ class ConfigManager:
     _default_user_config = 'user_config.yaml'
     _log_filename = 'last_user_config.yaml'
 
-    # Functions
+    # Methods
     def __init__(
         self,
         config: Union[Path, dict, None] = None,
         temp_folder: Optional[Path] = None,
     ):
+        """
+        
+
+        Parameters
+        ----------
+        config : Union[Path, dict, None], optional
+            _description_, by default None
+        temp_folder : Optional[Path], optional
+            _description_, by default None
+        """
 
         self.temp_folder = temp_folder
-
-        file_dir = Path(__file__).parents[0]
+        
+        self.file_dir = Path(__file__).parents[0]
+        # Handle the special case of core config
         if config is None:
-            # Find the config file in the module directory
-            config = os.path.join(file_dir, self._default_core_config)
-        elif type(config) == dict:
+            # Find the core config file in the module directory
+            config = os.path.join(self.file_dir, self._default_core_config)
+            self.config = {}
+        else:
+            # Load the default user configuration
+            self._load_default()
+        # Now handle based on the update type and content
+        if type(config) == dict:
             # Directly use the provided dictionary
-            self.config = config
-            return
+            self._deep_update(config)
         elif not os.path.isfile(config):
-            # Use the default user config file
+            # Use the default user config file - don't change any defaults
             print ('Using the default settings.')
-            print ()
-            config = os.path.join(file_dir, self._default_user_config)
+        else:
+            # Update with provided config (core or user)
+            with open(config, 'r') as f:
+                update = yaml.safe_load(f)
+            self._deep_update(update)
 
-        # Load the config file
-        with open(config, 'r') as f:
-            self.config = yaml.safe_load(f)
-
-
+    # Overwritten built-in methods
     def __del__(
         self,
     ):
+        """
+        When the object is deleted, if a temporary folder was specified,
+        the managed configuration is saved there.
+        """
 
         if self.temp_folder is not None:
             log_file = os.path.join(self.temp_folder, self._log_filename)
@@ -52,7 +72,20 @@ class ConfigManager:
     def __getitem__(
         self,
         key: str,
-    ) -> dict:
+    ) -> Union[dict, str]:
+        """
+        Accesses the given key in the managed configuration.
+
+        Parameters
+        ----------
+        key : str
+            Key to access
+
+        Returns
+        -------
+        Union[dict, str]
+            Value referred to by the given key
+        """
 
         return self.config[key]
 
@@ -60,8 +93,18 @@ class ConfigManager:
     def __setitem__(
         self,
         key: str,
-        val: Any,
+        val: Union[dict, str],
     ) -> None:
+        """
+        Sets the value for the given key in the managed configuration.
+
+        Parameters
+        ----------
+        key : str
+            Key to change
+        val : Union[dict, str]
+            Value to set
+        """
 
         self.config[key] = val
 
@@ -70,6 +113,14 @@ class ConfigManager:
         self,
         key: str,
     ) -> None:
+        """
+        Deletes the given key from the managed configuration.
+
+        Parameters
+        ----------
+        key : str
+            Key to delete
+        """
 
         del self.config[key]
 
@@ -78,64 +129,64 @@ class ConfigManager:
         self,
         key: str,
     ) -> bool:
+        """
+        Checks if the given key exists in the managed configuration.
+
+        Parameters
+        ----------
+        key : str
+            Key to verify
+
+        Returns
+        -------
+        bool
+            Whether the given key exists in the managed configuration
+        """
 
         return key in self.config
+
+    # Rest of the methods
+    def _load_default(
+        self,
+    ) -> None:
+        """
+        Loads the default user configuration into the managed
+        configuration.
+        """
+        
+        config = os.path.join(self.file_dir, self._default_user_config)
+        with open(config, 'r') as f:
+            self.config = yaml.safe_load(f)
+
+
+    def _deep_update(
+        self,
+        config: dict,
+    ) -> None:
+        """
+        Updates the managed configuration with a dictionary, recursively
+        so that multiple level updates are possible.
+
+        Parameters
+        ----------
+        config : dict
+            Configuration update
+        """
+
+        # Call the above function to update the internal config
+        self.config = recursive_update(self.config, config)
 
 
     def _retrieve_level(
         self,
         keys: List[str],
-    ) -> dict:
+    ) -> Union[dict, str]:
 
         curr = self.config
         for k in keys:
             curr = curr[k]
 
         return curr
-
-
-    def is_true(
-        self,
-        key: Union[str, List[str]],
-    ) -> bool:
-        """
-        Return if the key is present and evaluates to True. It is mostly
-        useful for parameters which are implied False by default.
-
-        Parameters
-        ----------
-        key : Union[str, List[str]]
-            Key to be investigated, nested key can be provided as a list
-
-        Returns
-        -------
-        bool
-            Whether the key exists and is True
-        """
-
-        return self.exists(key) and bool(self.get_value(key))
-
-
-    def is_false(
-        self,
-        key: Union[str, List[str]],
-    ) -> bool:
-        """
-        Return if the key is present and evaluates to False. It is
-        mostly useful for parameters which are implied True by default.
-
-        Parameters
-        ----------
-        key : Union[str, List[str]]
-            Key to be investigated, nested key can be provided as a list
-
-        Returns
-        -------
-        bool
-            Whether the key exists and is False
-        """
-
-        return self.exists(key) and not bool(self.get_value(key))
 
 
     def exists(

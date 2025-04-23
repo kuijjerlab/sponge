@@ -6,7 +6,7 @@ import yaml
 
 from collections import defaultdict
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 from yaml.error import MarkedYAMLError
 
 ### Class definition ###
@@ -14,7 +14,7 @@ class VersionLogger:
     # Variables
     _log_filename = 'fingerprint.yaml'
 
-    # Functions
+    # Methods
     def __init__(
         self,
         temp_folder: Path,
@@ -41,7 +41,7 @@ class VersionLogger:
                     ' to fix the issue.'
                 )
 
-
+    # Overwritten built-in methods
     def __del__(
         self,
     ):
@@ -83,7 +83,7 @@ class VersionLogger:
 
         return key in self.data
 
-
+    # Rest of the methods
     def _reset_entry(
         self,
         key: str,
@@ -137,3 +137,18 @@ class VersionLogger:
         self._reset_entry(key)
 
         self.data[key]['version'] = version
+
+
+    def register_class(
+        self,
+        target_class: type,
+    ) -> None:
+
+        # Include a reference to this instance in the registered class
+        target_class.version_logger = self
+        # List of functions to be overwritten in the registered class
+        function_names = ['write_provided', 'write_default', 'update_cached',
+            'write_retrieved']
+        for fn in function_names:
+            # Replace with a call to the internal version logger
+            setattr(target_class, fn, getattr(self, fn))

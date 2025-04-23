@@ -4,58 +4,61 @@ import os
 from pathlib import Path
 from typing import Callable, Optional
 
-from sponge.modules.version_logger import VersionLogger
-
 ### Class definition ###
 class FileRetriever:
+    # Methods
     def __init__(
         self,
         key: str,
         temp_filename: str,
-        version_logger: VersionLogger,
         path_to_file: Optional[Path] = None,
     ):
+        """
+        Base class for the retrieval of files required by SPONGE.
+        Takes care of checking the cache and updating the values
+        if registered by a VersionLogger.
 
-        # print ()
-        # print (f'--- Attempting to locate {key} ---')
-
-        # # Check existence of a user-provided file
-        # if path_to_file is not None:
-        #     print (f'Using a user-provided file: {path_to_file}')
-        #     if not os.path.exists(path_to_file):
-        #         raise FileNotFoundError('Could not locate file: '
-        #             f'{path_to_file}')
-        #     version_logger.write_provided(key)
-        #     self.actual_path = path_to_file
-        # # Check for a cached file
-        # elif os.path.exists(temp_filename):
-        #     if key not in version_logger:
-        #         print ('A cached file is present but it is not being tracked '
-        #             'by the version logger.')
-        #         version_logger.write_default(key)
-        #     print ('Reusing a cached file.')
-        #     version_logger.update_cached(key)
-        #     self.actual_path = temp_filename
-        # # Retrieve a file
-        # else:
-        #     print ('Retrieving the file...')
-        #     version = self.retrieve_file(temp_filename)
-        #     version_logger.write_retrieved(key, version)
-        #     self.actual_path = temp_filename
+        Parameters
+        ----------
+        key : str
+            Descriptor of the file to be retrieved
+        temp_filename : str
+            Path to where a cached file would be located
+        path_to_file : Optional[Path], optional
+            Path to the provided file or None if none was provided,
+            by default None
+        """
 
         self.key = key
         self.temp_filename = temp_filename
-        self.version_logger = version_logger
         self.path_to_file = path_to_file
+        # Overwritten by registering with a VersionLogger instance
+        self.version_logger = None
 
 
     def retrieve_file(
         self,
         retrieve_function: Callable,
-    ) -> str:
+    ) -> None:
+        """
+        Attempts to retrieve the specified file from the cache or
+        the user-provided path, retrieves it if not found, logs the
+        results if registered by a VersionLogger.
 
-        print ()
-        print (f'--- Attempting to locate {self.key} ---')
+        Parameters
+        ----------
+        retrieve_function : Callable
+            Function to be called to retrieve the file if it is not
+            found in the cache or provided directly, it should take
+            no arguments and return the version
+
+        Raises
+        ------
+        FileNotFoundError
+            If the user-provided path does not exist
+        """
+
+        print (f'\n--- Attempting to locate {self.key} ---')
 
         # Check existence of a user-provided file
         if self.path_to_file is not None:
@@ -63,20 +66,57 @@ class FileRetriever:
             if not os.path.exists(self.path_to_file):
                 raise FileNotFoundError('Could not locate file: '
                     f'{self.path_to_file}')
-            self.version_logger.write_provided(self.key)
+            self.write_provided(self.key)
             self.actual_path = self.path_to_file
         # Check for a cached file
         elif os.path.exists(self.temp_filename):
-            if self.key not in self.version_logger:
+            if (self.version_logger is not None and
+                self.key not in self.version_logger):
                 print ('A cached file is present but it is not being tracked '
                     'by the version logger.')
-                self.version_logger.write_default(self.key)
+                self.write_default(self.key)
             print ('Reusing a cached file.')
-            self.version_logger.update_cached(self.key)
+            self.update_cached(self.key)
             self.actual_path = self.temp_filename
         # Retrieve a file
         else:
             print ('Retrieving the file...')
             version = retrieve_function()
-            self.version_logger.write_retrieved(self.key, version)
+            self.write_retrieved(self.key, version)
             self.actual_path = self.temp_filename
+
+    # Placeholder functions to be replaced with VersionLogger if any
+    def write_provided(
+        self,
+        *args,
+        **kwargs,
+    ) -> None:
+
+        pass
+
+
+    def write_default(
+        self,
+        *args,
+        **kwargs,
+    ) -> None:
+
+        pass
+
+
+    def update_cached(
+        self,
+        *args,
+        **kwargs,
+    ) -> None:
+
+        pass
+
+
+    def write_retrieved(
+        self,
+        *args,
+        **kwargs,
+    ) -> None:
+
+        pass
