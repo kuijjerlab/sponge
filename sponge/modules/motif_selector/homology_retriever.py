@@ -11,7 +11,7 @@ from sponge.modules.protein_id_mapper import ProteinIDMapper
 
 ### Class definition ###
 class HomologyRetriever:
-    # Functions
+    # Methods
     def __init__(
         self,
         core_config: ConfigManager,
@@ -20,7 +20,7 @@ class HomologyRetriever:
     ):
 
         self.core_config = core_config
-        self.unique_motifs = user_config.is_true(['motif', 'unique_motifs'])
+        self.unique_motifs = user_config['motif']['unique_motifs']
         self.ncbi_url = core_config['url']['homology']
         self.version_logger = version_logger
 
@@ -31,10 +31,11 @@ class HomologyRetriever:
         tf_to_motif,
     ) -> None:
 
+        print ('\n--- Searching for matching homologs ---')
+
         # TODO: Replace mentions of human to make later expansion easier
         # Get the non-human motifs
         non_human_motifs = [i for i in motifs if '9606' not in i.species]
-        print ()
         print ('Non-human motifs:', len(non_human_motifs))
 
         # Retrieve mapping of Uniprot to GeneID
@@ -71,8 +72,7 @@ class HomologyRetriever:
         # Find the missing ones
         missing = (set([adjust_gene_name(i) for i in non_human_motif_names]) -
             set(found_names))
-        print ()
-        print ('TFs for which no homolog was found:')
+        print ('\nTFs for which no homolog was found:')
         for motif in non_human_motifs:
             if motif.name in missing:
                 print (motif.name, *motif.acc)
@@ -95,8 +95,7 @@ class HomologyRetriever:
                 ~corr_df['Human Name'].isna()].copy()
             to_print = duplicated.groupby('Human Name'
                 )['Original Name'].unique().apply(lambda x: ' '.join(x))
-            print ()
-            print ('Duplicate names:')
+            print ('\nDuplicate names:')
             for i in to_print.index:
                 print (f'{i}:', to_print.loc[i])
 
@@ -123,8 +122,7 @@ class HomologyRetriever:
         animal_to_human = {animal_name: human_name for animal_name, human_name
             in zip(corr_df_final['Original Name'],
                 corr_df_final['Human Name'])}
-        print ()
-        print ('Final number of IDs which will be replaced by homologs:',
+        print ('\nFinal number of IDs which will be replaced by homologs:',
                len(animal_to_human))
         # Doing it this way ensures the ordering matches
         matrix_ids = [motif.matrix_id for motif in motifs if

@@ -13,7 +13,7 @@ from sponge.modules.version_logger import VersionLogger
 
 ### Class definition ###
 class PPIRetriever:
-    # Functions
+    # Methods
     def __init__(
         self,
         core_config: ConfigManager,
@@ -25,7 +25,7 @@ class PPIRetriever:
         self.ppi_url = core_config['url']['ppi']
         self.protein_url = core_config['url']['protein']
         self.version_logger = version_logger
-        self.physical_only = not user_config.is_false(['ppi', 'physical_only'])
+        self.physical_only = user_config['ppi']['physical_only']
 
 
     def retrieve_ppi(
@@ -38,7 +38,8 @@ class PPIRetriever:
         Stores the resulting network internally.
         """
 
-        print ()
+        print ('\n--- Retrieving protein-protein interaction data ---')
+
         print ('Retrieving mapping from STRING...')
         query_string = '%0d'.join(tf_names)
         mapping_request = requests.get(f'{self.ppi_url}get_string_ids?'
@@ -96,8 +97,7 @@ class PPIRetriever:
             ppi_df['tf2'].replace(p_to_q, inplace=True)
         ppi_df.sort_values(by=['tf1', 'tf2'], inplace=True)
 
-        print ()
-        print ('Final number of TFs in the PPI network: '
+        print ('\nFinal number of TFs in the PPI network: '
             f'{len(set(ppi_df["tf1"]).union(set(ppi_df["tf2"])))}')
         print (f'Final number of edges: {len(ppi_df)}')
 

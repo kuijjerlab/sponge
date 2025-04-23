@@ -9,7 +9,7 @@ from sponge.modules.utils import calculate_ic
 
 ### Class definition ###
 class JasparRetriever:
-    # Functions
+    # Methods
     def __init__(
         self,
         user_config: ConfigManager,
@@ -71,10 +71,10 @@ class JasparRetriever:
         self,
     ):
 
-        print ()
-        drop_heterodimers = not self.user_config.is_false(
-            ['motif', 'drop_heterodimers'])
-        unique_motifs = self.user_config.is_true(['motif', 'unique_motifs'])
+        print ('\n--- Retrieving transcription factor motifs ---')
+
+        drop_heterodimers = self.user_config['motif']['drop_heterodimers']
+        unique_motifs = self.user_config['motif']['unique_motifs']
         tf_names = None
         if self.user_config.exists(['motif', 'tf_names']):
             tf_names = self.user_config['motif']['tf_names']

@@ -7,7 +7,7 @@ from .jaspar_retriever import JasparRetriever
 
 ### Class definition ###
 class MotifSelector:
-    # Functions
+    # Methods
     def __init__(
         self,
         core_config: ConfigManager,

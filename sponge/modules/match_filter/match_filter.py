@@ -13,7 +13,7 @@ from sponge.modules.version_logger import VersionLogger
 
 ### Class definition ###
 class MatchFilter:
-    # Functions
+    # Methods
     def __init__(
         self,
         core_config: ConfigManager,
@@ -67,8 +67,9 @@ class MatchFilter:
             chromosomes = self.default_chromosomes
         if score_threshold is None:
             score_threshold = self.settings['score_threshold']
+   
+        print ('\n--- Filtering binding sites in the regions of interest ---')
 
-        print ()
         print ('Loading the regions file...')
         df_full = bioframe.read_table(self.regions_path, header=0)
         df_full.set_index('Transcript stable ID', inplace=True)
@@ -86,8 +87,7 @@ class MatchFilter:
 
         elapsed = time.time() - start_time
 
-        print ()
-        print (f'Total time: {elapsed // 60:n} m {elapsed % 60:.2f} s')
+        print (f'\nTotal time: {elapsed // 60:n} m {elapsed % 60:.2f} s')
 
         # Save the final results, ignoring the index makes this fast
         # The index is irrelevant

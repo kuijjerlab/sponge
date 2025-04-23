@@ -10,7 +10,7 @@ from sponge.config_manager import ConfigManager
 
 ### Class definition ###
 class ProteinIDMapper:
-    # Functions
+    # Methods
     def __init__(
         self,
         core_config: ConfigManager,

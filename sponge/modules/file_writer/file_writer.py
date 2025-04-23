@@ -6,7 +6,7 @@ from typing import Iterable
 
 ### Class definition ###
 class FileWriter:
-    # Functions
+    # Methods
     def __init__(
         self,
     ):

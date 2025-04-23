@@ -21,7 +21,7 @@ from sponge.modules.version_logger import VersionLogger
 
 ### Class definition ###
 class Sponge:
-    # Functions
+    # Methods
     def __init__(
         self,
         temp_folder: Path = '.sponge_temp/',
@@ -38,7 +38,7 @@ class Sponge:
         # Retrieve necessary files if required
         self.retrieve_data()
         # Run the default workflow if selected
-        if not self.user_config.is_false('default_workflow'):
+        if self.user_config['default_workflow']:
             self.select_motifs()
             self.filter_tfbs()
             self.retrieve_ppi()
@@ -122,17 +122,19 @@ class Sponge:
         
         writer = FileWriter()
 
+        print ('\n--- Saving the motif prior ---')
         motif_weight = 'edge'
-        if self.user_config.is_true(['motif_output', 'weighted']):
+        if self.user_config['motif_output']['weighted']:
             motif_weight = 'weight'
         label = 'Gene stable ID'
-        if not self.user_config.is_false(['motif_output', 'use_gene_names']):
+        if self.user_config['motif_output']['use_gene_names']:
             label = 'Gene name'
         writer.write_network_file(edges, ['TFName', label], motif_weight,
             self.user_config['motif_output']['file_name'])
 
+        print ('\n--- Saving the PPI prior ---')
         ppi_weight = 'edge'
-        if self.user_config.is_true(['ppi_output', 'weighted']):
+        if self.user_config['ppi_output']['weighted']:
             ppi_weight = 'score'            
         writer.write_network_file(self.ppi_frame, ['tf1', 'tf2'], ppi_weight,
             self.user_config['ppi_output']['file_name'])

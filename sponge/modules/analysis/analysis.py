@@ -113,18 +113,15 @@ def compare_priors(
 
     print ('Statistics for the first prior:')
     describe_prior(prior_1)
-    print ()
-    print ('Statistics for the second prior:')
+    print ('\nStatistics for the second prior:')
     describe_prior(prior_2)
 
     common_tfs = set(prior_1['tf'].unique()).intersection(
         prior_2['tf'].unique())
     common_genes = set(prior_1['gene'].unique()).intersection(
         prior_2['gene'].unique())
-    print ()
-    print ('Number of common TFs:', len(common_tfs))
-    print ('Number of common genes:', len(common_genes))
-    print ()
+    print ('\nNumber of common TFs:', len(common_tfs))
+    print ('Number of common genes:', len(common_genes), '\n')
 
     if len(common_tfs) == 0 or len(common_genes) == 0:
         print ('No possible edges in common, skipping the analysis.')
@@ -141,8 +138,7 @@ def compare_priors(
     print ('Network density in common TF/genes for the first prior:',
         f'{100 * comp_df["edge_1"].mean():.2f} %')
     print ('Network density in common TF/genes for the second prior:',
-        f'{100 * comp_df["edge_2"].mean():.2f} %')
-    print ()
+        f'{100 * comp_df["edge_2"].mean():.2f} %\n')
     print (classification_report(comp_df['edge_1'], comp_df['edge_2']))
 
     return plot_confusion_matrix(

@@ -115,8 +115,7 @@ def iterate_chromosomes(
     results_list = []
     p = Pool(n_processes)
 
-    print ()
-    print ('Iterating over the chromosomes...')
+    print ('\nIterating over the chromosomes...')
     for chrom in chromosomes:
         st_chr = time.time()
         df_chrom = bed_df[bed_df['Chromosome'] == chrom]
@@ -292,8 +291,7 @@ def iterate_motifs(
 
     results_list = []
 
-    print ()
-    print ('Iterating over the transcription factors...')
+    print ('\nIterating over the transcription factors...')
     for tf,m_id in zip(tf_names, matrix_ids):
         print (f'Processing the TF {tf} with matrix ID {m_id}')
         file_name = f'{m_id}.tsv.gz'
@@ -305,8 +303,7 @@ def iterate_motifs(
             bytes_tf = download_with_progress(to_request)
         except Exception:
             print ('Unable to download', file_name)
-            print (f'The TF {tf} will be skipped')
-            print ()
+            print (f'The TF {tf} will be skipped\n')
             continue
         # Load the downloaded TF track
         MOTIF_COLS = ['chrom', 'start', 'end', 'TFName', 'p-val', 'score',
