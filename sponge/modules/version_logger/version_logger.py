@@ -20,6 +20,18 @@ class VersionLogger:
         temp_folder: Path,
         log_filename: Optional[str] = None,
     ):
+        """
+        Logs the accession times and versions of databases and files
+        and maintains a file with the records. 
+
+        Parameters
+        ----------
+        temp_folder : Path
+            Folder where the fingerprint file should be maintained
+        log_filename : Optional[str], optional
+            Name of the fingerprint file or None to use the default,
+            by default None
+        """
 
         os.makedirs(temp_folder, exist_ok=True)
         if log_filename is None:
@@ -45,6 +57,10 @@ class VersionLogger:
     def __del__(
         self,
     ):
+        """
+        Saves the records into a file when the object is deleted,
+        assuming there is any.
+        """
 
         if len(self.data) > 0:
             yaml.safe_dump(dict(self.data),
@@ -55,6 +71,19 @@ class VersionLogger:
         self,
         key: str,
     ) -> dict:
+        """
+        Retrieves the values for a single record.
+
+        Parameters
+        ----------
+        key : str
+            Key describing the record
+
+        Returns
+        -------
+        dict
+            Values associated with the record
+        """
 
         return self.data[key]
 
@@ -64,6 +93,16 @@ class VersionLogger:
         key: str,
         val: dict,
     ) -> None:
+        """
+        Sets the value of a single record.
+
+        Parameters
+        ----------
+        key : str
+            Key describing the record
+        val : dict
+            Values to be stored in it
+        """
 
         self.data[key] = val
 
@@ -72,6 +111,14 @@ class VersionLogger:
         self,
         key: str,
     ) -> None:
+        """
+        Deletes a single record.
+
+        Parameters
+        ----------
+        key : str
+            Key describing the record
+        """
 
         del self.data[key]
 
@@ -80,6 +127,19 @@ class VersionLogger:
         self,
         key: str,
     ) -> bool:
+        """
+        Checks whether a specified record exists.
+
+        Parameters
+        ----------
+        key : str
+            Key describing the record
+
+        Returns
+        -------
+        bool
+            Whether the record exists
+        """
 
         return key in self.data
 
@@ -88,6 +148,16 @@ class VersionLogger:
         self,
         key: str,
     ) -> None:
+        """
+        Resets the entry for the given record to the default, which
+        means it deletes the already present data and sets retrieval
+        time to current time.
+
+        Parameters
+        ----------
+        key : str
+            Key describing the record
+        """
 
         # Remove if present
         if key in self.data:
@@ -101,6 +171,15 @@ class VersionLogger:
         self,
         key: str,
     ) -> None:
+        """
+        Specifies the given record as provided by the user at the
+        current time.
+
+        Parameters
+        ----------
+        key : str
+            Key describing the record
+        """
 
         self._reset_entry(key)
 
@@ -112,6 +191,15 @@ class VersionLogger:
         self,
         key: str,
     ) -> None:
+        """
+        Specifies the given record as default, which means neither
+        the time it was provided nor the version are known.
+
+        Parameters
+        ----------
+        key : str
+            Key describing the record
+        """
 
         self._reset_entry(key)
         # Datetime is set here again
@@ -123,6 +211,14 @@ class VersionLogger:
         self,
         key: str,
     ) -> None:
+        """
+        Updates the given record to specify it was retrieved from cache.
+
+        Parameters
+        ----------
+        key : str
+            Key describing the record
+        """
 
         # Only update cache label, don't change anything else
         self.data[key]['cached'] = True
@@ -133,6 +229,17 @@ class VersionLogger:
         key: str,
         version: str,
     ) -> None:
+        """
+        Specifies the given record as retrieved at the current time with
+        the given version.
+
+        Parameters
+        ----------
+        key : str
+            Key describing the record
+        version : str
+            Version of the record
+        """
 
         self._reset_entry(key)
 
@@ -143,6 +250,15 @@ class VersionLogger:
         self,
         target_class: type,
     ) -> None:
+        """
+        Registers a class instance with this instance, giving it access
+        to the logging functionality.
+
+        Parameters
+        ----------
+        target_class : type
+            Class instance to be modified
+        """
 
         # Include a reference to this instance in the registered class
         target_class.version_logger = self
@@ -151,4 +267,5 @@ class VersionLogger:
             'write_retrieved']
         for fn in function_names:
             # Replace with a call to the internal version logger
+           
             setattr(target_class, fn, getattr(self, fn))
