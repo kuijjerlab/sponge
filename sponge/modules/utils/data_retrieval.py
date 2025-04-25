@@ -191,13 +191,11 @@ def get_ensembl_version(
 def get_chromosome_mapping(
     assembly: str,
     mapping_url: str,
-) -> Tuple[pd.Series, pd.Series]:
+) -> pd.Series:
     """
-    Returns a tuple with two pandas Series which can be used to map
-    Ensembl chromosome names to UCSC (first Series) and vice versa
-    (second Series) for a provided genome assembly. If it is not
-    recognised, a default mapping valid from the main chromosomes
-    (autosomes + X, Y, MT) is returned.
+    Returns a  pandas Series which can be used to map Ensembl chromosome
+    names to UCSC for a provided genome assembly. If it is not
+    recognised, None is returned.
 
     Parameters
     ----------
@@ -209,8 +207,8 @@ def get_chromosome_mapping(
     Returns
     -------
     Tuple[pd.Series, pd.Series]
-        Tuple of two pandas Series, providing chromosome name mapping
-        from Ensembl to UCSC (first one) and vice versa (second one)
+        Pandas Series providing chromosome name mapping from Ensembl
+        to UCSC
     """
 
     if assembly[:2] == 'hg':
@@ -228,7 +226,6 @@ def get_chromosome_mapping(
             print (f'Failed to retrieve mapping for the assembly {assembly}.')
             return None
     else:
-        # Default mapping for the 22 autosomal chromosomes + X, Y, MT
         print ('No chromosome name mapping available for the assembly',
             f'{assembly}.')
         return None

@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import Iterable, Optional
 
 from sponge.config_manager import ConfigManager
-from sponge.modules.utils import iterate_chromosomes, iterate_motifs
+from sponge.modules.utils import iterate_chromosomes, iterate_motifs, \
+    process_jaspar_version
 from sponge.modules.version_logger import VersionLogger
 
 ### Class definition ###
@@ -76,11 +77,12 @@ class MatchFilter:
 
         start_time = time.time()
         if self.tfbs_path is None:
+            jaspar_release = process_jaspar_version(self.jaspar_release)
             results_list = iterate_motifs(self.url, df_full, tf_names,
-                matrix_ids, chromosomes, self.jaspar_release,
+                matrix_ids, chromosomes, jaspar_release,
                 self.assembly, n_processes, score_threshold)
             self.version_logger.write_retrieved('tfbs_file',
-                self.jaspar_release)
+                jaspar_release)
         else:
             results_list = iterate_chromosomes(self.tfbs_path, df_full,
                 matrix_ids, chromosomes, n_processes, score_threshold)

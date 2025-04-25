@@ -32,6 +32,8 @@ class FileRetriever:
         self.key = key
         self.temp_filename = temp_filename
         self.path_to_file = path_to_file
+        # Meant to be overwritten after retrieval
+        self.actual_path = None
         # Overwritten by registering with a VersionLogger instance
         self.version_logger = None
 

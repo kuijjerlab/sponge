@@ -31,9 +31,10 @@ class Sponge:
         self.temp_folder = temp_folder
         # Load the file with internal module inputs
         self.core_config = ConfigManager()
-        # Load the user-provided config file (or use defaults if it doesn't
-        # exist)
+        # Load the user-provided config file
+        # (or use defaults if it doesn't exist)
         self.user_config = ConfigManager(config, temp_folder)
+        # TODO: Fill in some default values at this stage?
         self.version_logger = VersionLogger(temp_folder)
         # Retrieve necessary files if required
         self.retrieve_data()
@@ -56,9 +57,9 @@ class Sponge:
             self.user_config, self.version_logger)
         data.retrieve_data()
 
-        self.tfbs_path = data.tfbs.actual_path
-        self.regions_path = data.regions.actual_path
-        self.chromosomes = data.regions.settings['chromosomes']
+        self.tfbs_path = data.get_tfbs_path()
+        self.regions_path = data.get_regions_path()
+        self.chromosomes = data.get_chromosomes()
 
 
     def select_motifs(
@@ -85,7 +86,7 @@ class Sponge:
             self.version_logger, self.tfbs_path, self.regions_path)
         match_filter.filter_matches(self.tf_names, self.matrix_ids,
             chromosomes=self.chromosomes)
-        
+
         self.all_edges = match_filter.all_edges
         self.all_edges['weight'] = self.all_edges['score'] / 100
         self.all_edges['edge'] = 1
@@ -119,7 +120,7 @@ class Sponge:
             self.user_config['motif_output']['protein_coding_only'],
         )
         edges = aggregator.edges
-        
+
         writer = FileWriter()
 
         print ('\n--- Saving the motif prior ---')
@@ -135,6 +136,6 @@ class Sponge:
         print ('\n--- Saving the PPI prior ---')
         ppi_weight = 'edge'
         if self.user_config['ppi_output']['weighted']:
-            ppi_weight = 'score'            
+            ppi_weight = 'score'
         writer.write_network_file(self.ppi_frame, ['tf1', 'tf2'], ppi_weight,
             self.user_config['ppi_output']['file_name'])

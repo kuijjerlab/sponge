@@ -1,5 +1,7 @@
+### Imports ###
 from typing import Mapping
 
+### Functions ###
 def recursive_update(
     dictionary: dict,
     update: dict,

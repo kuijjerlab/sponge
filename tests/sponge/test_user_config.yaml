@@ -1,3 +1,4 @@
+# Any non-specified option will use the default value
 default_workflow: True  # True by default
 on_the_fly_processing: True  # False by default
 genome_assembly: "hg38"
@@ -13,8 +14,8 @@ motif:
 region:
   # region_file:
   filter_basic: True  # True by default
-  # If chromosomes is not defined: all autosomes + X, Y
-  # If chromosomes is specified as empty (None): all chromosomes
+  use_all_chromosomes: False  # False by default
+  # If chromosomes is specified as empty (None): all autosomes + X, Y
   chromosomes: ["chr21"]
   tss_offset: [-750, 250]
 filter:
