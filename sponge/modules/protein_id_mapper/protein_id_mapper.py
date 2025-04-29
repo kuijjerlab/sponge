@@ -6,17 +6,15 @@ import pandas as pd
 
 from typing import Iterable, Union
 
-from sponge.config_manager import ConfigManager
-
 ### Class definition ###
 class ProteinIDMapper:
     # Methods
     def __init__(
         self,
-        core_config: ConfigManager,
+        mapping_url: str,
     ):
 
-        self.mapping_url = core_config['url']['protein']
+        self.mapping_url = mapping_url
 
 
     def get_uniprot_mapping(

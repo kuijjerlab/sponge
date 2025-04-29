@@ -70,23 +70,6 @@ class DataRetriever:
         self.tfbs.retrieve_file()
         self.regions.retrieve_file()
 
-    # TODO: If chromosomes are parsed after being provided, this should
-    # be removed
-    def get_chromosomes(
-        self,
-    ) -> List[str]:
-        """
-        Get the chromosomes used for the generation of region file
-        and specified in the user configuration.
-
-        Returns
-        -------
-        List[str]
-            List of chromosome names
-        """
-
-        return self.regions.settings['chromosomes']
-
 
     def get_tfbs_path(
         self,

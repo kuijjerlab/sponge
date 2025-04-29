@@ -25,7 +25,6 @@ class MatchFilter:
     ):
 
         self.url = core_config['url']['motif']['by_tf']
-        self.default_chromosomes = core_config['default_chromosomes']
         self.settings = user_config['filter']
         self.assembly = user_config['genome_assembly']
         self.jaspar_release = user_config['motif']['jaspar_release']
@@ -62,13 +61,6 @@ class MatchFilter:
             follow the option from the initialisation, by default None
         """
 
-        if n_processes is None:
-            n_processes = self.settings['n_processes']
-        if chromosomes is None:
-            chromosomes = self.default_chromosomes
-        if score_threshold is None:
-            score_threshold = self.settings['score_threshold']
-   
         print ('\n--- Filtering binding sites in the regions of interest ---')
 
         print ('Loading the regions file...')

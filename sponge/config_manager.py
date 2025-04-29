@@ -36,7 +36,7 @@ class ConfigManager:
         """
 
         self.temp_folder = temp_folder
-        
+
         self.file_dir = Path(__file__).parents[0]
         # Handle the special case of core config
         if config is None:
@@ -49,7 +49,7 @@ class ConfigManager:
         # Now handle based on the update type and content
         if type(config) == dict:
             # Directly use the provided dictionary
-            self._deep_update(config)
+            self.deep_update(config)
         elif not os.path.isfile(config):
             # Use the default user config file - don't change any defaults
             print ('Using the default settings.')
@@ -57,7 +57,7 @@ class ConfigManager:
             # Update with provided config (core or user)
             with open(config, 'r') as f:
                 update = yaml.safe_load(f)
-            self._deep_update(update)
+            self.deep_update(update)
 
     # Overwritten built-in methods
     def __del__(
@@ -157,13 +157,13 @@ class ConfigManager:
         Loads the default user configuration into the managed
         configuration.
         """
-        
+
         config = os.path.join(self.file_dir, self._default_user_config)
         with open(config, 'r') as f:
             self.config = yaml.safe_load(f)
 
 
-    def _deep_update(
+    def deep_update(
         self,
         config: dict,
     ) -> None:

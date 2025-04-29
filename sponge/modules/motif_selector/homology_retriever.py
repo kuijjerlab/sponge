@@ -3,51 +3,52 @@ import requests
 
 import pandas as pd
 
-from sponge.config_manager import ConfigManager
-from sponge.modules.utils import adjust_gene_name
-from sponge.modules.version_logger import VersionLogger
+from Bio.motifs.jaspar import Motif
+from typing import List, Mapping
 
 from sponge.modules.protein_id_mapper import ProteinIDMapper
+from sponge.modules.utils import adjust_gene_name
 
 ### Class definition ###
 class HomologyRetriever:
     # Methods
     def __init__(
         self,
-        core_config: ConfigManager,
-        user_config: ConfigManager,
-        version_logger: VersionLogger,
+        unique_motifs: bool,
+        mapping_url: str,
+        ncbi_url: str,
     ):
 
-        self.core_config = core_config
-        self.unique_motifs = user_config['motif']['unique_motifs']
-        self.ncbi_url = core_config['url']['homology']
-        self.version_logger = version_logger
+        self.unique_motifs = unique_motifs
+        self.mapping_url = mapping_url
+        self.ncbi_url = ncbi_url
+        # Overwritten by registering with a VersionLogger instance
+        self.version_logger = None
 
 
     def find_homologs(
         self,
-        motifs,
-        tf_to_motif,
+        motifs: List[Motif],
+        tf_to_motif: Mapping[str, dict],
     ) -> None:
 
         print ('\n--- Searching for matching homologs ---')
 
-        # TODO: Replace mentions of human to make later expansion easier
-        # Get the non-human motifs
-        non_human_motifs = [i for i in motifs if '9606' not in i.species]
-        print ('Non-human motifs:', len(non_human_motifs))
+        # Get the non-species motifs
+        xeno_motifs = [motif for motif in motifs
+            if '9606' not in motif.species]
+        print ('Motifs from other species:', len(xeno_motifs))
 
         # Retrieve mapping of Uniprot to GeneID
         all_ids = set()
-        for motif in non_human_motifs:
+        for motif in xeno_motifs:
             for id in motif.acc:
                 all_ids.add(id)
-        mapper = ProteinIDMapper(self.core_config)
+        mapper = ProteinIDMapper(self.mapping_url)
         mapping = mapper.get_uniprot_mapping('UniProtKB_AC-ID', 'GeneID',
             list(all_ids))
 
-        # Get the human homologs from NCBI
+        # Get the homologs from NCBI
         print ('Retrieving homologs from NCBI...')
         homologs = {}
         suffix = '/gene/id/{gene_id}/orthologs'
@@ -62,38 +63,38 @@ class HomologyRetriever:
         # Record the version of NCBI services
         version_r = requests.get(self.ncbi_url + '/version')
         version = version_r.json()['version']
-        self.version_logger.write_retrieved('ncbi_homologs', version)
+        self.write_retrieved('ncbi_homologs', version)
 
-        # Get the non-human motif names
-        non_human_motif_names = [i.name for i in non_human_motifs]
+        # Get the non-species motif names
+        xeno_motif_names = [motif.name for motif in xeno_motifs]
         # Compare against NCBI homologs
-        found_names = [adjust_gene_name(i.name) for i in non_human_motifs
-            if not False in [acc in homologs for acc in i.acc]]
+        found_names = [adjust_gene_name(motif.name) for motif in xeno_motifs
+            if not False in [acc in homologs for acc in motif.acc]]
         # Find the missing ones
-        missing = (set([adjust_gene_name(i) for i in non_human_motif_names]) -
-            set(found_names))
+        missing = (set([adjust_gene_name(name) for name in
+            xeno_motif_names]) - set(found_names))
         print ('\nTFs for which no homolog was found:')
-        for motif in non_human_motifs:
+        for motif in xeno_motifs:
             if motif.name in missing:
                 print (motif.name, *motif.acc)
 
         # Create a DataFrame of corresponding names
         corr_names = {
             motif.name: '::'.join([homologs[acc][0] for acc in motif.acc])
-            for motif in non_human_motifs
+            for motif in xeno_motifs
             if not False in [acc in homologs for acc in motif.acc]
         }
-        corr_df = pd.DataFrame(non_human_motif_names,
-            columns=['Original Name'])
+        corr_df = pd.DataFrame(xeno_motif_names, columns=['Original Name'])
         corr_df['Adjusted Name'] = corr_df['Original Name'].apply(
             adjust_gene_name)
-        corr_df['Human Name'] = corr_df['Original Name'].apply(corr_names.get)
+        corr_df['Species Name'] = corr_df['Original Name'].apply(
+            corr_names.get)
 
         if self.unique_motifs:
             # Find duplicates
-            duplicated = corr_df[corr_df['Human Name'].duplicated(keep=False) &
-                ~corr_df['Human Name'].isna()].copy()
-            to_print = duplicated.groupby('Human Name'
+            duplicated = corr_df[corr_df['Species Name'].duplicated(keep=False
+                ) & ~corr_df['Species Name'].isna()].copy()
+            to_print = duplicated.groupby('Species Name'
                 )['Original Name'].unique().apply(lambda x: ' '.join(x))
             print ('\nDuplicate names:')
             for i in to_print.index:
@@ -104,33 +105,70 @@ class HomologyRetriever:
                 max(tf_to_motif[x].values()))
             # Keep the highest IC amongst the duplicates
             to_drop = duplicated['Original Name'][duplicated.sort_values(
-                'IC').duplicated('Human Name', keep='last')]
+                'IC').duplicated('Species Name', keep='last')]
         else:
             to_drop = []
 
-        # Exclude the IDs which are already present among the human ones
-        human_motif_names = [i.name for i in motifs if '9606' in i.species]
-        corr_df['Duplicate'] = corr_df['Human Name'].isin(human_motif_names)
+        # Exclude the IDs which are already present among the in-species ones
+        species_motif_names = [motif.name for motif in motifs
+            if '9606' in motif.species]
+        corr_df['Duplicate'] = corr_df['Species Name'].isin(
+            species_motif_names)
 
         # Perform the final filtering - discard all duplicates and TFs without
         # homologs
         corr_df_final = corr_df[(corr_df['Duplicate'] == False) &
-            (~corr_df['Human Name'].isna()) &
+            (~corr_df['Species Name'].isna()) &
             (corr_df['Original Name'].isin(to_drop) == False)]
 
-        # The mapping of original to human names and the matrix IDs to be kept
-        animal_to_human = {animal_name: human_name for animal_name, human_name
+        # The mapping of out-species to in-species names
+        # and the matrix IDs to be kept
+        homolog_mapping = {animal_name: species_name
+            for animal_name,species_name
             in zip(corr_df_final['Original Name'],
-                corr_df_final['Human Name'])}
+                corr_df_final['Species Name'])}
         print ('\nFinal number of IDs which will be replaced by homologs:',
-               len(animal_to_human))
+               len(homolog_mapping))
         # Doing it this way ensures the ordering matches
         matrix_ids = [motif.matrix_id for motif in motifs if
-            (motif.name in human_motif_names or motif.name in animal_to_human)]
+            (motif.name in species_motif_names or
+            motif.name in homolog_mapping)]
         tf_names = [motif.name for motif in motifs if
-            (motif.name in human_motif_names or motif.name in animal_to_human)]
+            (motif.name in species_motif_names or
+            motif.name in homolog_mapping)]
         print ('Final number of all matrix IDs:', len(matrix_ids))
 
-        self.animal_to_human = animal_to_human
+        self.homolog_mapping = homolog_mapping
         self.matrix_ids = matrix_ids
         self.tf_names = tf_names
+
+
+    def get_homolog_mapping(
+        self,
+    ) -> Mapping[str, str]:
+
+        return self.homolog_mapping
+
+
+    def get_matrix_ids(
+        self,
+    ) -> List[str]:
+
+        return self.matrix_ids
+
+
+    def get_tf_names(
+        self,
+    ) -> List[str]:
+
+        return self.tf_names
+
+
+    # Placeholder functions to be replaced with VersionLogger if any
+    def write_retrieved(
+        self,
+        *args,
+        **kwargs,
+    ) -> None:
+
+        pass

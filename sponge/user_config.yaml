@@ -19,7 +19,7 @@ region:
   chromosomes:
   tss_offset: [-750, 250]
 filter:
-  n_processes: 16
+  n_processes: 1
   score_threshold: 400
 ppi:
   physical_only: True  # True by default

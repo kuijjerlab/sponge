@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import List, Union
 
 from sponge.modules.data_retriever.file_retriever import FileRetriever
-from sponge.modules.utils import download_with_progress, process_jaspar_version
+from sponge.modules.utils import download_with_progress
 
 ### Class definition ###
 class TFBSRetriever(FileRetriever):
@@ -45,8 +45,7 @@ class TFBSRetriever(FileRetriever):
         """
 
         self.on_the_fly = on_the_fly_processing
-        self.jaspar_release = process_jaspar_version(
-            motif_settings['jaspar_release'])
+        self.jaspar_release = motif_settings['jaspar_release']
         self.genome_assembly = genome_assembly
         self.urls = motif_url
 
