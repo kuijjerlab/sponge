@@ -13,6 +13,14 @@ class ProteinIDMapper:
         self,
         mapping_url: str,
     ):
+        """
+        Class that maps protein IDs using the Uniprot services.
+
+        Parameters
+        ----------
+        mapping_url : str
+            URL of the Uniprot ID mapping service
+        """
 
         self.mapping_url = mapping_url
 

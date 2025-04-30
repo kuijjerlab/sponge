@@ -64,7 +64,7 @@ class PPIRetriever:
         if len(ids_to_check) > 0:
             # Retrieve UniProt identifiers for the genes with differing names
             print ('Checking the conflicts in the UniProt database...')
-            mapper = ProteinIDMapper(self.core_config)
+            mapper = ProteinIDMapper(self.core_config['url']['protein'])
             uniprot_df = mapper.get_uniprot_mapping('Gene_Name', 'UniProtKB',
                 ids_to_check).set_index('from')
             p_to_q = {p: q for q,p in zip(diff_df['queryName'],

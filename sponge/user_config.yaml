@@ -15,7 +15,7 @@ region:
   region_file:
   filter_basic: True  # True by default
   use_all_chromosomes: False  # False by default
-  # If chromosomes is specified as empty (None): all autosomes + X, Y
+  # If chromosomes is not specified: all autosomes + X, Y
   chromosomes:
   tss_offset: [-750, 250]
 filter:

@@ -18,10 +18,26 @@ class HomologyRetriever:
         mapping_url: str,
         ncbi_url: str,
     ):
+        """
+        Class that retrieves TF homologs from NCBI.
+
+        Parameters
+        ----------
+        unique_motifs : bool
+            Whether a single motif is enforced per TF
+        mapping_url : str
+            URL to the ID mapping service of Uniprot
+        ncbi_url : str
+            URL to the NCBI datasets API
+        """
 
         self.unique_motifs = unique_motifs
         self.mapping_url = mapping_url
         self.ncbi_url = ncbi_url
+        # To be overwritten once retrieved
+        self.homolog_mapping = None
+        self.matrix_ids = None
+        self.tf_names = None
         # Overwritten by registering with a VersionLogger instance
         self.version_logger = None
 
@@ -31,6 +47,18 @@ class HomologyRetriever:
         motifs: List[Motif],
         tf_to_motif: Mapping[str, dict],
     ) -> None:
+        """
+        Attempts to find the homologs of the provided motifs that do not
+        match the species of interest.
+
+        Parameters
+        ----------
+        motifs : List[Motif]
+            List of selected TF motifs
+        tf_to_motif : Mapping[str, dict]
+            Mapping of TF names to their motif IDs and information
+            contents
+        """
 
         print ('\n--- Searching for matching homologs ---')
 
@@ -146,6 +174,15 @@ class HomologyRetriever:
     def get_homolog_mapping(
         self,
     ) -> Mapping[str, str]:
+        """
+        Get the mapping of TF homolog names to the names in the species
+        of interest, can be None if it wasn't retrieved.
+
+        Returns
+        -------
+        Mapping[str, str]
+            Mapping of TF homolog names
+        """
 
         return self.homolog_mapping
 
@@ -153,6 +190,15 @@ class HomologyRetriever:
     def get_matrix_ids(
         self,
     ) -> List[str]:
+        """
+        Get the list of TF matrix IDs, can be None if it wasn't
+        retrieved.
+
+        Returns
+        -------
+        List[str]
+            List of TF matrix IDs
+        """
 
         return self.matrix_ids
 
@@ -160,9 +206,16 @@ class HomologyRetriever:
     def get_tf_names(
         self,
     ) -> List[str]:
+        """
+        Get the list of TF names, can be None if it wasn't retrieved.
+
+        Returns
+        -------
+        List[str]
+            List of TF names
+        """
 
         return self.tf_names
-
 
     # Placeholder functions to be replaced with VersionLogger if any
     def write_retrieved(

@@ -13,8 +13,21 @@ class JasparRetriever:
         self,
         motif_settings: dict,
     ):
+        """
+        Class that retrieves TF motifs from JASPAR.
+
+        Parameters
+        ----------
+        motif_settings : dict
+            Motif relevant settings from the user configuration,
+            specifically containing jaspar_release, drop_heterodimers,
+            unique_motifs, tf_names and matrix_ids
+        """
 
         self.motif_settings = motif_settings
+        # To be overwritten once retrieved
+        self.motifs = None
+        self.tf_to_motif = None
         # Overwritten by registering with a VersionLogger instance
         self.version_logger = None
 
@@ -22,6 +35,10 @@ class JasparRetriever:
     def retrieve_tfs(
         self,
     ) -> None:
+        """
+        Retrieve the TF motifs of interest based on the settings
+        provided during initialisation.
+        """
 
         print ('\n--- Retrieving transcription factor motifs ---')
 
@@ -75,6 +92,15 @@ class JasparRetriever:
     def get_motifs(
         self,
     ) -> List[Motif]:
+        """
+        Get the list of selected TF motifs, can be None if it wasn't
+        retrieved.
+
+        Returns
+        -------
+        List[Motif]
+            List of selected TF motifs
+        """
 
         return self.motifs
 
@@ -82,6 +108,15 @@ class JasparRetriever:
     def get_tf_to_motif(
         self,
     ) -> Mapping[str, dict]:
+        """
+        Get the mapping of TF names to their motif IDs and information
+        contents, can be None if it wasn't retrieved.
+
+        Returns
+        -------
+        Mapping[str, dict]
+            Mapping of TF names
+        """
 
         return self.tf_to_motif
 
