@@ -26,7 +26,7 @@ class HomologyRetriever:
         unique_motifs : bool
             Whether a single motif is enforced per TF
         mapping_url : str
-            URL to the ID mapping service of Uniprot
+            URL to the ID mapping service of UniProt
         ncbi_url : str
             URL to the NCBI datasets API
         """
@@ -67,7 +67,7 @@ class HomologyRetriever:
             if '9606' not in motif.species]
         print ('Motifs from other species:', len(xeno_motifs))
 
-        # Retrieve mapping of Uniprot to GeneID
+        # Retrieve mapping of UniProt to GeneID
         all_ids = set()
         for motif in xeno_motifs:
             for id in motif.acc:

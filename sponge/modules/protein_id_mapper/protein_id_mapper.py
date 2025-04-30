@@ -14,12 +14,12 @@ class ProteinIDMapper:
         mapping_url: str,
     ):
         """
-        Class that maps protein IDs using the Uniprot services.
+        Class that maps protein IDs using the UniProt services.
 
         Parameters
         ----------
         mapping_url : str
-            URL of the Uniprot ID mapping service
+            URL of the UniProt ID mapping service
         """
 
         self.mapping_url = mapping_url
@@ -33,7 +33,7 @@ class ProteinIDMapper:
         **kwargs,
     ) -> pd.DataFrame:
         """
-        Attempts to get a mapping for the given IDs from Uniprot. Can be
+        Attempts to get a mapping for the given IDs from UniProt. Can be
         provided with extra keyword arguments which are then added to
         the request.
 
