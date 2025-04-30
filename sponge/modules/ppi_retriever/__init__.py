@@ -1,0 +1,1 @@
+from sponge.modules.ppi_retriever.ppi_retriever import PPIRetriever

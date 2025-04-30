@@ -1,0 +1,1 @@
+from sponge.modules.motif_selector.motif_selector import MotifSelector

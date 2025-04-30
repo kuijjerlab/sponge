@@ -2,9 +2,7 @@
 import pandas as pd
 
 from Bio.motifs.jaspar import Motif
-from datetime import datetime
 from math import log2
-from typing import Union
 
 ### Functions ###
 def plogp(
@@ -55,48 +53,3 @@ def calculate_ic(
 
     # Return the total IC for the whole motif
     return df['IC'].sum()
-
-
-def adjust_gene_name(
-    gene: str,
-) -> str:
-    """
-    Adjusts the gene name by converting the last two letters to
-    lowercase. This is typically done to enhance name matching.
-
-    Parameters
-    ----------
-    gene : str
-        Provided gene name
-
-    Returns
-    -------
-    str
-        Adjusted gene name
-    """
-
-    return gene[:-2] + gene[-2:].lower()
-
-
-def parse_datetime(
-    datetime: Union[str, datetime],
-) -> str:
-    """
-    Converts the provided datetime object into a formatted string,
-    or returns the provided string.
-
-    Parameters
-    ----------
-    datetime : Union[str, datetime]
-        Provided string or datetime object
-
-    Returns
-    -------
-    str
-        Provided string or provided datetime expressed as a string
-    """
-
-    if type(datetime) == str:
-        return datetime
-    else:
-        return datetime.strftime('%d/%m/%Y, %H:%M:%S')

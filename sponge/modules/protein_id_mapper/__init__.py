@@ -1,0 +1,1 @@
+from sponge.modules.protein_id_mapper.protein_id_mapper import ProteinIDMapper

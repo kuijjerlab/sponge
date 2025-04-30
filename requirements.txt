@@ -1,4 +1,5 @@
 bioframe
+matplotlib
 numpy
 pandas
 pybbi
