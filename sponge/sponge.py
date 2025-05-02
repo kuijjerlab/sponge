@@ -1,8 +1,10 @@
 ### Imports ###
+import inspect
+
 from bioframe import assembly_info
 from functools import wraps
 from pathlib import Path
-from typing import Union
+from typing import Callable, Union
 
 from sponge.config_manager import ConfigManager
 from sponge.modules.data_retriever import DataRetriever
@@ -24,14 +26,22 @@ from sponge.modules.version_logger import VersionLogger
 
 ### Decorators ###
 def allow_config_update(
-    function,
-) -> None:
+    function: Callable,
+) -> Callable:
+    """
+    Adds the ability for a method to update the user configuration
+    through on optional keyword argument user_config_update.
 
-    # sig = utilipy.utils.inspect.fuller_signature(function)
-    # param = inspect.Parameter('kw1', inspect._KEYWORD_ONLY, default='has a value', annotation='added kwarg')
-    # sig = sig.insert_parameter(sig.index_var_keyword, param)
+    Parameters
+    ----------
+    function : Callable
+        Method to be modified
 
-    # @utilipy.utils.functools.wraps(function, signature=sig)
+    Returns
+    -------
+    Callable
+        Modified version of the method
+    """
 
     @wraps(function)
     def wrapper(
@@ -43,10 +53,23 @@ def allow_config_update(
         self.fill_default_values()
         function(self)
 
-    # TODO: Find a way to update signature too
+    # Update function signature
+    orig_signature = inspect.signature(function)
+    new_params = orig_signature.parameters.copy()
+    new_params['user_config_update'] = inspect.Parameter('user_config_update',
+        inspect.Parameter.POSITIONAL_OR_KEYWORD, default={})
+    new_signature = inspect.Signature(parameters=new_params.values())
+    wrapper.__signature__ = new_signature
+    # Update function docstring
     if wrapper.__doc__ is None:
         wrapper.__doc__ = ''
-    wrapper.__doc__ += ("\nbbb")
+    wrapper.__doc__ += (
+        """
+        user_config_update : dict, optional
+            Dictionary to be used for updating the user configuration
+            prior to executing the method, by default {}
+        """
+    )
 
     return wrapper
 
@@ -59,6 +82,24 @@ class Sponge:
         config: Union[Path, dict] = 'user_config.yaml',
         config_update: dict = {},
     ):
+        """
+        Class that generates a prior gene regulatory network and a prior
+        protein-protein interaction network based on the provided
+        settings.
+
+        Parameters
+        ----------
+        temp_folder : Path, optional
+            Folder to save the temporary files to,
+            by default '.sponge_temp/'
+        config : Union[Path, dict], optional
+            Path to a configuration file in .yaml format or a dictionary
+            containing the settings, by default 'user_config.yaml'
+        config_update : dict, optional
+            Dictionary that updates the provided settings, useful for
+            changing a small subset of the settings from a config file,
+            by default {}
+        """
 
         self.temp_folder = temp_folder
         # Load the file with internal module inputs
@@ -84,6 +125,10 @@ class Sponge:
     def fill_default_values(
         self,
     ) -> None:
+        """
+        Fills in the values for chromosomes and jaspar_release in the
+        stored user configuration if needed.
+        """
 
         # Fill in chromosomes
         if self.user_config['region']['use_all_chromosomes']:
@@ -102,6 +147,11 @@ class Sponge:
     def retrieve_data(
         self,
     ) -> None:
+        """
+        Retrieves the initial files required for running the SPONGE
+        pipeline. Some online services are still accessed later
+        in the process.
+        """
 
         data = DataRetriever(
             self.temp_folder,
@@ -120,7 +170,8 @@ class Sponge:
         self,
     ) -> None:
         """
-        aaa
+        Selects the TF motifs to be used in the SPONGE pipeline based
+        on the settings from the configuration.
         """
 
         motifs = MotifSelector(

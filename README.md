@@ -32,7 +32,7 @@ the JASPAR database.
 It also uses NCBI to find the human analogs of vertebrate transcription
 factors, UniProt for symbol matching, and STRING to retrieve
 protein-protein interactions between transcription factors.
-By default, Ensembl is used to collect all the promoter regions in 
+By default, Ensembl is used to collect all the promoter regions in
 the human genome as the regions of interest, but different regions can
 be provided by the user.
 Because SPONGE accesses these databases on the fly, it requires internet
