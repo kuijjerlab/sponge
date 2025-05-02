@@ -17,8 +17,8 @@ FILTER_INPUT = Tuple[str, pd.DataFrame, Iterable[str], str, int, int, float]
 def filter_edges(
     bb_ref: Path,
     bed_df: pd.DataFrame,
-    motif_list: Iterable[str],
     chrom: str,
+    motif_list: Iterable[str],
     start_ind: int,
     final_ind: int,
     score_threshold: float = 400,
@@ -35,11 +35,11 @@ def filter_edges(
     bed_df : pd.DataFrame
         Pandas DataFrame containing the regions of interest in the
         chromosome, typically promoters
+    chrom : str
+        Name of the chromosome of interest
     motif_list : Iterable[str]
         Iterable containing the matrix IDs of transcription factors of
         interest
-    chrom : str
-        Name of the chromosome of interest
     start_ind : int
         Starting index of the region DataFrame (bed_df)
     final_ind : int
@@ -80,10 +80,10 @@ def filter_edges(
 def iterate_chromosomes(
     bb_ref: Path,
     bed_df: pd.DataFrame,
-    matrix_ids: List[str],
     chromosomes: List[str],
-    n_processes: int = 1,
+    matrix_ids: List[str],
     score_threshold: float = 400,
+    n_processes: int = 1,
 ) -> List[pd.DataFrame]:
     """
     Iterates over the chromosomes in a bigbed file, intersecting the
@@ -96,14 +96,14 @@ def iterate_chromosomes(
         Path to a bigbed file that stores all possible matches
     bed_df : pd.DataFrame
         Pandas DataFrame containing the regions of interest
-    matrix_ids : List[str]
-        List of matrix IDs of transcription factors to use
     chromosomes : List[str]
         List of chromosomes to use
-    n_processes : int, optional
-        Number of processes to run in parallel, by default 1
+    matrix_ids : List[str]
+        List of matrix IDs of transcription factors to use
     score_threshold : float, optional
         Score required for selection, by default 400
+    n_processes : int, optional
+        Number of processes to run in parallel, by default 1
 
     Returns
     -------
@@ -132,7 +132,7 @@ def iterate_chromosomes(
         # Based off of performance benchmarking
         chunk_size = ceil(sqrt(len(df_chrom) / n_processes))
         chunk_divisions = [i for i in range(0, len(df_chrom), chunk_size)]
-        input_tuples = [(bb_ref, df_chrom, matrix_ids, chrom, i,
+        input_tuples = [(bb_ref, df_chrom, chrom, matrix_ids, i,
             i+chunk_size, score_threshold) for i in chunk_divisions]
         # Run the calculations in parallel
         result = p.starmap_async(filter_edges, input_tuples,
@@ -249,13 +249,13 @@ def process_motif(
 def iterate_motifs(
     motif_url: str,
     bed_df: pd.DataFrame,
-    tf_names: List[str],
-    matrix_ids: List[str],
     chromosomes: List[str],
-    jaspar_release: str,
+    matrix_ids: List[str],
+    tf_names: List[str],
     assembly: str,
-    n_processes: int = 1,
+    jaspar_release: str,
     score_threshold: float = 400,
+    n_processes: int = 1,
 ) -> List[pd.DataFrame]:
     """
     Iterates over the TFs to filter all binding sites within regions of
@@ -265,22 +265,22 @@ def iterate_motifs(
     ----------
     bed_df : pd.DataFrame
         Pandas DataFrame containing the regions of interest
-    tf_names : List[str]
-        List of names of transcription factors to use, ordered the same
-        way as matrix_ids
+    chromosomes : List[str]
+        List of chromosomes to use
     matrix_ids : List[str]
         List of matrix IDs of transcription factors to use, ordered the
         same way as tf_names
-    chromosomes : List[str]
-        List of chromosomes to use
-    jaspar_release : str
-        JASPAR release used
+    tf_names : List[str]
+        List of names of transcription factors to use, ordered the same
+        way as matrix_ids
     assembly : str
         Assembly of the genome used
-    n_processes : int, optional
-        Number of processes to run in parallel, by default 1
+    jaspar_release : str
+        JASPAR release used
     score_threshold : float, optional
         Score required for selection, by default 400
+    n_processes : int, optional
+        Number of processes to run in parallel, by default 1
 
     Returns
     -------

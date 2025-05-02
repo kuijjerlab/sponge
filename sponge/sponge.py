@@ -30,7 +30,8 @@ def allow_config_update(
 ) -> Callable:
     """
     Adds the ability for a method to update the user configuration
-    through on optional keyword argument user_config_update.
+    through an optional argument user_config_update or directly through
+    keywords.
 
     Parameters
     ----------
@@ -46,10 +47,12 @@ def allow_config_update(
     @wraps(function)
     def wrapper(
         self,
-        user_config_update: dict = {}
+        user_config_update: dict = {},
+        **kwargs,
     ) -> None:
 
         self.user_config.deep_update(user_config_update)
+        self.user_config.deep_update(kwargs)
         self.fill_default_values()
         function(self)
 
@@ -58,6 +61,8 @@ def allow_config_update(
     new_params = orig_signature.parameters.copy()
     new_params['user_config_update'] = inspect.Parameter('user_config_update',
         inspect.Parameter.POSITIONAL_OR_KEYWORD, default={})
+    new_params['**kwargs'] = inspect.Parameter('kwargs',
+        inspect.Parameter.VAR_KEYWORD)
     new_signature = inspect.Signature(parameters=new_params.values())
     wrapper.__signature__ = new_signature
     # Update function docstring
@@ -68,6 +73,10 @@ def allow_config_update(
         user_config_update : dict, optional
             Dictionary to be used for updating the user configuration
             prior to executing the method, by default {}
+        **kwargs
+            Keyword arguments will be used to update the user
+            configuration in the class instance prior to executing
+            the method, they take priority over user_config_update
         """
     )
 
@@ -191,18 +200,27 @@ class Sponge:
     def filter_tfbs(
         self,
     ) -> None:
+        """
+        
+        """
 
-        match_filter = MatchFilter(self.core_config, self.user_config,
-            self.version_logger, self.tfbs_path, self.regions_path)
+        match_filter = MatchFilter(
+            self.tfbs_path,
+            self.regions_path,
+            self.user_config['genome_assembly'],
+            self.user_config['motif']['jaspar_release'],
+            self.core_config['url']['motif']['by_tf'],
+        )
+        self.version_logger.register_class(match_filter)
         match_filter.filter_matches(
-            self.tf_names,
-            self.matrix_ids,
-            self.user_config['filter']['score_threshold'],
             self.user_config['region']['chromosomes'],
+            self.matrix_ids,
+            self.tf_names,
+            self.user_config['filter']['score_threshold'],
             self.user_config['filter']['n_processes'],
         )
 
-        self.all_edges = match_filter.all_edges
+        self.all_edges = match_filter.get_all_edges()
         self.all_edges['weight'] = self.all_edges['score'] / 100
         self.all_edges['edge'] = 1
 
@@ -228,8 +246,11 @@ class Sponge:
         self,
     ) -> None:
 
-        aggregator = MatchAggregator(self.all_edges, self.regions_path,
-            self.homolog_mapping)
+        aggregator = MatchAggregator(
+            self.all_edges,
+            self.regions_path,
+            self.homolog_mapping,
+        )
         aggregator.aggregate_matches(
             self.user_config['motif_output']['use_gene_names'],
             self.user_config['motif_output']['protein_coding_only'],
