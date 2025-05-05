@@ -70,6 +70,8 @@ def allow_config_update(
         wrapper.__doc__ = ''
     wrapper.__doc__ += (
         """
+        Parameters
+        ----------
         user_config_update : dict, optional
             Dictionary to be used for updating the user configuration
             prior to executing the method, by default {}
@@ -201,7 +203,8 @@ class Sponge:
         self,
     ) -> None:
         """
-        
+        Filter the TF binding sites to match the regions of interest
+        and score threshold from the configuration.
         """
 
         match_filter = MatchFilter(
@@ -229,15 +232,24 @@ class Sponge:
     def retrieve_ppi(
         self,
     ) -> None:
+        """
+        Retrieves PPI data for selected TFs from the STRING database.
+        """
 
-        ppi = PPIRetriever(self.core_config, self.user_config,
-            self.version_logger)
+        ppi = PPIRetriever(
+            self.core_config['url']['ppi'],
+            self.core_config['url']['protein'],
+        )
+        self.version_logger.register_class(ppi)
         filtered_tfs = self.all_edges['TFName'].unique()
         mapped_tfs = [self.homolog_mapping[x] if x in self.homolog_mapping
             else x for x in filtered_tfs]
-        ppi.retrieve_ppi(mapped_tfs)
+        ppi.retrieve_ppi(
+            mapped_tfs,
+            self.user_config['ppi']['physical_only'],
+        )
 
-        self.ppi_frame = ppi.ppi_frame
+        self.ppi_frame = ppi.get_ppi_frame()
         self.ppi_frame['edge'] = 1
 
 
