@@ -3,26 +3,43 @@ import numpy as np
 import pandas as pd
 
 from pathlib import Path
+from typing import Mapping
 
 ### Class definition ###
 class MatchAggregator:
     # Methods
     def __init__(
         self,
-        match_df: pd.DataFrame,
-        ensembl_file: Path,
-        animal_to_human: dict,
+        edges: pd.DataFrame,
+        regions_file: Path,
+        homolog_mapping: Mapping[str, str],
     ):
-        
-        self.match_df = match_df
-        self.ensembl = pd.read_csv(ensembl_file, sep='\t')
-        self.animal_to_human = animal_to_human
+        """
+        Class that aggregates transcript matches to genes and can also
+        filter the genes and convert IDs to names.
+
+        Parameters
+        ----------
+        edges : pd.DataFrame
+            DataFrame containing the edges of the motif prior
+        regions_file : Path
+            Path to the file describing the regions of interest
+        homolog_mapping : Mapping[str, str]
+            Mapping of the TF homologs in other species to the
+            species of interest
+        """
+
+        self.initial_edges = edges
+        self.regions = pd.read_csv(regions_file, sep='\t')
+        self.homolog_mapping = homolog_mapping
+        # To be overwritten once retrieved
+        self.edges = None
 
 
     def aggregate_matches(
         self,
-        use_gene_names: bool,
-        protein_coding_only: bool,
+        use_gene_names: bool = True,
+        protein_coding_only: bool = False,
     ) -> pd.DataFrame:
         """
         Aggregates all the matches corresponding to individual
@@ -31,23 +48,16 @@ class MatchAggregator:
 
         Parameters
         ----------
-        ensembl_file : Optional[Path], optional
-            Path to an Ensembl file or None to use cache or
-            download it, by default None
-        prompt : bool, optional
-            Whether to prompt before downloading, by default True
-        use_gene_names : Optional[bool], optional
-            Whether to use gene names instead of Ensembl IDs or None
-            to follow the option from the initialisation,
-            by default None
-        protein_coding_only : Optional[bool], optional
+        use_gene_names : bool, optional
+            Whether to use gene names instead of Ensembl IDs,
+            by default True
+        protein_coding_only : bool, optional
             Whether to restrict the selection to only protein coding
-            genes or None to follow the option from the initialisation,
-            by default None
+            genes, by default False
         """
 
-        # Add the Ensembl data (gene names) to the edges previously found
-        motif_df = self.match_df.join(other=self.ensembl.set_index(
+        # Add the gene name data to the edges previously found
+        motif_df = self.initial_edges.join(other=self.regions.set_index(
             'Transcript stable ID'), on='transcript')
         print ('\nNumber of TF - transcript edges:', len(motif_df))
         if protein_coding_only:
@@ -57,7 +67,7 @@ class MatchAggregator:
         motif_df.drop(columns=['Gene type', 'name'], inplace=True)
         # Humanise the TF names
         motif_df['TFName'] = motif_df['TFName'].apply(lambda x:
-            self.animal_to_human[x] if x in self.animal_to_human else x)
+            self.homolog_mapping[x] if x in self.homolog_mapping else x)
         # Ignore genes without identifiers
         motif_df.dropna(subset=['Gene stable ID'], inplace=True)
         motif_df.sort_values('score', ascending=False, inplace=True)
@@ -85,3 +95,19 @@ class MatchAggregator:
                 len(motif_df))
 
         self.edges = motif_df
+
+
+    def get_edges(
+        self,
+    ) -> pd.DataFrame:
+        """
+        Get the final edges of the prior gene regulatory network,
+        can be None if it wasn't generated yet.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame containing the gene regulatory network
+        """
+
+        return self.edges

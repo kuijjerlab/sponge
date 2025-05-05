@@ -257,6 +257,9 @@ class Sponge:
     def write_output_files(
         self,
     ) -> None:
+        """
+        Writes the generated gene regulatory and PPI priors to files.
+        """
 
         aggregator = MatchAggregator(
             self.all_edges,
@@ -267,7 +270,7 @@ class Sponge:
             self.user_config['motif_output']['use_gene_names'],
             self.user_config['motif_output']['protein_coding_only'],
         )
-        edges = aggregator.edges
+        edges = aggregator.get_edges()
 
         writer = FileWriter()
 
@@ -278,12 +281,20 @@ class Sponge:
         label = 'Gene stable ID'
         if self.user_config['motif_output']['use_gene_names']:
             label = 'Gene name'
-        writer.write_network_file(edges, ['TFName', label], motif_weight,
-            self.user_config['motif_output']['file_name'])
+        writer.write_network_file(
+            edges,
+            ['TFName', label],
+            motif_weight,
+            self.user_config['motif_output']['file_name'],
+        )
 
         print ('\n--- Saving the PPI prior ---')
         ppi_weight = 'edge'
         if self.user_config['ppi_output']['weighted']:
             ppi_weight = 'score'
-        writer.write_network_file(self.ppi_frame, ['tf1', 'tf2'], ppi_weight,
-            self.user_config['ppi_output']['file_name'])
+        writer.write_network_file(
+            self.ppi_frame,
+            ['tf1', 'tf2'],
+            ppi_weight,
+            self.user_config['ppi_output']['file_name'],
+        )
