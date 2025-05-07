@@ -1,9 +1,9 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = ["sponge"]
+[packages]
+find = {}
 
 [project]
 name = "netzoopy-sponge"
@@ -13,7 +13,7 @@ authors = [
 version = "2.0.0"
 description = "A package to generate prior gene regulatory networks."
 readme = "README.md"
-license = {text = "GPL-3"}
+license = "GPL-3.0-or-later"
 keywords = ["transcription-factors", "gene-regulatory-network"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
