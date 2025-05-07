@@ -263,6 +263,9 @@ def iterate_motifs(
 
     Parameters
     ----------
+    motif_url : str
+        URL to retrieve the TF-specific binding sites from, with
+        year and genome_assembly to be formatted in
     bed_df : pd.DataFrame
         Pandas DataFrame containing the regions of interest
     chromosomes : List[str]

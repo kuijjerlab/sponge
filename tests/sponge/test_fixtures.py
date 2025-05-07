@@ -1,3 +1,4 @@
+### Imports ###
 import bioframe
 import os
 import pytest
@@ -6,6 +7,14 @@ import pandas as pd
 
 from Bio.motifs.jaspar import Motif
 from pyjaspar import jaspardb
+
+from sponge.config_manager import ConfigManager
+
+### Fixtures ###
+# Core config fixture
+@pytest.fixture
+def core_config():
+    return ConfigManager()
 
 # A motif without any information
 @pytest.fixture
@@ -17,7 +26,6 @@ def no_info_motif():
 
     yield no_info_motif
 
-
 # A motif with perfect information
 @pytest.fixture
 def all_A_motif():
@@ -28,7 +36,6 @@ def all_A_motif():
 
     yield all_A_motif
 
-
 # A real motif for SOX2
 @pytest.fixture
 def SOX2_motif():
@@ -37,18 +44,14 @@ def SOX2_motif():
 
     yield SOX2_motif
 
-
 # A subset of promoters on chromosome 19
 @pytest.fixture
 def chr19_promoters():
-    path_to_file = os.path.join('tests', 'sponge', 'chr19_subset.bed')
-    df = bioframe.read_table(path_to_file, schema='bed')
-    df['name'] = df['name'].apply(lambda x: x.split('.')[0])
-    df.drop(columns=['score', 'strand'], inplace=True)
-    df.set_index('name', inplace=True)
+    path_to_file = os.path.join('tests', 'sponge', 'chr19_subset.tsv')
+    df = bioframe.read_table(path_to_file, header=0)
+    df.set_index('Transcript stable ID', inplace=True)
 
     yield df
-
 
 # Part of the FOXF2 track for chromosome 19
 @pytest.fixture
