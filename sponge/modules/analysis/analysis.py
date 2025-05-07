@@ -5,12 +5,12 @@ import pandas as pd
 
 from pathlib import Path
 from sklearn.metrics import classification_report, confusion_matrix
-
-MOTIF_COLS = ['tf', 'gene', 'edge']
+from typing import List
 
 ### Functions ###
 def load_prior(
     path: Path,
+    names: List[str] = ['tf', 'gene', 'edge']
 ) -> pd.DataFrame:
     """
     Loads a motif prior file into a pandas DataFrame
@@ -26,7 +26,7 @@ def load_prior(
         The processed pandas DataFrame
     """
 
-    return pd.read_csv(path, sep='\t', header=None, names=MOTIF_COLS)
+    return pd.read_csv(path, sep='\t', header=None, names=names)
 
 
 def describe_prior(
@@ -113,17 +113,19 @@ def compare_priors(
 
     print ('Statistics for the first prior:')
     describe_prior(prior_1)
-    print ()
-    print ('Statistics for the second prior:')
+    print ('\nStatistics for the second prior:')
     describe_prior(prior_2)
 
     common_tfs = set(prior_1['tf'].unique()).intersection(
         prior_2['tf'].unique())
     common_genes = set(prior_1['gene'].unique()).intersection(
         prior_2['gene'].unique())
-    print ()
-    print ('Number of common TFs:', len(common_tfs))
-    print ('Number of common genes:', len(common_genes))
+    print ('\nNumber of common TFs:', len(common_tfs))
+    print (f'Number of common genes: {len(common_genes)}\n')
+
+    if len(common_tfs) == 0 or len(common_genes) == 0:
+        print ('No possible edges in common, skipping the analysis.')
+        return
 
     common_index = pd.MultiIndex.from_product([sorted(common_tfs),
         sorted(common_genes)])
@@ -133,12 +135,10 @@ def compare_priors(
         common_index, fill_value=0)
     comp_df = prior_1_mod.join(prior_2_mod, lsuffix='_1', rsuffix='_2')
 
-    print ()
     print ('Network density in common TF/genes for the first prior:',
         f'{100 * comp_df["edge_1"].mean():.2f} %')
     print ('Network density in common TF/genes for the second prior:',
-        f'{100 * comp_df["edge_2"].mean():.2f} %')
-    print ()
+        f'{100 * comp_df["edge_2"].mean():.2f} %\n')
     print (classification_report(comp_df['edge_1'], comp_df['edge_2']))
 
     return plot_confusion_matrix(

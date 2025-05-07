@@ -9,8 +9,7 @@ from multiprocessing import Pool
 from pathlib import Path
 from typing import List, Iterable, Tuple
 
-from sponge.config import MOTIF_URL
-from sponge.data_retrieval import download_with_progress
+from sponge.modules.utils.data_retrieval import download_with_progress
 
 FILTER_INPUT = Tuple[str, pd.DataFrame, Iterable[str], str, int, int, float]
 
@@ -18,8 +17,8 @@ FILTER_INPUT = Tuple[str, pd.DataFrame, Iterable[str], str, int, int, float]
 def filter_edges(
     bb_ref: Path,
     bed_df: pd.DataFrame,
-    motif_list: Iterable[str],
     chrom: str,
+    motif_list: Iterable[str],
     start_ind: int,
     final_ind: int,
     score_threshold: float = 400,
@@ -36,11 +35,11 @@ def filter_edges(
     bed_df : pd.DataFrame
         Pandas DataFrame containing the regions of interest in the
         chromosome, typically promoters
+    chrom : str
+        Name of the chromosome of interest
     motif_list : Iterable[str]
         Iterable containing the matrix IDs of transcription factors of
         interest
-    chrom : str
-        Name of the chromosome of interest
     start_ind : int
         Starting index of the region DataFrame (bed_df)
     final_ind : int
@@ -59,7 +58,7 @@ def filter_edges(
 
     for transcript in bed_df.index[start_ind:final_ind]:
         # Retrieve the start and end points
-        start,end = bed_df.loc[transcript][['start', 'end']]
+        start,end = bed_df.loc[transcript][['Start', 'End']]
         # Load all matches in that region from the bigbed file
         motifs = bioframe.read_bigbed(bb_ref, chrom, start=start, end=end)
         # Ensure the entire motif fits within range (not default behaviour)
@@ -81,10 +80,10 @@ def filter_edges(
 def iterate_chromosomes(
     bb_ref: Path,
     bed_df: pd.DataFrame,
-    matrix_ids: List[str],
     chromosomes: List[str],
-    n_processes: int = 1,
+    matrix_ids: List[str],
     score_threshold: float = 400,
+    n_processes: int = 1,
 ) -> List[pd.DataFrame]:
     """
     Iterates over the chromosomes in a bigbed file, intersecting the
@@ -97,14 +96,14 @@ def iterate_chromosomes(
         Path to a bigbed file that stores all possible matches
     bed_df : pd.DataFrame
         Pandas DataFrame containing the regions of interest
-    matrix_ids : List[str]
-        List of matrix IDs of transcription factors to use
     chromosomes : List[str]
         List of chromosomes to use
-    n_processes : int, optional
-        Number of processes to run in parallel, by default 1
+    matrix_ids : List[str]
+        List of matrix IDs of transcription factors to use
     score_threshold : float, optional
         Score required for selection, by default 400
+    n_processes : int, optional
+        Number of processes to run in parallel, by default 1
 
     Returns
     -------
@@ -116,11 +115,10 @@ def iterate_chromosomes(
     results_list = []
     p = Pool(n_processes)
 
-    print ()
-    print ('Iterating over the chromosomes...')
+    print ('\nIterating over the chromosomes...')
     for chrom in chromosomes:
         st_chr = time.time()
-        df_chrom = bed_df[bed_df['chrom'] == chrom]
+        df_chrom = bed_df[bed_df['Chromosome'] == chrom]
         if len(df_chrom) == 0:
             suffix = 'no transcripts'
         elif len(df_chrom) == 1:
@@ -134,7 +132,7 @@ def iterate_chromosomes(
         # Based off of performance benchmarking
         chunk_size = ceil(sqrt(len(df_chrom) / n_processes))
         chunk_divisions = [i for i in range(0, len(df_chrom), chunk_size)]
-        input_tuples = [(bb_ref, df_chrom, matrix_ids, chrom, i,
+        input_tuples = [(bb_ref, df_chrom, chrom, matrix_ids, i,
             i+chunk_size, score_threshold) for i in chunk_divisions]
         # Run the calculations in parallel
         result = p.starmap_async(filter_edges, input_tuples,
@@ -178,7 +176,7 @@ def process_chromosome(
 
     for t in bed_df.index:
         # Retrieve the start and end points
-        start,end = bed_df.loc[t][['start', 'end']]
+        start,end = bed_df.loc[t][['Start', 'End']]
         # Find the corresponding TF binding sites using binary search
         id_start = motifs_chrom['start'].searchsorted(start, 'left')
         id_end = motifs_chrom['end'].searchsorted(end, 'right')
@@ -236,7 +234,7 @@ def process_motif(
     chrom_maxs = chrom_info['index'].max()
     # Setup input for parallelisation across chromosomes
     input_tuples = [(motif_df.loc[chrom_mins[chr]:chrom_maxs[chr]],
-        bed_df[bed_df['chrom'] == chr], score_threshold)
+        bed_df[bed_df['Chromosome'] == chr], score_threshold)
         for chr in chrom_mins.index]
     # Parallelise the filtering across chromosomes
     result = p.starmap_async(process_chromosome, input_tuples,
@@ -249,14 +247,15 @@ def process_motif(
 
 
 def iterate_motifs(
+    motif_url: str,
     bed_df: pd.DataFrame,
-    tf_names: List[str],
-    matrix_ids: List[str],
     chromosomes: List[str],
-    jaspar_release: str,
+    matrix_ids: List[str],
+    tf_names: List[str],
     assembly: str,
-    n_processes: int = 1,
+    jaspar_release: str,
     score_threshold: float = 400,
+    n_processes: int = 1,
 ) -> List[pd.DataFrame]:
     """
     Iterates over the TFs to filter all binding sites within regions of
@@ -264,24 +263,27 @@ def iterate_motifs(
 
     Parameters
     ----------
+    motif_url : str
+        URL to retrieve the TF-specific binding sites from, with
+        year and genome_assembly to be formatted in
     bed_df : pd.DataFrame
         Pandas DataFrame containing the regions of interest
-    tf_names : List[str]
-        List of names of transcription factors to use, ordered the same
-        way as matrix_ids
+    chromosomes : List[str]
+        List of chromosomes to use
     matrix_ids : List[str]
         List of matrix IDs of transcription factors to use, ordered the
         same way as tf_names
-    chromosomes : List[str]
-        List of chromosomes to use
-    jaspar_release : str
-        JASPAR release used
+    tf_names : List[str]
+        List of names of transcription factors to use, ordered the same
+        way as matrix_ids
     assembly : str
         Assembly of the genome used
-    n_processes : int, optional
-        Number of processes to run in parallel, by default 1
+    jaspar_release : str
+        JASPAR release used
     score_threshold : float, optional
         Score required for selection, by default 400
+    n_processes : int, optional
+        Number of processes to run in parallel, by default 1
 
     Returns
     -------
@@ -292,21 +294,19 @@ def iterate_motifs(
 
     results_list = []
 
-    print ()
-    print ('Iterating over the transcription factors...')
+    print ('\nIterating over the transcription factors...')
     for tf,m_id in zip(tf_names, matrix_ids):
         print (f'Processing the TF {tf} with matrix ID {m_id}')
         file_name = f'{m_id}.tsv.gz'
         to_request = [tr.format(
             year=jaspar_release[-4:],
-            genome_assembly=assembly) + file_name for tr in MOTIF_URL]
+            genome_assembly=assembly) + file_name for tr in motif_url]
         # Attempt to download the TF track
         try:
             bytes_tf = download_with_progress(to_request)
         except Exception:
             print ('Unable to download', file_name)
-            print (f'The TF {tf} will be skipped')
-            print ()
+            print (f'The TF {tf} will be skipped\n')
             continue
         # Load the downloaded TF track
         MOTIF_COLS = ['chrom', 'start', 'end', 'TFName', 'p-val', 'score',

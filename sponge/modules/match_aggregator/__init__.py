@@ -1,0 +1,1 @@
+from sponge.modules.match_aggregator.match_aggregator import MatchAggregator

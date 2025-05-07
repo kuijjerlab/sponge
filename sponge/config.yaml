@@ -1,0 +1,62 @@
+# URLs to websites for downloads
+url:
+  motif:
+    full:
+    - "https://mencius.uio.no/JASPAR/JASPAR_TFBSs/{year}/\
+       JASPAR{year}_{genome_assembly}.bb"
+    - "http://expdata.cmmt.ubc.ca/JASPAR/downloads/UCSC_tracks/{year}/\
+       JASPAR{year}_{genome_assembly}.bb"
+    by_tf:
+    - "https://mencius.uio.no/JASPAR/JASPAR_TFBSs/{year}/\
+       {genome_assembly}/"
+    - "http://expdata.cmmt.ubc.ca/JASPAR/downloads/UCSC_tracks/{year}/\
+       {genome_assembly}/"
+  region:
+    xml: "http://www.ensembl.org/biomart"
+    rest: "https://rest.ensembl.org"
+  protein: "https://rest.uniprot.org/idmapping/"
+  ppi: "https://string-db.org/api/tsv/"
+  homology: "https://api.ncbi.nlm.nih.gov/datasets/v2/"
+  chrom_mapping: "https://hgdownload.soe.ucsc.edu/goldenPath/\
+                  {genome_assembly}/database/chromAlias.txt.gz"
+
+# Synonyms for genome assembly versions
+assembly_synonym:
+  GRCh38: "hg38"
+  GRCh37: "hg19"
+  T2T-CHM13v2.0: "hs1"
+
+# Default chromosomes to use
+default_chromosomes: [
+  "chr1", "chr2", "chr3", "chr4", "chr5", "chr6", "chr7", "chr8",
+  "chr9", "chr10", "chr11", "chr12", "chr13", "chr14", "chr15", "chr16",
+  "chr17", "chr18", "chr19", "chr20", "chr21", "chr22", "chrX", "chrY"
+]
+
+# Default chromosome name mapping from Ensembl to UCSC
+default_mapping:
+  "1": "chr1"
+  "2": "chr2"
+  "3": "chr3"
+  "4": "chr4"
+  "5": "chr5"
+  "6": "chr6"
+  "7": "chr7"
+  "8": "chr8"
+  "9": "chr9"
+  "10": "chr10"
+  "11": "chr11"
+  "12": "chr12"
+  "13": "chr13"
+  "14": "chr14"
+  "15": "chr15"
+  "16": "chr16"
+  "17": "chr17"
+  "18": "chr18"
+  "19": "chr19"
+  "20": "chr20"
+  "21": "chr21"
+  "22": "chr22"
+  "X": "chrX"
+  "Y": "chrY"
+  "MT": "chrM"

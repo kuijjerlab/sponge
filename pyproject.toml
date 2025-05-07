@@ -8,9 +8,9 @@ packages = ["sponge"]
 [project]
 name = "netzoopy-sponge"
 authors = [
-    {name = "Ladislav Hovan", email = "ladislav.hovan@ncmm.uio.no"},
+    {name = "Ladislav Hovan", email = "ladislav.hovan@ncmbm.uio.no"},
 ]
-version = "1.1.0"
+version = "2.0.0"
 description = "A package to generate prior gene regulatory networks."
 readme = "README.md"
 license = {text = "GPL-3"}
@@ -34,7 +34,7 @@ dependencies = [
 netzoopy-sponge = "sponge.cli:cli"
 
 [project.urls]
-Repository = "https://github.com/ladislav-hovan/sponge"
+Repository = "https://github.com/kuijjerlab/sponge"
 
 [tool.pytest.ini_options]
 markers = [

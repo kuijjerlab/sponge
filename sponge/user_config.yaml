@@ -1,0 +1,34 @@
+# Any non-specified option will use the default value
+default_workflow: True  # True by default
+on_the_fly_processing: False  # False by default
+genome_assembly: "hg38"
+motif:
+  jaspar_release:  # Default is newest release
+  tfbs_file:
+  # If neither tf_names nor matrix_ids are specified,
+  # all vertebrate TFs are selected
+  tf_names:
+  matrix_ids:
+  unique_motifs: False  # False by default
+  drop_heterodimers: True  # True by default
+region:
+  region_file:
+  filter_basic: True  # True by default
+  # This setting overwrites chromosomes if True
+  use_all_chromosomes: False  # False by default
+  # If chromosomes is not specified: all autosomes + X, Y
+  chromosomes:
+  tss_offset: [-750, 250]
+filter:
+  n_processes: 1
+  score_threshold: 400
+ppi:
+  physical_only: True  # True by default
+motif_output:
+  file_name: "motif_prior.tsv"
+  use_gene_names: True  # True by default
+  protein_coding_only: False  # False by default
+  weighted: False  # False by default
+ppi_output:
+  file_name: "ppi_prior.tsv"
+  weighted: False  # False by default
