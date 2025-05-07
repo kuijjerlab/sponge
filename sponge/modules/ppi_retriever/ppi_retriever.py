@@ -7,35 +7,52 @@ import pandas as pd
 from io import BytesIO
 from typing import Iterable
 
-from sponge.config_manager import ConfigManager
 from sponge.modules.protein_id_mapper import ProteinIDMapper
-from sponge.modules.version_logger import VersionLogger
 
 ### Class definition ###
 class PPIRetriever:
     # Methods
     def __init__(
         self,
-        core_config: ConfigManager,
-        user_config: ConfigManager,
-        version_logger: VersionLogger,
+        ppi_url: str,
+        protein_url: str,
     ):
-        
-        self.core_config = core_config
-        self.ppi_url = core_config['url']['ppi']
-        self.protein_url = core_config['url']['protein']
-        self.version_logger = version_logger
-        self.physical_only = user_config['ppi']['physical_only']
+        """
+        Class that retrieves PPI data from the STRING database.
+
+        Parameters
+        ----------
+        ppi_url : str
+            URL of the STRING database API
+        protein_url : str
+            URL of the UniProt ID mapping service
+        """
+
+        self.ppi_url = ppi_url
+        self.protein_url = protein_url
+        # To be overwritten once retrieved
+        self.ppi_frame = None
+        # Overwritten by registering with a VersionLogger instance
+        self.version_logger = None
 
 
     def retrieve_ppi(
         self,
         tf_names: Iterable[str],
+        physical_only: bool = True,
     ):
         """
         Retrieves the protein-protein interaction data from the STRING
-        database for the previously identified transcription factors.
-        Stores the resulting network internally.
+        database for the provided proteins. Stores the resulting network
+        internally.
+
+        Parameters
+        ----------
+        tf_names : Iterable[str]
+            Names of the proteins
+        physical_only : bool, optional
+            Whether to consider only physical interactions,
+            by default True
         """
 
         print ('\n--- Retrieving protein-protein interaction data ---')
@@ -58,8 +75,7 @@ class PPIRetriever:
         version_request = requests.get(f'{self.ppi_url}version')
         version_df = pd.read_csv(BytesIO(version_request.content), sep='\t',
             dtype=str)
-        self.version_logger.write_retrieved('string_ppi',
-            version_df['string_version'].loc[0])
+        self.write_retrieved('string_ppi', version_df['string_version'].loc[0])
 
         if len(ids_to_check) > 0:
             # Retrieve UniProt identifiers for the genes with differing names
@@ -80,7 +96,7 @@ class PPIRetriever:
         print ('Retrieving the network from STRING...')
         network_str = (f'{self.ppi_url}network?'
             f'identifiers={query_string_filt}&species=9606')
-        if self.physical_only:
+        if physical_only:
             network_str += '&network_type=physical'
         request = requests.get(network_str)
         ppi_df = pd.read_csv(BytesIO(request.content), sep='\t')
@@ -102,3 +118,28 @@ class PPIRetriever:
         print (f'Final number of edges: {len(ppi_df)}')
 
         self.ppi_frame = ppi_df
+
+
+    def get_ppi_frame(
+        self,
+    ) -> pd.DataFrame:
+        """
+        Get the pandas DataFrame of the PPI network, can be None
+        if it wasn't retrieved yet.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame containing the PPI network
+        """
+
+        return self.ppi_frame
+
+    # Placeholder functions to be replaced with VersionLogger if any
+    def write_retrieved(
+        self,
+        *args,
+        **kwargs,
+    ) -> None:
+
+        pass

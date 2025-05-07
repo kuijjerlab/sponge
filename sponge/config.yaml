@@ -2,12 +2,12 @@
 url:
   motif:
     full:
-    - "https://frigg.uio.no/JASPAR/JASPAR_TFBSs/{year}/\
+    - "https://mencius.uio.no/JASPAR/JASPAR_TFBSs/{year}/\
        JASPAR{year}_{genome_assembly}.bb"
     - "http://expdata.cmmt.ubc.ca/JASPAR/downloads/UCSC_tracks/{year}/\
        JASPAR{year}_{genome_assembly}.bb"
     by_tf:
-    - "https://frigg.uio.no/JASPAR/JASPAR_TFBSs/{year}/\
+    - "https://mencius.uio.no/JASPAR/JASPAR_TFBSs/{year}/\
        {genome_assembly}/"
     - "http://expdata.cmmt.ubc.ca/JASPAR/downloads/UCSC_tracks/{year}/\
        {genome_assembly}/"

@@ -14,6 +14,7 @@ motif:
 region:
   region_file:
   filter_basic: True  # True by default
+  # This setting overwrites chromosomes if True
   use_all_chromosomes: False  # False by default
   # If chromosomes is not specified: all autosomes + X, Y
   chromosomes:

@@ -121,7 +121,7 @@ def compare_priors(
     common_genes = set(prior_1['gene'].unique()).intersection(
         prior_2['gene'].unique())
     print ('\nNumber of common TFs:', len(common_tfs))
-    print ('Number of common genes:', len(common_genes), '\n')
+    print (f'Number of common genes: {len(common_genes)}\n')
 
     if len(common_tfs) == 0 or len(common_genes) == 0:
         print ('No possible edges in common, skipping the analysis.')

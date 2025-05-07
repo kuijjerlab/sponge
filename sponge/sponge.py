@@ -1,8 +1,10 @@
 ### Imports ###
+import inspect
+
 from bioframe import assembly_info
 from functools import wraps
 from pathlib import Path
-from typing import Union
+from typing import Callable, Union
 
 from sponge.config_manager import ConfigManager
 from sponge.modules.data_retriever import DataRetriever
@@ -14,39 +16,63 @@ from sponge.modules.ppi_retriever import PPIRetriever
 from sponge.modules.utils import process_jaspar_version
 from sponge.modules.version_logger import VersionLogger
 
-# General TODOs:
-# TODO: For most class definitions, refactor out passing the entire config
-# (just the relevant parts)
-# TODO: Potentially refactor out VersionLogger too
-# Ideally a wrapper would be implemented that would log the version
-# Requires the classes to store the version information after retrieval
-# Would this mess up the accuracy of the timestamp?
-
 ### Decorators ###
 def allow_config_update(
-    function,
-) -> None:
+    function: Callable,
+) -> Callable:
+    """
+    Adds the ability for a method to update the user configuration
+    through an optional argument user_config_update or directly through
+    keywords.
 
-    # sig = utilipy.utils.inspect.fuller_signature(function)
-    # param = inspect.Parameter('kw1', inspect._KEYWORD_ONLY, default='has a value', annotation='added kwarg')
-    # sig = sig.insert_parameter(sig.index_var_keyword, param)
+    Parameters
+    ----------
+    function : Callable
+        Method to be modified
 
-    # @utilipy.utils.functools.wraps(function, signature=sig)
+    Returns
+    -------
+    Callable
+        Modified version of the method
+    """
 
     @wraps(function)
     def wrapper(
         self,
-        user_config_update: dict = {}
+        user_config_update: dict = {},
+        **kwargs,
     ) -> None:
 
         self.user_config.deep_update(user_config_update)
+        self.user_config.deep_update(kwargs)
         self.fill_default_values()
         function(self)
 
-    # TODO: Find a way to update signature too
+    # Update function signature
+    orig_signature = inspect.signature(function)
+    new_params = orig_signature.parameters.copy()
+    new_params['user_config_update'] = inspect.Parameter('user_config_update',
+        inspect.Parameter.POSITIONAL_OR_KEYWORD, default={})
+    new_params['**kwargs'] = inspect.Parameter('kwargs',
+        inspect.Parameter.VAR_KEYWORD)
+    new_signature = inspect.Signature(parameters=new_params.values())
+    wrapper.__signature__ = new_signature
+    # Update function docstring
     if wrapper.__doc__ is None:
         wrapper.__doc__ = ''
-    wrapper.__doc__ += ("\nbbb")
+    wrapper.__doc__ += (
+        """
+        Parameters
+        ----------
+        user_config_update : dict, optional
+            Dictionary to be used for updating the user configuration
+            prior to executing the method, by default {}
+        **kwargs
+            Keyword arguments will be used to update the user
+            configuration in the class instance prior to executing
+            the method, they take priority over user_config_update
+        """
+    )
 
     return wrapper
 
@@ -59,6 +85,24 @@ class Sponge:
         config: Union[Path, dict] = 'user_config.yaml',
         config_update: dict = {},
     ):
+        """
+        Class that generates a prior gene regulatory network and a prior
+        protein-protein interaction network based on the provided
+        settings.
+
+        Parameters
+        ----------
+        temp_folder : Path, optional
+            Folder to save the temporary files to,
+            by default '.sponge_temp/'
+        config : Union[Path, dict], optional
+            Path to a configuration file in .yaml format or a dictionary
+            containing the settings, by default 'user_config.yaml'
+        config_update : dict, optional
+            Dictionary that updates the provided settings, useful for
+            changing a small subset of the settings from a config file,
+            by default {}
+        """
 
         self.temp_folder = temp_folder
         # Load the file with internal module inputs
@@ -84,6 +128,10 @@ class Sponge:
     def fill_default_values(
         self,
     ) -> None:
+        """
+        Fills in the values for chromosomes and jaspar_release in the
+        stored user configuration if needed.
+        """
 
         # Fill in chromosomes
         if self.user_config['region']['use_all_chromosomes']:
@@ -102,6 +150,11 @@ class Sponge:
     def retrieve_data(
         self,
     ) -> None:
+        """
+        Retrieves the initial files required for running the SPONGE
+        pipeline. Some online services are still accessed later
+        in the process.
+        """
 
         data = DataRetriever(
             self.temp_folder,
@@ -120,7 +173,8 @@ class Sponge:
         self,
     ) -> None:
         """
-        aaa
+        Selects the TF motifs to be used in the SPONGE pipeline based
+        on the settings from the configuration.
         """
 
         motifs = MotifSelector(
@@ -140,18 +194,28 @@ class Sponge:
     def filter_tfbs(
         self,
     ) -> None:
+        """
+        Filter the TF binding sites to match the regions of interest
+        and score threshold from the configuration.
+        """
 
-        match_filter = MatchFilter(self.core_config, self.user_config,
-            self.version_logger, self.tfbs_path, self.regions_path)
+        match_filter = MatchFilter(
+            self.tfbs_path,
+            self.regions_path,
+            self.user_config['genome_assembly'],
+            self.user_config['motif']['jaspar_release'],
+            self.core_config['url']['motif']['by_tf'],
+        )
+        self.version_logger.register_class(match_filter)
         match_filter.filter_matches(
-            self.tf_names,
-            self.matrix_ids,
-            self.user_config['filter']['score_threshold'],
             self.user_config['region']['chromosomes'],
+            self.matrix_ids,
+            self.tf_names,
+            self.user_config['filter']['score_threshold'],
             self.user_config['filter']['n_processes'],
         )
 
-        self.all_edges = match_filter.all_edges
+        self.all_edges = match_filter.get_all_edges()
         self.all_edges['weight'] = self.all_edges['score'] / 100
         self.all_edges['edge'] = 1
 
@@ -160,15 +224,24 @@ class Sponge:
     def retrieve_ppi(
         self,
     ) -> None:
+        """
+        Retrieves PPI data for selected TFs from the STRING database.
+        """
 
-        ppi = PPIRetriever(self.core_config, self.user_config,
-            self.version_logger)
+        ppi = PPIRetriever(
+            self.core_config['url']['ppi'],
+            self.core_config['url']['protein'],
+        )
+        self.version_logger.register_class(ppi)
         filtered_tfs = self.all_edges['TFName'].unique()
         mapped_tfs = [self.homolog_mapping[x] if x in self.homolog_mapping
             else x for x in filtered_tfs]
-        ppi.retrieve_ppi(mapped_tfs)
+        ppi.retrieve_ppi(
+            mapped_tfs,
+            self.user_config['ppi']['physical_only'],
+        )
 
-        self.ppi_frame = ppi.ppi_frame
+        self.ppi_frame = ppi.get_ppi_frame()
         self.ppi_frame['edge'] = 1
 
 
@@ -176,14 +249,20 @@ class Sponge:
     def write_output_files(
         self,
     ) -> None:
+        """
+        Writes the generated gene regulatory and PPI priors to files.
+        """
 
-        aggregator = MatchAggregator(self.all_edges, self.regions_path,
-            self.homolog_mapping)
+        aggregator = MatchAggregator(
+            self.all_edges,
+            self.regions_path,
+            self.homolog_mapping,
+        )
         aggregator.aggregate_matches(
             self.user_config['motif_output']['use_gene_names'],
             self.user_config['motif_output']['protein_coding_only'],
         )
-        edges = aggregator.edges
+        edges = aggregator.get_edges()
 
         writer = FileWriter()
 
@@ -194,12 +273,20 @@ class Sponge:
         label = 'Gene stable ID'
         if self.user_config['motif_output']['use_gene_names']:
             label = 'Gene name'
-        writer.write_network_file(edges, ['TFName', label], motif_weight,
-            self.user_config['motif_output']['file_name'])
+        writer.write_network_file(
+            edges,
+            ['TFName', label],
+            motif_weight,
+            self.user_config['motif_output']['file_name'],
+        )
 
         print ('\n--- Saving the PPI prior ---')
         ppi_weight = 'edge'
         if self.user_config['ppi_output']['weighted']:
             ppi_weight = 'score'
-        writer.write_network_file(self.ppi_frame, ['tf1', 'tf2'], ppi_weight,
-            self.user_config['ppi_output']['file_name'])
+        writer.write_network_file(
+            self.ppi_frame,
+            ['tf1', 'tf2'],
+            ppi_weight,
+            self.user_config['ppi_output']['file_name'],
+        )

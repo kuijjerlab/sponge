@@ -7,58 +7,98 @@ import pandas as pd
 from pathlib import Path
 from typing import Iterable, Optional
 
-from sponge.config_manager import ConfigManager
-from sponge.modules.utils import iterate_chromosomes, iterate_motifs, \
-    process_jaspar_version
-from sponge.modules.version_logger import VersionLogger
+from sponge.modules.utils import iterate_chromosomes, iterate_motifs
 
 ### Class definition ###
 class MatchFilter:
     # Methods
     def __init__(
         self,
-        core_config: ConfigManager,
-        user_config: ConfigManager,
-        version_logger: VersionLogger,
         tfbs_path: Optional[Path],
         regions_path: Path,
+        genome_assembly: Optional[str] = None,
+        jaspar_release: Optional[str] = None,
+        motif_url: Optional[str] = None,
     ):
+        """
+        Class which filters all the predicted TF binding sites to the
+        regions of interest.
 
-        self.url = core_config['url']['motif']['by_tf']
-        self.settings = user_config['filter']
-        self.assembly = user_config['genome_assembly']
-        self.jaspar_release = user_config['motif']['jaspar_release']
-        self.version_logger = version_logger
+        Parameters
+        ----------
+        tfbs_path : Optional[Path]
+            Path to the file containing the TF binding sites or None
+            to use on the fly processing instead, in which case
+            genome_assembly, jaspar_release and motif_url cannot be None
+        regions_path : Path
+            Path to the file containing the regions of interest
+        genome_assembly : Optional[str], optional
+            Genome assembly to use, only used if tfbs_path is None,
+            by default None
+        jaspar_release : Optional[str], optional
+            Version of the JASPAR release to use, only used if tfbs_path
+            is None, by default None
+        motif_url : Optional[str], optional
+            URL to retrieve the TF-specific binding sites from, with
+            year and genome_assembly to be formatted in, only used if
+            tfbs_path is None, by default None
+
+        Raises
+        ------
+        ValueError
+            If tfbs_path and either genome_assembly, jaspar_release
+            or motif_url are None
+        """
+
+        if tfbs_path is None:
+            error_str = ('At least one of tfbs_path and {parameter} '
+                'must be specified')
+            if genome_assembly is None:
+                raise ValueError(error_str.format(parameter='genome_assembly'))
+            if jaspar_release is None:
+                raise ValueError(error_str.format(parameter='jaspar_release'))
+            if motif_url is None:
+                raise ValueError(error_str.format(parameter='motif_url'))
+
         self.tfbs_path = tfbs_path
         self.regions_path = regions_path
+        self.assembly = genome_assembly
+        self.jaspar_release = jaspar_release
+        self.url = motif_url
+        # To be overwritten once retrieved
+        self.all_edges = None
+        # Overwritten by registering with a VersionLogger instance
+        self.version_logger = None
 
 
     def filter_matches(
         self,
-        tf_names: Iterable[str],
+        chromosomes: Iterable[str],
         matrix_ids: Iterable[str],
-        score_threshold: Optional[float] = None,
-        chromosomes: Optional[Iterable[str]] = None,
-        n_processes: Optional[int] = None,
+        tf_names: Optional[Iterable[str]] = None,
+        score_threshold: float = 400,
+        n_processes: int = 1,
     ) -> None:
         """
-        Filters all the binding sites in the JASPAR bigbed file to
-        select only the ones in the promoter regions of genes on given
-        chromosomes, subject to a score threshold. Stores the result
-        internally.
+        Filters the binding sites in the bigbed file or on the fly
+        downloaded JASPAR tsv files to select only those of the TFs
+        of interest in the regions of interest on given chromosomes,
+        subject to a score threshold. Stores the result internally.
 
         Parameters
         ----------
-        score_threshold : Optional[float], optional
+        chromosomes : Iterable[str]
+            Which chromosomes to use
+        matrix_ids : Iterable[str]
+            Which TF matrix IDs to use
+        tf_names : Optional[Iterable[str]], optional
+            Iterable of TF names matching the matrix IDs, only required
+            if on the fly download will be used, by default None
+        score_threshold : float, optional
             Minimal score of a match for it to be included in the
-            prior or None to follow the option from the initialisation,
-            by default None
-        chromosomes : Optional[Iterable[str]], optional
-            Which chromosomes to get the promoters from or None to
-            follow the option from the initialisation, by default None
-        n_processes : Optional[int], optional
-            Number of processes to run in parallel or None to
-            follow the option from the initialisation, by default None
+            prior, by default 400
+        n_processes : int, optional
+            Number of processes to run in parallel, by default 1
         """
 
         print ('\n--- Filtering binding sites in the regions of interest ---')
@@ -69,15 +109,27 @@ class MatchFilter:
 
         start_time = time.time()
         if self.tfbs_path is None:
-            jaspar_release = process_jaspar_version(self.jaspar_release)
-            results_list = iterate_motifs(self.url, df_full, tf_names,
-                matrix_ids, chromosomes, jaspar_release,
-                self.assembly, n_processes, score_threshold)
-            self.version_logger.write_retrieved('tfbs_file',
-                jaspar_release)
+            results_list = iterate_motifs(
+                self.url,
+                df_full,
+                chromosomes,
+                matrix_ids,
+                tf_names,
+                self.assembly,
+                self.jaspar_release,
+                score_threshold,
+                n_processes,
+            )
+            self.write_retrieved('tfbs_file', self.jaspar_release)
         else:
-            results_list = iterate_chromosomes(self.tfbs_path, df_full,
-                matrix_ids, chromosomes, n_processes, score_threshold)
+            results_list = iterate_chromosomes(
+                self.tfbs_path,
+                df_full,
+                chromosomes,
+                matrix_ids,
+                score_threshold,
+                n_processes,
+            )
 
         elapsed = time.time() - start_time
 
@@ -86,3 +138,28 @@ class MatchFilter:
         # Save the final results, ignoring the index makes this fast
         # The index is irrelevant
         self.all_edges = pd.concat(results_list, ignore_index=True)
+
+
+    def get_all_edges(
+        self,
+    ) -> pd.DataFrame:
+        """
+        Get the pandas DataFrame of all the filtered edges, can be None
+        if it wasn't created yet.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame containing all the filtered edges
+        """
+
+        return self.all_edges
+
+    # Placeholder functions to be replaced with VersionLogger if any
+    def write_retrieved(
+        self,
+        *args,
+        **kwargs,
+    ) -> None:
+
+        pass

@@ -40,7 +40,7 @@ def cli(
         help='create an example config file with the default values called '
             'user_config.yaml and quit',
         action='store_true')
-    
+
     args = parser.parse_args()
 
     if args.example_config:
