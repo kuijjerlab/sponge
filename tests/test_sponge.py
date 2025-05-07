@@ -87,6 +87,20 @@ def test_get_chromosome_mapping(input, expected_type, core_config):
 
     assert type(mapping) == expected_type
 
+# Dictionary update functions
+
+
+# JASPAR versioning functions
+
+
+# Motif information functions
+
+
+# String manipulation functions
+
+
+# TFBS filtering functions
+
 
 # ConfigReader class
 

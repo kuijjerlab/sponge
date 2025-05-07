@@ -16,14 +16,6 @@ from sponge.modules.ppi_retriever import PPIRetriever
 from sponge.modules.utils import process_jaspar_version
 from sponge.modules.version_logger import VersionLogger
 
-# General TODOs:
-# TODO: For most class definitions, refactor out passing the entire config
-# (just the relevant parts)
-# TODO: Potentially refactor out VersionLogger too
-# Ideally a wrapper would be implemented that would log the version
-# Requires the classes to store the version information after retrieval
-# Would this mess up the accuracy of the timestamp?
-
 ### Decorators ###
 def allow_config_update(
     function: Callable,
