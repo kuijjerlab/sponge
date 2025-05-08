@@ -39,6 +39,7 @@ class PPIRetriever:
     def retrieve_ppi(
         self,
         tf_names: Iterable[str],
+        score_threshold: int = 400,
         physical_only: bool = True,
     ):
         """
@@ -50,6 +51,9 @@ class PPIRetriever:
         ----------
         tf_names : Iterable[str]
             Names of the proteins
+        score_threshold : float, optional
+            Minimal interaction score for it to be included in the
+            network, by default 400
         physical_only : bool, optional
             Whether to consider only physical interactions,
             by default True
@@ -95,7 +99,8 @@ class PPIRetriever:
 
         print ('Retrieving the network from STRING...')
         network_str = (f'{self.ppi_url}network?'
-            f'identifiers={query_string_filt}&species=9606')
+            f'identifiers={query_string_filt}&species=9606&'
+            f'required_score={score_threshold}')
         if physical_only:
             network_str += '&network_type=physical'
         request = requests.get(network_str)

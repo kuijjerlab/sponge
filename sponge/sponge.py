@@ -238,6 +238,7 @@ class Sponge:
             else x for x in filtered_tfs]
         ppi.retrieve_ppi(
             mapped_tfs,
+            self.user_config['ppi']['score_threshold'],
             self.user_config['ppi']['physical_only'],
         )
 

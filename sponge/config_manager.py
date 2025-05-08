@@ -52,7 +52,8 @@ class ConfigManager:
             self.deep_update(config)
         elif not os.path.isfile(config):
             # Use the default user config file - don't change any defaults
-            print ('Using the default settings.')
+            print (f'Could not locate file {config}, '
+                'using the default settings.')
         else:
             # Update with provided config (core or user)
             with open(config, 'r') as f:
