@@ -13,6 +13,8 @@ on:
 
 jobs:
   os-python-compatibility:
+    name: Test SPONGE on multiple OS and Python versions
+
     strategy:
       matrix:
         os: [ 'ubuntu-latest', 'macos-latest' ]
