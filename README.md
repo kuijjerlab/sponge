@@ -219,15 +219,19 @@ a bed file.
 ### Container
 SPONGE releases are also provided as Docker containers.
 The most basic way of running would involve mounting a directory to the
-`/data` directory on the container, where networks will be written by
-default:
+`/app` directory on the container, where SPONGE will be run:
 
 ``` bash
-docker run --mount type=bind,source="$(pwd)"/output,target=/data ghcr.io/kuijjerlab/netzoopy_sponge:latest
+docker run --mount type=bind,source="$(pwd)"/sponge_run,target=/app ghcr.io/kuijjerlab/netzoopy_sponge:latest --help
 ```
 
-Help can be requested with the `--help` argument.
 The arguments match those of the `netzoopy-sponge` command line script.
+In particular, it could be useful to generate an example input file
+first using the `--example` option, then editing the configuration file
+as appropriate.
+Without mounting a directory, it is impossible to both provide an input
+file and retrieve the generated prior networks, unless of course the
+container is run using something like the `singularity shell` command.
 
 
 ## Project Status
