@@ -56,6 +56,8 @@ class MatchAggregator:
             genes, by default False
         """
 
+        print ('\n--- Aggregating transcript matches into genes ---')
+
         # Add the gene name data to the edges previously found
         motif_df = self.initial_edges.join(other=self.regions.set_index(
             'Transcript stable ID'), on='transcript')
