@@ -239,6 +239,16 @@ Without mounting a directory, it is impossible to both provide an input
 file and retrieve the generated prior networks, unless of course the
 container is run using something like the `singularity shell` command.
 
+Because of the libraries used for bigbed format support, SPONGE is not
+currently supported on Windows. 
+Therefore, this container is probably the best way to run it there,
+and the command equivalent to the above in the command prompt would look
+like this:
+
+``` bash
+docker.exe run --mount type=bind,source="%cd%"/sponge_run,target=/app ghcr.io/kuijjerlab/netzoopy_sponge:latest --help
+```
+
 
 ## Project Status
 The project is: _in progress_.
