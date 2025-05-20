@@ -173,6 +173,12 @@ The physical storage footprint is much reduced.
 This option is enabled with `on_the_fly_processing: True` in the
 configuration file.
 
+For filtering, the default setting of `n_processes` is set to 1, but
+we highly recommend increasing it if your machine is capable of it.
+During our testing, the entire default workflow could be done in just
+over 10 minutes with 16 processes (this excludes the time taken to
+download the required files).
+
 
 ### File formats
 Users are free to provide their own files for the list of regions of
