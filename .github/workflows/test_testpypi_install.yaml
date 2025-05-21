@@ -25,6 +25,10 @@ jobs:
       run: |
         python -m pip install --upgrade pip
 
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
     - name: Install from TestPyPI
       run: |
         pip install --index-url https://test.pypi.org/simple/ netzoopy-sponge
