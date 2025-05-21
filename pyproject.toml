@@ -10,7 +10,7 @@ name = "netzoopy-sponge"
 authors = [
     {name = "Ladislav Hovan", email = "ladislav.hovan@ncmbm.uio.no"},
 ]
-version = "2.0.3"
+version = "2.0.4"
 description = "A package to generate prior gene regulatory networks."
 readme = "README.md"
 license = "GPL-3.0-or-later"
