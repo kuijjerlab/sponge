@@ -3,7 +3,7 @@ import os
 import yaml
 
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 from sponge.modules.utils import recursive_update
 
@@ -52,7 +52,8 @@ class ConfigManager:
             self.deep_update(config)
         elif not os.path.isfile(config):
             # Use the default user config file - don't change any defaults
-            print ('Using the default settings.')
+            print (f'Could not locate file {config}, '
+                'using the default settings.')
         else:
             # Update with provided config (core or user)
             with open(config, 'r') as f:
@@ -266,3 +267,30 @@ class ConfigManager:
         last_level = self._retrieve_level(key[:-1])
 
         return last_level[key[-1]]
+
+
+    def set_value(
+        self,
+        key: Union[str, List[str]],
+        value: Any,
+    ) -> Union[str, dict]:
+        """
+        Updates the value of the entry in the managed configuration
+        specified by the given key or list of keys.
+
+        Parameters
+        ----------
+        key : Union[str, List[str]]
+            Key or list of keys specifying the successive levels in the
+            managed configuration
+        value : Any
+            New value for the specified entry
+        """
+
+        if type(key) == str:
+            key = [key]
+
+        # Can throw KeyErrors on purpose
+        last_level = self._retrieve_level(key[:-1])
+
+        last_level[key[-1]] = value

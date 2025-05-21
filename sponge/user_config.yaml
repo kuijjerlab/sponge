@@ -23,6 +23,7 @@ filter:
   n_processes: 1
   score_threshold: 400
 ppi:
+  score_threshold: 400
   physical_only: True  # True by default
 motif_output:
   file_name: "motif_prior.tsv"

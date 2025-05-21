@@ -145,6 +145,12 @@ class Sponge:
         if self.user_config['motif']['jaspar_release'] is None:
             newest_release = process_jaspar_version(None)
             self.user_config['motif']['jaspar_release'] = newest_release
+        # Turn strings into lists where appropriate
+        for option in [['motif', 'tf_names'], ['motif', 'matrix_ids'],
+            ['region', 'chromosomes']]:
+            value = self.user_config.get_value(option)
+            if type(value) == str:
+                self.user_config.set_value(option, [value])
 
 
     def retrieve_data(
@@ -238,6 +244,7 @@ class Sponge:
             else x for x in filtered_tfs]
         ppi.retrieve_ppi(
             mapped_tfs,
+            self.user_config['ppi']['score_threshold'],
             self.user_config['ppi']['physical_only'],
         )
 

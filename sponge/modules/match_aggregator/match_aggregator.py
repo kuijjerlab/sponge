@@ -56,10 +56,12 @@ class MatchAggregator:
             genes, by default False
         """
 
+        print ('\n--- Aggregating transcript matches into genes ---')
+
         # Add the gene name data to the edges previously found
         motif_df = self.initial_edges.join(other=self.regions.set_index(
             'Transcript stable ID'), on='transcript')
-        print ('\nNumber of TF - transcript edges:', len(motif_df))
+        print ('Number of TF - transcript edges:', len(motif_df))
         if protein_coding_only:
             motif_df = motif_df[motif_df['Gene type'] ==
                 'protein_coding'].copy()

@@ -39,6 +39,7 @@ class PPIRetriever:
     def retrieve_ppi(
         self,
         tf_names: Iterable[str],
+        score_threshold: int = 400,
         physical_only: bool = True,
     ):
         """
@@ -50,12 +51,20 @@ class PPIRetriever:
         ----------
         tf_names : Iterable[str]
             Names of the proteins
+        score_threshold : float, optional
+            Minimal interaction score for it to be included in the
+            network, by default 400
         physical_only : bool, optional
             Whether to consider only physical interactions,
             by default True
         """
 
         print ('\n--- Retrieving protein-protein interaction data ---')
+
+        if len(tf_names) <= 1:
+            print ('Not enough TFs were provided to build a PPI network.')
+            self.ppi_frame = pd.DataFrame(columns=['tf1', 'tf2', 'score'])
+            return
 
         print ('Retrieving mapping from STRING...')
         query_string = '%0d'.join(tf_names)
@@ -80,7 +89,7 @@ class PPIRetriever:
         if len(ids_to_check) > 0:
             # Retrieve UniProt identifiers for the genes with differing names
             print ('Checking the conflicts in the UniProt database...')
-            mapper = ProteinIDMapper(self.core_config['url']['protein'])
+            mapper = ProteinIDMapper(self.protein_url)
             uniprot_df = mapper.get_uniprot_mapping('Gene_Name', 'UniProtKB',
                 ids_to_check).set_index('from')
             p_to_q = {p: q for q,p in zip(diff_df['queryName'],
@@ -91,11 +100,17 @@ class PPIRetriever:
                 if (p not in uniprot_df.index or q not in uniprot_df.index
                     or uniprot_df.loc[p, 'to'] == uniprot_df.loc[q, 'to']):
                     matching_ids.append(p)
-        query_string_filt = '%0d'.join(matching_ids)
+
+        if len(matching_ids) <= 1:
+            print ('Not enough IDs were matched to build a PPI network.')
+            self.ppi_frame = pd.DataFrame(columns=['tf1', 'tf2', 'score'])
+            return
 
         print ('Retrieving the network from STRING...')
+        query_string_filt = '%0d'.join(matching_ids)
         network_str = (f'{self.ppi_url}network?'
-            f'identifiers={query_string_filt}&species=9606')
+            f'identifiers={query_string_filt}&species=9606&'
+            f'required_score={score_threshold}')
         if physical_only:
             network_str += '&network_type=physical'
         request = requests.get(network_str)
