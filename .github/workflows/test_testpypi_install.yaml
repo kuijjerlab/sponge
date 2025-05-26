@@ -39,3 +39,14 @@ jobs:
     - name: Test basic functionality
       run: |
         netzoopy-sponge --help
+
+    - name: Save release version
+      run: |
+        echo ${{ github.event.workflow_run.head_branch }} >> version.txt
+    
+    - name: Upload artifact with the version
+      uses: actions/upload-artifact@v4
+      with:
+        name: version
+        path: ./version.txt
+        retention-days: 1

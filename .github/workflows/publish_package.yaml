@@ -19,8 +19,9 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     permissions:
-      packages: write
+      actions: read
       contents: read
+      packages: write
 
     steps:
     - name: Checkout repository
@@ -32,6 +33,23 @@ jobs:
     - name: Check basic functionality
       run: docker run $IMAGE_NAME --help
 
+    - name: Download the artifact with the version
+      uses: dawidd6/action-download-artifact@v9
+      with:
+        name: version
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        workflow: test_testpypi_install.yaml
+        workflow_conclusion: success
+
+    - name: Check the downloaded files
+      run: |
+        ls -lah
+
+    - name: Extract the version
+      run: |
+        VERSION=$(cat version.txt)
+        echo VERSION=$VERSION
+
     - name: Log in to registry
       run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
@@ -41,9 +59,6 @@ jobs:
 
         # This changes all uppercase characters to lowercase
         IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
-
-        # This strips the git ref prefix from the version
-        VERSION=$(echo "${{ github.event.workflow_run.head_branch }}" | sed -e 's,.*/\(.*\),\1,')
 
         # This strips the "v" prefix from the tag name
         [[ $VERSION =~ v[0-9]+.[0-9]+.[0-9]+ ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
