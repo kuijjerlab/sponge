@@ -10,7 +10,7 @@ name = "netzoopy-sponge"
 authors = [
     {name = "Ladislav Hovan", email = "ladislav.hovan@ncmbm.uio.no"},
 ]
-version = "2.0.4"
+dynamic = ["version"]
 description = "A package to generate prior gene regulatory networks."
 readme = "README.md"
 license = "GPL-3.0-or-later"
@@ -42,3 +42,7 @@ markers = [
     "network: marks tests that require internet connection",
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
 ]
+
+[tool.setuptools_scm]
+version_scheme = "only-version"
+local_scheme = "no-local-version"
