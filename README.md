@@ -237,7 +237,14 @@ first using the `--example` option, then editing the configuration file
 as appropriate.
 Without mounting a directory, it is impossible to both provide an input
 file and retrieve the generated prior networks, unless of course the
-container is run using something like the `singularity shell` command.
+container is run interactively:
+
+``` bash
+docker run -it --entrypoint bash ghcr.io/kuijjerlab/netzoopy_sponge:latest
+```
+
+In HPC environments, something like the `apptainer shell` command would
+work.
 
 Because of the libraries used for bigbed format support, SPONGE is not
 currently supported on Windows. 
