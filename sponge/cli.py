@@ -38,7 +38,7 @@ def cli(
         default='user_config.yaml', metavar='FILE')
     parser.add_argument('-e', '--example', dest='example_config',
         help='create an example config file with the default values called '
-            'user_config.yaml and quit',
+            'user_config.yaml and exit',
         action='store_true')
 
     args = parser.parse_args()
