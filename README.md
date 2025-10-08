@@ -1,5 +1,5 @@
-[![master](https://github.com/ladislav-hovan/sponge/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/ladislav-hovan/sponge/actions/workflows/test.yaml)
-[![devel](https://github.com/ladislav-hovan/sponge/actions/workflows/test.yaml/badge.svg?branch=devel)](https://github.com/ladislav-hovan/sponge/actions/workflows/test.yaml)
+[![master](https://github.com/kuijjerlab/sponge/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/kuijjerlab/sponge/actions/workflows/test.yaml)
+[![devel](https://github.com/kuijjerlab/sponge/actions/workflows/test.yaml/badge.svg?branch=devel)](https://github.com/kuijjerlab/sponge/actions/workflows/test.yaml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 
