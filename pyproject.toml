@@ -2,9 +2,6 @@
 requires = ["setuptools", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.packages.find]
-namespaces = false
-
 [project]
 name = "netzoopy-sponge"
 authors = [
