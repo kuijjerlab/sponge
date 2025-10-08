@@ -9,6 +9,8 @@ on:
     branches:
     - main
     - devel
+  schedule:
+  - cron: '15 3 1 * *'  # 1st of every month at 3:15
   workflow_dispatch:
 
 jobs:
