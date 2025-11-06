@@ -9,7 +9,7 @@ import pandas as pd
 
 from Bio.motifs.jaspar import Motif
 from pathlib import Path
-from pyjaspar import jaspardb
+from pyjaspar import jaspardb, JASPAR_LATEST_RELEASE
 from typing import Tuple
 
 from sponge.config_manager import ConfigManager
@@ -221,7 +221,7 @@ def test_recursive_update(input, expected_output):
 import sponge.modules.utils.jaspar_versioning as jaspar_f
 
 @pytest.mark.parametrize('input, expected_output', [
-    (None, 'JASPAR2024'),
+    (None, JASPAR_LATEST_RELEASE),
     ('JASPAR2022', 'JASPAR2022'),
     ('2024', 'JASPAR2024'),
 ])
@@ -417,7 +417,7 @@ def test_full_default_workflow(tmp_path):
     _,_ = run_integration_test_common(
         tmp_path,
         # Default config file
-        os.path.join('sponge', 'user_config.yaml'),
+        os.path.join('src', 'sponge', 'user_config.yaml'),
     )
 
 
