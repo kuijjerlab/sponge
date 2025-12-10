@@ -141,8 +141,8 @@ class PPIRetriever:
             'preferredName_B': 'tf2'}, inplace=True)
         if len(ids_to_check) > 0:
             # Replace with names that have been queried (as used by JASPAR)
-            ppi_df['tf1'].replace(p_to_q, inplace=True)
-            ppi_df['tf2'].replace(p_to_q, inplace=True)
+            ppi_df['tf1'] = ppi_df['tf1'].replace(p_to_q)
+            ppi_df['tf2'] = ppi_df['tf2'].replace(p_to_q)
         ppi_df.sort_values(by=['tf1', 'tf2'], inplace=True)
 
         print ('\nFinal number of TFs in the PPI network: '
