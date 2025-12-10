@@ -121,7 +121,7 @@ class RegionRetriever(FileRetriever):
         # Convert the response into a DataFrame
         df = pd.read_csv(buffer, sep='\t', dtype=dtype_dict)
 
-        print ('Filtering and modifying dataframe...')
+        print ('\nFiltering and modifying dataframe...\n')
         if self.settings['filter_basic']:
             # Filter only for GENCODE basic
             df = df[df['GENCODE basic annotation'] == 'GENCODE basic'].copy()
@@ -162,7 +162,7 @@ class RegionRetriever(FileRetriever):
         # Columns to be saved into a file
         columns = ['Chromosome', 'Start', 'End', 'Transcript stable ID',
             'Gene stable ID', 'Gene name', 'Gene type']
-        print (f'Saving data to: {self.temp_filename}')
+        print (f'\nSaving data to: {self.temp_filename}')
         # Save the file
         self.df = df[columns]
         self.df.to_csv(self.temp_filename, sep='\t', index=False)

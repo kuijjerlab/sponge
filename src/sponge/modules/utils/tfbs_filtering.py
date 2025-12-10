@@ -78,6 +78,11 @@ def filter_edges(
         start,end = bed_df.loc[transcript][['Start', 'End']]
         # Load all matches in that region from the bigbed file
         motifs = bioframe.read_bigbed(bb_ref, chrom, start=start, end=end)
+        # This is a temporary guard until the name of TFName column
+        # is fixed for the 2026 release
+        colnames = ['chrom', 'start', 'end', 'name', 'score', 'strand',
+            'TFName']
+        motifs.columns = colnames
         # Ensure the entire motif fits within range (not default behaviour)
         motifs = motifs[(motifs['start'] >= start) & (motifs['end'] <= end)]
         # Filter only the transcription factors in the list
