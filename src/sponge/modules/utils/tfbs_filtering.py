@@ -85,11 +85,11 @@ def filter_edges(
         motifs.columns = colnames
         # Ensure the entire motif fits within range (not default behaviour)
         motifs = motifs[(motifs['start'] >= start) & (motifs['end'] <= end)]
-        # Filter only the transcription factors in the list
-        max_scores = motifs[motifs['name'].isin(motif_list)].groupby(
-            'name')[['score', 'TFName']].max()
         # Filter only high enough scores
-        max_scores = max_scores[max_scores['score'] >= score_threshold]
+        motifs_filt = motifs[motifs['score'] >= score_threshold]
+        # Filter only the transcription factors in the list
+        max_scores = motifs_filt[motifs_filt['name'].isin(motif_list)].groupby(
+            'name')[['score', 'TFName']].max()
         max_scores.reset_index(inplace=True)
         # Add the transcript (region) name for identification
         max_scores['transcript'] = transcript
@@ -170,7 +170,6 @@ def iterate_chromosomes(
 def process_chromosome(
     motifs_chrom: pd.DataFrame,
     bed_df: pd.DataFrame,
-    score_threshold: float = 400,
 ) -> pd.DataFrame:
     """
     Finds the overlap between TF binding sites and regions of interest
@@ -184,8 +183,6 @@ def process_chromosome(
     bed_df : pd.DataFrame
         Pandas DataFrame containing the regions of interest in a single
         chromosome
-    score_threshold : float, optional
-        Score required for selection, by default 400
 
     Returns
     -------
@@ -205,11 +202,9 @@ def process_chromosome(
         motifs = motifs_chrom.iloc[id_start:id_end]
         if len(motifs) == 0:
             continue
-        # Filter only high enough scores
+        # Add the maximum score found
         to_add = {}
         to_add['score'] = motifs['score'].max()
-        if to_add['score'] < score_threshold:
-            continue
         # Add the transcript (region) name for identification
         to_add['transcript'] = t
         # Append the results to the dataframe
@@ -222,7 +217,6 @@ def process_chromosome(
 def process_motif(
     motif_df: pd.DataFrame,
     bed_df: pd.DataFrame,
-    score_threshold: float = 400,
     n_processes: int = 1,
 ) -> pd.DataFrame:
     """
@@ -236,8 +230,6 @@ def process_motif(
         the genome
     bed_df : pd.DataFrame
         Pandas DataFrame containing the regions of interest
-    score_threshold : float, optional
-        Score required for selection, by default 400
     n_processes : int, optional
         Number of processes to run in parallel, by default 1
 
@@ -256,7 +248,7 @@ def process_motif(
     chrom_maxs = chrom_info['index'].max()
     # Setup input for parallelisation across chromosomes
     input_tuples = [(motif_df.loc[chrom_mins[chr]:chrom_maxs[chr]],
-        bed_df[bed_df['Chromosome'] == chr], score_threshold)
+        bed_df[bed_df['Chromosome'] == chr])
         for chr in chrom_mins.index]
     # Parallelise the filtering across chromosomes
     result = p.starmap_async(process_chromosome, input_tuples,
@@ -341,8 +333,10 @@ def iterate_motifs(
         BIGBED_MAX_SCORE = 1000
         motif_df['score'] = motif_df['score'].astype(int).apply(
             lambda x: min(x, BIGBED_MAX_SCORE))
+        # Filter only for TFBS above the score threshold
+        motif_df_filt = motif_df[motif_df['score'] >= score_threshold]
         # Process the individual TF track
-        result = process_motif(motif_df, bed_df, score_threshold, n_processes)
+        result = process_motif(motif_df_filt, bed_df, n_processes)
         result['name'] = m_id
         result['TFName'] = tf
         # Append the resulting pandas DataFrame to the list
