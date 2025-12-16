@@ -19,9 +19,9 @@ classifiers = [
 ]
 dependencies = [ 
     "bioframe>=0.8.0,<0.9",
-    "numpy>=2.2.6,<3",
-    "pandas>=2.3.3,<3",
-    "pybbi>=0.4.2,<0.5",
+    "numpy>=1.19.0,<3",
+    "pandas>=2.0.0,<3",
+    "pybbi>=0.4.0,<0.5",
     "pyjaspar>=4.0.0,<5",
     "scikit-learn>=1.7.2,<2",
     "tqdm>=4.67.1,<5",
