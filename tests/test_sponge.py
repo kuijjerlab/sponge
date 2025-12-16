@@ -302,13 +302,13 @@ def test_iterate_chromosomes(input, expected_length, chr19_promoters):
 def test_process_chromosome(chr19_promoters, foxf2_chr19):
     df = filter_f.process_chromosome(foxf2_chr19, chr19_promoters)
 
-    assert len(df) == 38
+    assert len(df) == 128
 
 
 def test_process_motif(chr19_promoters, foxf2_chr19):
     df = filter_f.process_motif(foxf2_chr19, chr19_promoters)
 
-    assert len(df) == 38
+    assert len(df) == 128
 
 
 @pytest.mark.network
