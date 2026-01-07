@@ -108,7 +108,7 @@ class PPIRetriever:
             print ('Checking the conflicts in the UniProt database...')
             mapper = ProteinIDMapper(self.protein_url)
             uniprot_df = mapper.get_uniprot_mapping('Gene_Name', 'UniProtKB',
-                ids_to_check).set_index('from')
+                ids_to_check, taxonomy_id=9606).set_index('from')
             p_to_q = {p: q for q,p in zip(diff_df['queryName'],
                 diff_df['preferredName'])}
             # Keep the conflicts where there is a match or where one or both
