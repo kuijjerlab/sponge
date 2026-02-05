@@ -152,9 +152,9 @@ def compare_priors(
         common_index, fill_value=0)
     comp_df = prior_1_mod.join(prior_2_mod, lsuffix='_1', rsuffix='_2')
 
-    print ('Network density in common TF/genes for the first prior:',
+    print ('Network density in common TFs/genes for the first prior:',
         f'{100 * comp_df["edge_1"].mean():.2f} %')
-    print ('Network density in common TF/genes for the second prior:',
+    print ('Network density in common TFs/genes for the second prior:',
         f'{100 * comp_df["edge_2"].mean():.2f} %\n')
     print (classification_report(comp_df['edge_1'], comp_df['edge_2']))
 
