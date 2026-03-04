@@ -39,7 +39,7 @@ class VersionLogger:
     ):
         """
         Logs the accession times and versions of databases and files
-        and maintains a file with the records. 
+        and maintains a file with the records.
 
         Parameters
         ----------
@@ -284,5 +284,4 @@ class VersionLogger:
             'write_retrieved']
         for fn in function_names:
             # Replace with a call to the internal version logger
-           
             setattr(target_class, fn, getattr(self, fn))

@@ -58,7 +58,7 @@ class PPIRetriever:
         tf_names: Iterable[str],
         score_threshold: int = 400,
         physical_only: bool = True,
-    ):
+    ) -> None:
         """
         Retrieves the protein-protein interaction data from the STRING
         database for the provided proteins. Stores the resulting network
@@ -83,7 +83,8 @@ class PPIRetriever:
             columns=['tf1', 'tf2', 'score'],
         )
         if len(tf_names) <= 1:
-            return base_frame
+            self.ppi_frame = base_frame
+            return
 
         print ('Retrieving mapping from STRING...')
         query_string = '%0d'.join(tf_names)
@@ -140,7 +141,11 @@ class PPIRetriever:
             # Replace with names that have been queried (as used by JASPAR)
             ppi_df['tf1'] = ppi_df['tf1'].replace(p_to_q)
             ppi_df['tf2'] = ppi_df['tf2'].replace(p_to_q)
-        ppi_df = pd.concat([base_frame, ppi_df], ignore_index=True)
+        if len(ppi_df) == 0:
+            # Concatenation of empty frames is deprecated
+            ppi_df = base_frame
+        else:
+            ppi_df = pd.concat([base_frame, ppi_df], ignore_index=True)
         ppi_df.sort_values(by=['tf1', 'tf2'], inplace=True)
 
         print ('\nFinal number of TFs in the PPI network: '
