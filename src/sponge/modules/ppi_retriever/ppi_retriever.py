@@ -78,10 +78,12 @@ class PPIRetriever:
 
         print ('\n--- Retrieving protein-protein interaction data ---')
 
+        base_frame = pd.DataFrame(
+            data=[[tf, tf, 1.0] for tf in tf_names],
+            columns=['tf1', 'tf2', 'score'],
+        )
         if len(tf_names) <= 1:
-            print ('Not enough TFs were provided to build a PPI network.')
-            self.ppi_frame = pd.DataFrame(columns=['tf1', 'tf2', 'score'])
-            return
+            return base_frame
 
         print ('Retrieving mapping from STRING...')
         query_string = '%0d'.join(tf_names)
@@ -118,11 +120,6 @@ class PPIRetriever:
                     or uniprot_df.loc[p, 'to'] == uniprot_df.loc[q, 'to']):
                     matching_ids.append(p)
 
-        if len(matching_ids) <= 1:
-            print ('Not enough IDs were matched to build a PPI network.')
-            self.ppi_frame = pd.DataFrame(columns=['tf1', 'tf2', 'score'])
-            return
-
         print ('Retrieving the network from STRING...')
         query_string_filt = '%0d'.join(matching_ids)
         network_str = (f'{self.ppi_url}network?'
@@ -143,11 +140,14 @@ class PPIRetriever:
             # Replace with names that have been queried (as used by JASPAR)
             ppi_df['tf1'] = ppi_df['tf1'].replace(p_to_q)
             ppi_df['tf2'] = ppi_df['tf2'].replace(p_to_q)
+        ppi_df = pd.concat([base_frame, ppi_df], ignore_index=True)
         ppi_df.sort_values(by=['tf1', 'tf2'], inplace=True)
 
         print ('\nFinal number of TFs in the PPI network: '
             f'{len(set(ppi_df["tf1"]).union(set(ppi_df["tf2"])))}')
         print (f'Final number of edges: {len(ppi_df)}')
+        print ('Final number of non-self edges: '
+            f'{len(ppi_df) - len(tf_names)}')
 
         self.ppi_frame = ppi_df
 

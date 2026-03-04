@@ -32,4 +32,4 @@ motif_output:
   weighted: False  # False by default
 ppi_output:
   file_name: "ppi_prior.tsv"
-  weighted: False  # False by default
+  weighted: True  # True by default
