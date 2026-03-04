@@ -13,12 +13,13 @@ from pyjaspar import jaspardb, JASPAR_LATEST_RELEASE
 from typing import Tuple
 
 from sponge.config_manager import ConfigManager
+from sponge.modules.ppi_retriever import PPIRetriever
 
 ### Fixtures ###
 # Core config fixture
 @pytest.fixture
 def core_config():
-    return ConfigManager()
+    yield ConfigManager()
 
 # A motif without any information
 @pytest.fixture
@@ -64,6 +65,14 @@ def foxf2_chr19():
     df = pd.read_csv(path_to_file, sep='\t')
 
     yield df
+
+# PPI retriever instance
+@pytest.fixture
+def ppi_retriever(core_config):
+    yield PPIRetriever(
+        core_config['url']['ppi'],
+        core_config['url']['protein'],
+    )
 
 ### Unit tests ###
 # Analysis functions
@@ -211,7 +220,7 @@ import sponge.modules.utils.dictionary_update as dict_f
 
 @pytest.mark.parametrize('input, expected_output', [
     (({}, {'a': {'b': 1}}), {'a': {'b': 1}}),
-    (({'a': 1, 'b': {'c': 2}}, {'b': {'d': 3}}), 
+    (({'a': 1, 'b': {'c': 2}}, {'b': {'d': 3}}),
         {'a': 1, 'b': {'c': 2, 'd': 3}}),
 ])
 def test_recursive_update(input, expected_output):
@@ -356,7 +365,17 @@ def test_iterate_motifs(input, expected_length, core_config, chr19_promoters):
 
 
 # PPIRetriever class
+@pytest.mark.network
+@pytest.mark.parametrize('input, expected_length', [
+    (([],), 0),
+    ((["GATA2", "FOXF2", "JUN"],), 4),
+    ((["GATA2", "FOXF2", "JUN"], 400, False), 4),
+    ((["GATA2", "FOXF2", "JUN"], 1000, False), 3),
+])
+def test_ppi_retriever_retrieve_ppi(input, expected_length, ppi_retriever):
+    ppi_retriever.retrieve_ppi(*input)
 
+    assert len(ppi_retriever.get_ppi_frame()) == expected_length
 
 # MatchAggregator class
 

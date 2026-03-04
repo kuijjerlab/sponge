@@ -1,5 +1,5 @@
-[![master](https://github.com/kuijjerlab/sponge/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/kuijjerlab/sponge/actions/workflows/test.yaml)
-[![devel](https://github.com/kuijjerlab/sponge/actions/workflows/test.yaml/badge.svg?branch=devel)](https://github.com/kuijjerlab/sponge/actions/workflows/test.yaml)
+[![main](https://img.shields.io/github/actions/workflow/status/kuijjerlab/sponge/test.yaml?branch=main&label=main)](https://github.com/kuijjerlab/sponge/actions/workflows/test.yaml)
+[![devel](https://img.shields.io/github/actions/workflow/status/kuijjerlab/sponge/test.yaml?branch=devel&label=devel)](https://github.com/kuijjerlab/sponge/actions/workflows/test.yaml)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 
