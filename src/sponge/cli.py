@@ -27,7 +27,7 @@ from .sponge import Sponge
 
 ### Class definition ###
 class CustomFormatter(
-    ArgumentDefaultsHelpFormatter, 
+    ArgumentDefaultsHelpFormatter,
     RawDescriptionHelpFormatter,
 ):
     """
