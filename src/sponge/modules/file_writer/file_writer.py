@@ -19,7 +19,7 @@
 import pandas as pd
 
 from pathlib import Path
-from typing import Iterable
+from typing import Iterable, Union
 
 ### Class definition ###
 class FileWriter:
@@ -30,14 +30,14 @@ class FileWriter:
         """
         Class which writes prior networks to files.
         """
-        
+
         pass
 
 
     def write_network_file(
         self,
         df: pd.DataFrame,
-        node_columns: Iterable[str],
+        node_columns: Union[Iterable[str], str],
         weight_column: str,
         file_name: Path,
     ):
@@ -55,7 +55,9 @@ class FileWriter:
         file_name : Path
             Where to write the network to
         """
-        
+
+        if type(node_columns) == str:
+            node_columns = [node_columns]
         sorted_df = df.sort_values(by=node_columns)
         sorted_df[node_columns + [weight_column]].to_csv(
             file_name, sep='\t', index=False, header=False)
