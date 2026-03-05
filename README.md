@@ -247,7 +247,7 @@ In HPC environments, something like the `apptainer shell` command would
 work.
 
 Because of the libraries used for bigbed format support, SPONGE is not
-currently supported on Windows. 
+currently supported on Windows.
 Therefore, this container is probably the best way to run it there,
 and the command equivalent to the above in the command prompt would look
 like this:

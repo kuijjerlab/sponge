@@ -13,6 +13,7 @@ from pyjaspar import jaspardb, JASPAR_LATEST_RELEASE
 from typing import Tuple
 
 from sponge.config_manager import ConfigManager
+from sponge.modules.file_writer import FileWriter
 from sponge.modules.ppi_retriever import PPIRetriever
 
 ### Fixtures ###
@@ -72,6 +73,19 @@ def ppi_retriever(core_config):
     yield PPIRetriever(
         core_config['url']['ppi'],
         core_config['url']['protein'],
+    )
+
+# A mock prior frame
+@pytest.fixture
+def prior_frame():
+    yield pd.DataFrame(
+        [
+            ['SOX2', 'FOXF1', 'BRCA1', 1, 4.0],
+            ['SOX2', 'SOX2', 'MHCA2', 1, 0.4],
+            ['ABC', 'DEF', 'XYZ', 0, 0.0],
+            ['AAA', 'AAA', 'AAA', 4, 3.14],
+        ],
+        columns=['tf1', 'tf2', 'gene', 'edge', 'score'],
     )
 
 ### Unit tests ###
@@ -372,7 +386,7 @@ def test_iterate_motifs(input, expected_length, core_config, chr19_promoters):
     ((["GATA2", "FOXF2", "JUN"], 400, False), 4),
     ((["GATA2", "FOXF2", "JUN"], 1000, False), 3),
 ])
-def test_ppi_retriever_retrieve_ppi(input, expected_length, ppi_retriever):
+def test_ppi_retriever(input, expected_length, ppi_retriever):
     ppi_retriever.retrieve_ppi(*input)
 
     assert len(ppi_retriever.get_ppi_frame()) == expected_length
@@ -381,7 +395,20 @@ def test_ppi_retriever_retrieve_ppi(input, expected_length, ppi_retriever):
 
 
 # FileWriter class
+@pytest.mark.parametrize('input', [
+    ((['tf1', 'tf2'], 'edge')),
+    ((['tf1', 'tf2'], 'score')),
+    ((['tf1', 'gene'], 'edge')),
+    ((['tf1', 'tf2', 'gene'], 'edge')),
+    ((['tf1'], 'edge')),
+    (('tf1', 'edge')),
+])
+def test_file_writer(input, prior_frame, tmp_path):
+    file_writer = FileWriter()
+    write_path = os.path.join(tmp_path, 'test_frame.tsv')
+    file_writer.write_network_file(prior_frame, *input, write_path)
 
+    assert os.path.exists(write_path)
 
 ### Integration tests ###
 from sponge.sponge import Sponge
