@@ -13,7 +13,7 @@ from pyjaspar import jaspardb, JASPAR_LATEST_RELEASE
 from typing import Tuple
 
 from sponge.config_manager import ConfigManager
-from sponge.modules.file_writer import FileWriter
+from sponge.modules.match_aggregator import MatchAggregator
 from sponge.modules.ppi_retriever import PPIRetriever
 
 ### Fixtures ###
@@ -63,7 +63,7 @@ def chr19_promoters():
 @pytest.fixture
 def foxf2_chr19():
     path_to_file = os.path.join('tests', 'sponge', 'foxf2_chr19_subset.tsv')
-    df = pd.read_csv(path_to_file, sep='\t')
+    df = pd.read_table(path_to_file)
 
     yield df
 
@@ -73,6 +73,28 @@ def ppi_retriever(core_config):
     yield PPIRetriever(
         core_config['url']['ppi'],
         core_config['url']['protein'],
+    )
+
+# Match aggregator instance with initial edges
+@pytest.fixture
+def match_aggregator():
+    yield MatchAggregator(
+        pd.DataFrame(
+            [
+                ['aaa', 1000, 'MA0001.1', 'ENST00000530711'],
+                ['aaa', 900, 'MA0001.1', 'ENST00000530711'],
+                ['aaa', 800, 'MA0001.1', 'ENST00000530711'],
+                ['BBB', 400, 'MA0002.1', 'ENST00000530711'],
+                ['CCC', 600, 'MA0003.1', 'ENST00000585993'],
+                ['DDD', 700, 'MA0004.1' ,'ENST00000585993'],
+                ['BBB', 500, 'MA0002.1', 'ENST00000633742'],
+                ['CCC', 600, 'MA0003.1', 'ENST00000633742'],
+                ['BBB', 550, 'MA0002.1', 'ENST00000633703'],
+            ],
+            columns=['TFName', 'score', 'name', 'transcript'],
+        ),
+        os.path.join('tests', 'sponge', 'chr19_subset.tsv'),
+        {'aaa': 'AAA', 'xxx': 'XXX'},
     )
 
 # A mock prior frame
@@ -184,8 +206,8 @@ def test_download_with_progress(input, compare_to, tmp_path):
 
 
 @pytest.mark.parametrize('input', [
-    ['test_dataset', ['field1', 'field2', 'field3']],
-    ['test_dataset', []],
+    ('test_dataset', ['field1', 'field2', 'field3']),
+    ('test_dataset', []),
 ])
 def test_create_xml_query(input):
     xml_query = data_f.create_xml_query(*input)
@@ -196,12 +218,12 @@ def test_create_xml_query(input):
 
 @pytest.mark.network
 @pytest.mark.parametrize('input', [
-    ['hsapiens_gene_ensembl', ['ensembl_transcript_id', 'ensembl_gene_id']],
-    ['hsapiens_gene_ensembl', ['ensembl_transcript_id']],
+    ('hsapiens_gene_ensembl', ['ensembl_transcript_id', 'ensembl_gene_id']),
+    ('hsapiens_gene_ensembl', ['ensembl_transcript_id']),
 ])
 def test_retrieve_ensembl_data(input, core_config):
-    input.append(core_config['url']['region']['xml'])
-    df = pd.read_csv(data_f.retrieve_ensembl_data(*input), sep='\t')
+    ensembl_url = core_config['url']['region']['xml']
+    df = pd.read_table(data_f.retrieve_ensembl_data(*input, ensembl_url))
 
     assert type(df) == pd.DataFrame
     assert len(df.columns) == len(input[1])
@@ -301,8 +323,8 @@ def test_parse_datetime(input, expected_output):
 import sponge.modules.utils.tfbs_filtering as filter_f
 
 @pytest.mark.parametrize('input, expected_length', [
-    ((os.path.join('tests', 'sponge', 'chr19_subset.bb'),
-        'chr19', ['MA0036.4', 'MA0030.2', 'MA0147.4'], 0, 2_000_000), 62),
+    ((os.path.join('tests', 'sponge', 'chr19_subset.bb'), 'chr19',
+        ['MA0036.4', 'MA0030.2', 'MA0147.4'], 0, 2_000_000), 62),
 ])
 def test_filter_edges(input, expected_length, chr19_promoters):
     df = filter_f.filter_edges(input[0], chr19_promoters, *input[1:])
@@ -312,8 +334,8 @@ def test_filter_edges(input, expected_length, chr19_promoters):
 
 
 @pytest.mark.parametrize('input, expected_length', [
-    ((os.path.join('tests', 'sponge', 'chr19_subset.bb'),
-        ['chr1', 'chr19'], ['MA0036.4', 'MA0030.2', 'MA0147.4']), 62),
+    ((os.path.join('tests', 'sponge', 'chr19_subset.bb'), ['chr1', 'chr19'],
+        ['MA0036.4', 'MA0030.2', 'MA0147.4']), 62),
 ])
 def test_iterate_chromosomes(input, expected_length, chr19_promoters):
     df_list = filter_f.iterate_chromosomes(input[0], chr19_promoters,
@@ -345,7 +367,7 @@ def test_iterate_motifs(input, expected_length, core_config, chr19_promoters):
     assert sum(len(df) for df in df_list) == expected_length
 
 # TODO: Add tests for individual classes
-# ConfigReader class
+# ConfigManager class
 
 
 # VersionLogger class
@@ -382,9 +404,9 @@ def test_iterate_motifs(input, expected_length, core_config, chr19_promoters):
 @pytest.mark.network
 @pytest.mark.parametrize('input, expected_length', [
     (([],), 0),
-    ((["GATA2", "FOXF2", "JUN"],), 4),
-    ((["GATA2", "FOXF2", "JUN"], 400, False), 4),
-    ((["GATA2", "FOXF2", "JUN"], 1000, False), 3),
+    ((['GATA2', 'FOXF2', 'JUN'],), 4),
+    ((['GATA2', 'FOXF2', 'JUN'], 400, False), 4),
+    ((['GATA2', 'FOXF2', 'JUN'], 1000, False), 3),
 ])
 def test_ppi_retriever(input, expected_length, ppi_retriever):
     ppi_retriever.retrieve_ppi(*input)
@@ -392,16 +414,27 @@ def test_ppi_retriever(input, expected_length, ppi_retriever):
     assert len(ppi_retriever.get_ppi_frame()) == expected_length
 
 # MatchAggregator class
+@pytest.mark.parametrize('input, expected_length', [
+    ((), 6), # Defaults are True, False
+    ((False, False), 7),
+    ((False, True), 4),
+    ((True, True), 4),
+])
+def test_match_aggregator(input, expected_length, match_aggregator):
+    match_aggregator.aggregate_matches(*input)
 
+    assert len(match_aggregator.get_edges()) == expected_length
 
 # FileWriter class
+from sponge.modules.file_writer import FileWriter
+
 @pytest.mark.parametrize('input', [
-    ((['tf1', 'tf2'], 'edge')),
-    ((['tf1', 'tf2'], 'score')),
-    ((['tf1', 'gene'], 'edge')),
-    ((['tf1', 'tf2', 'gene'], 'edge')),
-    ((['tf1'], 'edge')),
-    (('tf1', 'edge')),
+    (['tf1', 'tf2'], 'edge'),
+    (['tf1', 'tf2'], 'score'),
+    (['tf1', 'gene'], 'edge'),
+    (['tf1', 'tf2', 'gene'], 'edge'),
+    (['tf1'], 'edge'),
+    ('tf1', 'edge'),
 ])
 def test_file_writer(input, prior_frame, tmp_path):
     file_writer = FileWriter()
@@ -475,14 +508,14 @@ def test_small_workflow(tmp_path):
         os.path.join('tests', 'sponge', 'test_user_config.yaml'),
     )
 
-    motif_df = pd.read_csv(motif_output, sep='\t', header=None)
-    motif_df_t = pd.read_csv(os.path.join('tests', 'sponge',
-        'test_motif_prior.tsv'), sep='\t', header=None)
+    motif_df = pd.read_table(motif_output, header=None)
+    motif_df_t = pd.read_table(os.path.join('tests', 'sponge',
+        'test_motif_prior.tsv'), header=None)
 
     pd.testing.assert_frame_equal(motif_df, motif_df_t)
 
-    ppi_df = pd.read_csv(ppi_output, sep='\t', header=None)
-    ppi_df_t = pd.read_csv(os.path.join('tests', 'sponge',
-        'test_ppi_prior.tsv'), sep='\t', header=None)
+    ppi_df = pd.read_table(ppi_output, header=None)
+    ppi_df_t = pd.read_table(os.path.join('tests', 'sponge',
+        'test_ppi_prior.tsv'), header=None)
 
     pd.testing.assert_frame_equal(ppi_df, ppi_df_t)
