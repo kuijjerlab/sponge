@@ -325,7 +325,7 @@ def iterate_motifs(
         # Load the downloaded TF track
         MOTIF_COLS = ['chrom', 'start', 'end', 'TFName', 'p-val', 'score',
             'strand']
-        motif_df = pd.read_csv(bytes_tf, sep='\t', names=MOTIF_COLS,
+        motif_df = pd.read_table(bytes_tf, names=MOTIF_COLS,
             compression='gzip')
         motif_df.drop(columns=['p-val', 'TFName', 'strand'], inplace=True)
         motif_df = motif_df[motif_df['chrom'].isin(chromosomes)]

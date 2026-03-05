@@ -119,7 +119,7 @@ class RegionRetriever(FileRetriever):
         dtype_dict['Transcription start site (TSS)'] = int
         dtype_dict['Strand'] = int
         # Convert the response into a DataFrame
-        df = pd.read_csv(buffer, sep='\t', dtype=dtype_dict)
+        df = pd.read_table(buffer, dtype=dtype_dict)
 
         print ('\nFiltering and modifying dataframe...\n')
         if self.settings['filter_basic']:

@@ -235,7 +235,7 @@ def get_chromosome_mapping(
             f = gzip.open(download_with_progress(mapping_url.format(
                 genome_assembly=assembly)))
             header_fields = ['alt', 'ucsc', 'notes']
-            chrom_df = pd.read_csv(f, sep='\t', names=header_fields)
+            chrom_df = pd.read_table(f, names=header_fields)
             # This mapping is unambiguous even if things other than Ensembl
             # are included in the index
             return chrom_df.set_index('alt')['ucsc']

@@ -43,7 +43,7 @@ def load_prior(
         The processed pandas DataFrame
     """
 
-    return pd.read_csv(path, sep='\t', header=None, names=names)
+    return pd.read_table(path, header=None, names=names)
 
 
 def describe_prior(

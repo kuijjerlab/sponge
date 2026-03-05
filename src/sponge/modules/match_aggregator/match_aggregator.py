@@ -47,7 +47,7 @@ class MatchAggregator:
         """
 
         self.initial_edges = edges
-        self.regions = pd.read_csv(regions_file, sep='\t')
+        self.regions = pd.read_table(regions_file)
         self.homolog_mapping = homolog_mapping
         # To be overwritten once retrieved
         self.edges = None
