@@ -90,7 +90,7 @@ class PPIRetriever:
         query_string = '%0d'.join(tf_names)
         mapping_request = requests.get(f'{self.ppi_url}get_string_ids?'
             f'identifiers={query_string}&species=9606')
-        mapping_df = pd.read_csv(BytesIO(mapping_request.content), sep='\t')
+        mapping_df = pd.read_table(BytesIO(mapping_request.content))
         mapping_df['queryName'] = mapping_df['queryIndex'].apply(
             lambda i: tf_names[i])
         # Check where the preferred name doesn't match the query
@@ -102,8 +102,7 @@ class PPIRetriever:
             mapping_df['preferredName']]['preferredName'])
         # Log the STRING version in the fingerprint
         version_request = requests.get(f'{self.ppi_url}version')
-        version_df = pd.read_csv(BytesIO(version_request.content), sep='\t',
-            dtype=str)
+        version_df = pd.read_table(BytesIO(version_request.content), dtype=str)
         self.write_retrieved('string_ppi', version_df['string_version'].loc[0])
 
         if len(ids_to_check) > 0:
@@ -129,7 +128,7 @@ class PPIRetriever:
         if physical_only:
             network_str += '&network_type=physical'
         request = requests.get(network_str)
-        ppi_df = pd.read_csv(BytesIO(request.content), sep='\t')
+        ppi_df = pd.read_table(BytesIO(request.content))
 
         print ('Processing the results...')
         ppi_df.drop(['stringId_A', 'stringId_B', 'ncbiTaxonId', 'nscore',
