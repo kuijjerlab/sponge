@@ -23,7 +23,7 @@ import yaml
 
 from collections import defaultdict
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 from yaml.error import MarkedYAMLError
 
 ### Class definition ###
