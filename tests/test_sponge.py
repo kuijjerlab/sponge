@@ -22,6 +22,11 @@ from sponge.modules.ppi_retriever import PPIRetriever
 def core_config():
     yield ConfigManager()
 
+# Default user config fixture
+@pytest.fixture
+def default_user_config():
+    yield ConfigManager({})
+
 # A motif without any information
 @pytest.fixture
 def no_info_motif():
@@ -208,6 +213,8 @@ def test_download_with_progress(input, compare_to, tmp_path):
 @pytest.mark.parametrize('input', [
     ('test_dataset', ['field1', 'field2', 'field3']),
     ('test_dataset', []),
+    ('test_dataset', [], {}),
+    ('test_dataset', [], {'field1': ['val1', 'val2', 'val3']}),
 ])
 def test_create_xml_query(input):
     xml_query = data_f.create_xml_query(*input)
@@ -217,16 +224,20 @@ def test_create_xml_query(input):
 
 
 @pytest.mark.network
-@pytest.mark.parametrize('input', [
-    ('hsapiens_gene_ensembl', ['ensembl_transcript_id', 'ensembl_gene_id']),
-    ('hsapiens_gene_ensembl', ['ensembl_transcript_id']),
+@pytest.mark.parametrize('dataset, fields, filters', [
+    ('hsapiens_gene_ensembl', ['ensembl_transcript_id', 'ensembl_gene_id'],
+        None),
+    ('hsapiens_gene_ensembl', ['ensembl_transcript_id'], None),
+    ('hsapiens_gene_ensembl', ['ensembl_transcript_id'],
+        {'chromosome_name': ['chr19', 'chrX']}),
 ])
-def test_retrieve_ensembl_data(input, core_config):
+def test_retrieve_ensembl_data(dataset, fields, filters, core_config):
     ensembl_url = core_config['url']['region']['xml']
-    df = pd.read_table(data_f.retrieve_ensembl_data(*input, ensembl_url))
+    df = pd.read_table(data_f.retrieve_ensembl_data(dataset, fields,
+        ensembl_url, filters))
 
     assert type(df) == pd.DataFrame
-    assert len(df.columns) == len(input[1])
+    assert len(df.columns) == len(fields)
 
 
 @pytest.mark.network
@@ -454,16 +465,7 @@ def test_file_retriever(key, tmp_file, file_path, tmp_path):
     Path(os.path.join(tmp_path, 'preexisting.file')).touch()
     tmp_file = os.path.join(tmp_path, tmp_file)
     file_retriever = FileRetriever(key, tmp_file, file_path)
-
-    def dummy_retrieve(
-    ) -> None:
-        """
-        Dummy function to create an empty file at tmp_file.
-        """
-
-        Path(tmp_file).touch()
-
-    file_retriever.retrieve_file(dummy_retrieve)
+    file_retriever.retrieve_file(lambda: Path(tmp_file).touch())
 
     if file_path is not None:
         assert os.path.exists(file_path)
@@ -473,13 +475,73 @@ def test_file_retriever(key, tmp_file, file_path, tmp_path):
         assert file_retriever.actual_path == tmp_file
 
 # TFBSRetriever class
+from sponge.modules.data_retriever.tfbs_retriever import TFBSRetriever
 
+@pytest.mark.parametrize('settings, assembly, on_the_fly', [
+    ({}, 'hg38', True),
+    ({}, 'hg19', False),
+    ({}, 'hg38', False),
+    ({'tfbs_file': 'LICENSE'}, 'hg38', False),
+])
+def test_tfbs_retriever(settings, assembly, on_the_fly, default_user_config,
+    tmp_path):
+    # The full bigbed file is way too big, just a placeholder
+    test_file = ('https://raw.githubusercontent.com/kuijjerlab/sponge/main/'
+        'LICENSE')
+    default_user_config.deep_update({'motif': settings})
+    motif_settings = default_user_config['motif']
+    if motif_settings['jaspar_release'] is None:
+        motif_settings['jaspar_release'] = 'JASPAR2024'
+    tfbs_retriever = TFBSRetriever(
+        tmp_path,
+        test_file,
+        motif_settings,
+        assembly,
+        on_the_fly
+    )
+    tfbs_retriever.retrieve_file()
+
+    if not on_the_fly:
+        if motif_settings['tfbs_file'] is None:
+            assert os.path.exists(os.path.join(tmp_path, 'tfbs.bb'))
+        else:
+            assert os.path.exists(motif_settings['tfbs_file'])
 
 # RegionRetriever class
+from sponge.modules.data_retriever.region_retriever import RegionRetriever
 
+@pytest.mark.parametrize('settings, assembly', [
+    ({'chromosomes': ['chr19']}, 'hg38'),
+    ({'chromosomes': ['chr19', 'chrX']}, 'hg19'),
+    ({'region_file': 'LICENSE'}, 'hg38'),
+    ({'chromosomes': ['chr19']}, 'random_assembly'),
+])
+def test_region_retriever(settings, assembly, core_config, default_user_config,
+    tmp_path):
+    default_user_config.deep_update({'region': settings})
+    region_settings = default_user_config['region']
+    region_retriever = RegionRetriever(
+        tmp_path,
+        core_config['url']['region']['xml'],
+        core_config['url']['region']['rest'],
+        core_config['url']['chrom_mapping'],
+        region_settings,
+        assembly,
+        core_config['default_mapping'],
+        core_config['default_chromosomes'],
+    )
+    region_retriever.retrieve_file()
+
+    if region_settings['region_file'] is None:
+        assert os.path.exists(os.path.join(tmp_path, 'regions.tsv'))
+    else:
+        assert os.path.exists(region_settings['region_file'])
 
 # DataRetriever class
+from sponge.modules.data_retriever import DataRetriever
 
+def test_data_retriever():
+    pass
 
 # ProteinIDMapper class
 
