@@ -544,19 +544,34 @@ def test_data_retriever():
     pass
 
 # ProteinIDMapper class
+from sponge.modules.protein_id_mapper import ProteinIDMapper
 
+def test_protein_id_mapper():
+    pass
 
 # JasparRetriever class
+from sponge.modules.motif_selector.jaspar_retriever import JasparRetriever
 
+def test_jaspar_retriever():
+    pass
 
 # HomologyRetriever class
+from sponge.modules.motif_selector.homology_retriever import HomologyRetriever
 
+def test_homology_retriever():
+    pass
 
 # MotifSelector class
+from sponge.modules.motif_selector import MotifSelector
 
+def test_motif_selector():
+    pass
 
 # MatchFilter class
+from sponge.modules.match_filter import MatchFilter
 
+def test_match_filter():
+    pass
 
 # PPIRetriever class
 @pytest.mark.network
