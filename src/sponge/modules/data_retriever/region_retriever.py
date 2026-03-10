@@ -80,7 +80,7 @@ class RegionRetriever(FileRetriever):
         self.rest = rest_url
         self.mapping_url = mapping_url
         self.assembly = genome_assembly
-        self.mapping = default_mapping
+        self.mapping = pd.Series(default_mapping)
 
         if region_settings['chromosomes'] is None:
             region_settings['chromosomes'] = default_chromosomes
@@ -105,13 +105,23 @@ class RegionRetriever(FileRetriever):
             Version of the Ensembl database corresponding to the file
         """
 
+        # Attempt to retrieve mapping
+        mapping = get_chromosome_mapping(self.assembly, self.mapping_url)
+        if mapping is not None:
+            # Managed to retrieve it, overwrite the default
+            self.mapping = mapping
+        # Inverted mapping to apply chromosome filtering
+        inv_mapping = pd.Series(self.mapping.index, index=self.mapping.values)
+        # Filter for the required chromosomes
+        chroms = [inv_mapping[chrom] for chrom in self.settings['chromosomes']]
+        filter = {'chromosome_name': chroms}
         # Attributes to retrieve
-        attributes = ['ensembl_transcript_id', 'transcript_gencode_basic',
+        ATTRIBUTES = ['ensembl_transcript_id', 'transcript_gencode_basic',
             'chromosome_name', 'transcription_start_site', 'strand',
             'ensembl_gene_id', 'external_gene_name', 'gene_biotype']
         # Submit and retrieve the response
-        buffer = retrieve_ensembl_data('hsapiens_gene_ensembl', attributes,
-            self.xml)
+        buffer = retrieve_ensembl_data('hsapiens_gene_ensembl', ATTRIBUTES,
+            self.xml, filter)
 
         # Dictionary of types for conversion from the response, default strings
         dtype_dict = defaultdict(lambda: str)
@@ -127,11 +137,6 @@ class RegionRetriever(FileRetriever):
             df = df[df['GENCODE basic annotation'] == 'GENCODE basic'].copy()
             df.drop(columns='GENCODE basic annotation', inplace=True)
         # Convert chromosome names to match with other inputs
-        # Attempt to retrieve mapping
-        mapping = get_chromosome_mapping(self.assembly, self.mapping_url)
-        if mapping is not None:
-            # Managed to retrieve it, overwrite the default
-            self.mapping = mapping
         df['Chromosome'] = df['Chromosome/scaffold name'].apply(lambda x:
             self.mapping[x] if x in self.mapping else None)
         not_mapped = df['Chromosome'].isna().sum()
@@ -160,11 +165,11 @@ class RegionRetriever(FileRetriever):
         df.sort_values(['Chromosome', 'Start'], inplace=True)
 
         # Columns to be saved into a file
-        columns = ['Chromosome', 'Start', 'End', 'Transcript stable ID',
+        COLUMNS = ['Chromosome', 'Start', 'End', 'Transcript stable ID',
             'Gene stable ID', 'Gene name', 'Gene type']
         print (f'\nSaving data to: {self.temp_filename}')
         # Save the file
-        self.df = df[columns]
+        self.df = df[COLUMNS]
         self.df.to_csv(self.temp_filename, sep='\t', index=False)
 
         return get_ensembl_version(self.rest)
