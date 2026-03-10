@@ -65,6 +65,8 @@ class TFBSRetriever(FileRetriever):
         self.jaspar_release = motif_settings['jaspar_release']
         self.genome_assembly = genome_assembly
         self.urls = motif_url
+        if type(self.urls) is not list:
+            self.urls = [self.urls]
 
         temp_filename = os.path.join(temp_folder, self._default_filename)
 

@@ -110,6 +110,7 @@ def download_with_progress(
 def create_xml_query(
     dataset_name: str,
     requested_fields: Iterable[str],
+    filters: Optional[dict] = None,
 ) -> str:
     """
     Formulates an XML query to retrieve specified field from a dataset
@@ -121,6 +122,9 @@ def create_xml_query(
         Name of the dataset
     requested_fields : Iterable[str]
         Fields to be retrieved
+    filters : Optional[dict], optional
+        Filters to be applied (key: field, value: expected values) or
+        None to not apply any, by default None
 
     Returns
     -------
@@ -136,6 +140,10 @@ def create_xml_query(
         attrib=dict(name=dataset_name, interface='default'))
     for field in requested_fields:
         _ = et.SubElement(dataset, 'Attribute', attrib=dict(name=field))
+    if filters is not None:
+        for key,value in filters.items():
+            _ = et.SubElement(dataset, 'Filter', attrib=dict(name=key,
+                value=','.join(value)))
     # Convert to a string with a declaration
     query_string = et.tostring(xml_query, xml_declaration=True,
         encoding='unicode')
@@ -147,6 +155,7 @@ def retrieve_ensembl_data(
     dataset_name: str,
     requested_fields: Iterable[str],
     ensembl_url: str,
+    filters: Optional[dict] = None,
 ) -> BytesIO:
     """
     Retrieves specified fields from an Ensembl dataset by querying
@@ -160,6 +169,9 @@ def retrieve_ensembl_data(
         Fields to be retrieved
     ensembl_url : str
         URL for BioMart
+    filters : Optional[dict], optional
+        Filters to be applied (key: field, value: expected values) or
+        None to not apply any, by default None
 
     Returns
     -------
@@ -167,7 +179,7 @@ def retrieve_ensembl_data(
         Bytes retrieved from the server
     """
 
-    xml_query = create_xml_query(dataset_name, requested_fields)
+    xml_query = create_xml_query(dataset_name, requested_fields, filters)
     REQUEST_STRING = '/martservice?query='
     link = ensembl_url + REQUEST_STRING + xml_query
     r = requests.get(link, stream=True)
@@ -236,10 +248,16 @@ def get_chromosome_mapping(
                 genome_assembly=assembly)))
             header_fields = ['alt', 'ucsc', 'notes']
             chrom_df = pd.read_table(f, names=header_fields)
-            # This mapping is unambiguous even if things other than Ensembl
-            # are included in the index
-            return chrom_df.set_index('alt')['ucsc']
-        except requests.exceptions.HTTPError:
+            # Use ensembl annotation if present
+            has_ensembl = chrom_df['notes'].str.contains('ensembl')
+            if has_ensembl.sum() > 0:
+                chrom_df_filt = chrom_df[has_ensembl]
+            else:
+                # Use assembly annotation as backup
+                has_assembly = chrom_df['notes'].str.contains('assembly')
+                chrom_df_filt = chrom_df[has_assembly]
+            return chrom_df_filt.set_index('alt')['ucsc']
+        except (requests.exceptions.HTTPError, requests.exceptions.ProxyError):
             print (f'Failed to retrieve mapping for the assembly {assembly}.')
             return None
     else:
