@@ -10,7 +10,7 @@ import pandas as pd
 from Bio.motifs.jaspar import Motif
 from pathlib import Path
 from pyjaspar import jaspardb, JASPAR_LATEST_RELEASE
-from typing import Tuple
+from typing import Any, Iterable, Tuple
 
 from sponge.config_manager import ConfigManager
 from sponge.modules.match_aggregator import MatchAggregator
@@ -366,15 +366,111 @@ def test_iterate_motifs(input, expected_length, core_config, chr19_promoters):
 
     assert sum(len(df) for df in df_list) == expected_length
 
-# TODO: Add tests for individual classes
-# ConfigManager class
+### Class unit tests ###
+def call_class_methods(
+    class_object: Any,
+    input: Iterable[Tuple[str, Iterable[Any]]],
+) -> None:
+    """
+    Calls the specified methods with given arguments on a class object.
 
+    Parameters
+    ----------
+    class_object : Any
+        Class object on which methods should be called
+    input : Iterable[Tuple[str, Iterable[Any]]]
+        Iterable with method names and their arguments
+    """
+
+    for func,args in input:
+        f_call = getattr(class_object, func)
+        f_call(*args)
+
+# ConfigManager class
+@pytest.mark.parametrize('c_path, input, expected_length', [
+    (None, (
+    ), 4),
+    (os.path.join('src', 'sponge', 'user_config.yaml'), (
+    ), 9),
+    (os.path.join('src', 'sponge', 'user_config.yaml'), (
+        ('get_value', ('genome_assembly',)),
+        ('set_value', ('X', 2)),
+        ('deep_update', ({'Y': {'Z': 'def'}},)),
+        ('set_value', (['Y', 'Z'], 'abc')),
+    ), 11),
+])
+def test_config_manager(c_path, input, expected_length, tmp_path):
+    config_manager = ConfigManager(c_path, tmp_path)
+    call_class_methods(config_manager, input)
+    del config_manager
+    config_file = os.path.join(tmp_path, 'last_user_config.yaml')
+
+    assert os.path.exists(config_file)
+
+    data = yaml.safe_load(open(config_file, 'r', encoding='utf-8'))
+
+    assert len(data) == expected_length
 
 # VersionLogger class
+from sponge.modules.version_logger import VersionLogger
 
+@pytest.mark.parametrize('input, expected_length', [
+    ((
+        ('write_provided', ('X',)),
+    ), 1),
+    ((
+        ('write_default', ('X',)),
+        ('write_provided', ('X',)),
+        ('update_cached', ('X',)),
+        ('write_retrieved', ('X', '1.0')),
+    ), 1),
+    ((
+        ('write_default', ('X',)),
+        ('write_provided', ('Y',)),
+        ('write_retrieved', ('Z', '1.0')),
+    ), 3),
+])
+def test_version_logger(input, expected_length, tmp_path):
+    version_logger = VersionLogger(tmp_path)
+    call_class_methods(version_logger, input)
+    del version_logger  # Need to delete both references
+    fp_file = os.path.join(tmp_path, 'fingerprint.yaml')
+
+    assert os.path.exists(fp_file)
+
+    data = yaml.safe_load(open(fp_file, 'r', encoding='utf-8'))
+
+    assert len(data) == expected_length
 
 # FileRetriever class
+from sponge.modules.data_retriever.file_retriever import FileRetriever
 
+@pytest.mark.parametrize('key, tmp_file, file_path', [
+    ('A', 'tmp.file', os.path.join('src', 'sponge', 'user_config.yaml')),
+    ('B', 'tmp.file', None),
+    ('C', 'preexisting.file', None),
+])
+def test_file_retriever(key, tmp_file, file_path, tmp_path):
+    Path(os.path.join(tmp_path, 'preexisting.file')).touch()
+    tmp_file = os.path.join(tmp_path, tmp_file)
+    file_retriever = FileRetriever(key, tmp_file, file_path)
+
+    def dummy_retrieve(
+    ) -> None:
+        """
+        Dummy function to create an empty file at tmp_file.
+        """
+
+        Path(tmp_file).touch()
+
+    file_retriever.retrieve_file(dummy_retrieve)
+
+    if file_path is not None:
+        assert os.path.exists(file_path)
+        assert file_retriever.actual_path == file_path
+    else:
+        assert os.path.exists(tmp_file)
+        assert file_retriever.actual_path == tmp_file
 
 # TFBSRetriever class
 
