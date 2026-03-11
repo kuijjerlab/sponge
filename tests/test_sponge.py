@@ -477,6 +477,7 @@ def test_file_retriever(key, tmp_file, file_path, tmp_path):
 # TFBSRetriever class
 from sponge.modules.data_retriever.tfbs_retriever import TFBSRetriever
 
+@pytest.mark.network
 @pytest.mark.parametrize('settings, assembly, on_the_fly', [
     ({}, 'hg38', True),
     ({}, 'hg19', False),
@@ -510,6 +511,7 @@ def test_tfbs_retriever(settings, assembly, on_the_fly, default_user_config,
 # RegionRetriever class
 from sponge.modules.data_retriever.region_retriever import RegionRetriever
 
+@pytest.mark.network
 @pytest.mark.parametrize('settings, assembly', [
     ({'chromosomes': ['chr19']}, 'hg38'),
     ({'chromosomes': ['chr19', 'chrX']}, 'hg19'),
@@ -540,36 +542,59 @@ def test_region_retriever(settings, assembly, core_config, default_user_config,
 # DataRetriever class
 from sponge.modules.data_retriever import DataRetriever
 
-def test_data_retriever():
-    pass
+@pytest.mark.network
+@pytest.mark.parametrize('config_update', [
+    {'motif': {'tfbs_file': 'LICENSE'}, 'region': {'region_file': 'LICENSE'}},
+    {'region': {'chromosomes': ['chr19']}},
+    {'on_the_fly_processing': True, 'region': {'chromosomes': ['chr19']}},
+])
+def test_data_retriever(config_update, core_config, default_user_config,
+    tmp_path):
+    # The full bigbed file is way too big, just a placeholder
+    core_config['url']['motif']['full'] = ('https://raw.githubusercontent.com/'
+        'kuijjerlab/sponge/main/LICENSE')
+    if default_user_config['motif']['jaspar_release'] is None:
+        default_user_config['motif']['jaspar_release'] = 'JASPAR2024'
+    default_user_config.deep_update(config_update)
+    data_retriever = DataRetriever(tmp_path, core_config, default_user_config)
+    data_retriever.retrieve_data()
+
+    if not default_user_config['on_the_fly_processing']:
+        assert os.path.exists(data_retriever.get_tfbs_path())
+    assert os.path.exists(data_retriever.get_regions_path())
 
 # ProteinIDMapper class
 from sponge.modules.protein_id_mapper import ProteinIDMapper
 
+@pytest.mark.network
 def test_protein_id_mapper():
     pass
 
 # JasparRetriever class
 from sponge.modules.motif_selector.jaspar_retriever import JasparRetriever
 
+@pytest.mark.network
 def test_jaspar_retriever():
     pass
 
 # HomologyRetriever class
 from sponge.modules.motif_selector.homology_retriever import HomologyRetriever
 
+@pytest.mark.network
 def test_homology_retriever():
     pass
 
 # MotifSelector class
 from sponge.modules.motif_selector import MotifSelector
 
+@pytest.mark.network
 def test_motif_selector():
     pass
 
 # MatchFilter class
 from sponge.modules.match_filter import MatchFilter
 
+@pytest.mark.network
 def test_match_filter():
     pass
 
