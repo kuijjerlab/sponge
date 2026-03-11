@@ -17,7 +17,7 @@
 
 ### Imports ###
 from pathlib import Path
-from typing import List
+from typing import Optional
 
 from sponge.config_manager import ConfigManager
 from sponge.modules.version_logger import VersionLogger
@@ -33,7 +33,7 @@ class DataRetriever:
         temp_folder: Path,
         core_config: ConfigManager,
         user_config: ConfigManager,
-        version_logger: VersionLogger,
+        version_logger: Optional[VersionLogger] = None,
     ):
         """
         Class that retrieves the data required for the running of
@@ -47,8 +47,9 @@ class DataRetriever:
             Core configuration of SPONGE
         user_config : ConfigManager
             User-provided configuration of SPONGE
-        version_logger : VersionLogger
-            Version logger to keep track of the retrieved files
+        version_logger : Optional[VersionLogger], optional
+            Version logger to keep track of the retrieved files or None
+            to not use one, by default None
         """
 
         # JASPAR bigbed file (if appropriate)
@@ -72,8 +73,9 @@ class DataRetriever:
             core_config['default_chromosomes'],
         )
         # Register the classes for version logging
-        version_logger.register_class(self.tfbs)
-        version_logger.register_class(self.regions)
+        if version_logger is not None:
+            version_logger.register_class(self.tfbs)
+            version_logger.register_class(self.regions)
 
 
     def retrieve_data(
