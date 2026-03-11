@@ -567,17 +567,15 @@ def test_data_retriever(config_update, core_config, default_user_config,
 from sponge.modules.protein_id_mapper import ProteinIDMapper
 
 @pytest.mark.network
-@pytest.mark.parametrize('from_db, to_db, ids, kwargs, expected_length', [
-    ('Gene_Name', 'UniProtKB', [], {}, 0),
-    ('UniProtKB_AC-ID', 'GeneID', ['P01308'], {'taxonomy_id': 9606}, 1),
-    ('Gene_Name', 'UniProtKB', ['MYC', 'ERBB2', 'FAKEGENE'], {}, 2),
-    ('UniProtKB_AC-ID', 'GeneID', ['P01308', 'P06213', 'AAAAA'], {}, 2),
+@pytest.mark.parametrize('input, kwargs, expected_length', [
+    (('Gene_Name', 'UniProtKB', []), {}, 0),
+    (('UniProtKB_AC-ID', 'GeneID', ['P01308']), {'taxonomy_id': 9606}, 1),
+    (('Gene_Name', 'UniProtKB', ['MYC', 'ERBB2', 'FAKEGENE']), {}, 2),
+    (('UniProtKB_AC-ID', 'GeneID', ['P01308', 'P06213', 'AAAAA']), {}, 2),
 ])
-def test_protein_id_mapper(from_db, to_db, ids, kwargs, expected_length,
-    core_config):
+def test_protein_id_mapper(input, kwargs, expected_length, core_config):
     protein_id_mapper = ProteinIDMapper(core_config['url']['protein'])
-    reply = protein_id_mapper.get_uniprot_mapping(from_db, to_db, ids,
-        **kwargs)
+    reply = protein_id_mapper.get_uniprot_mapping(*input, **kwargs)
 
     assert type(reply) == pd.DataFrame
     assert len(reply) == expected_length
@@ -586,8 +584,21 @@ def test_protein_id_mapper(from_db, to_db, ids, kwargs, expected_length,
 from sponge.modules.motif_selector.jaspar_retriever import JasparRetriever
 
 @pytest.mark.network
-def test_jaspar_retriever():
-    pass
+@pytest.mark.parametrize('config_update, expected_lengths', [
+    ({}, (803, 828)),
+    ({'jaspar_release': 'JASPAR2026'}, (942, 964)),
+    ({'tf_names': ['MYC', 'SOX2', 'SOX4', 'SOX8']}, (4, 4)),
+])
+def test_jaspar_retriever(config_update, default_user_config,
+    expected_lengths):
+    if default_user_config['motif']['jaspar_release'] is None:
+        default_user_config['motif']['jaspar_release'] = 'JASPAR2024'
+    default_user_config.deep_update({'motif': config_update})
+    jaspar_retriever = JasparRetriever(default_user_config['motif'])
+    jaspar_retriever.retrieve_tfs()
+
+    assert len(jaspar_retriever.get_motifs()) == expected_lengths[0]
+    assert len(jaspar_retriever.get_tf_to_motif()) == expected_lengths[1]
 
 # HomologyRetriever class
 from sponge.modules.motif_selector.homology_retriever import HomologyRetriever
