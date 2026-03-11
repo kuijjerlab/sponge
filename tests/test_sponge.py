@@ -567,8 +567,20 @@ def test_data_retriever(config_update, core_config, default_user_config,
 from sponge.modules.protein_id_mapper import ProteinIDMapper
 
 @pytest.mark.network
-def test_protein_id_mapper():
-    pass
+@pytest.mark.parametrize('from_db, to_db, ids, kwargs, expected_length', [
+    ('Gene_Name', 'UniProtKB', [], {}, 0),
+    ('UniProtKB_AC-ID', 'GeneID', ['P01308'], {'taxonomy_id': 9606}, 1),
+    ('Gene_Name', 'UniProtKB', ['MYC', 'ERBB2', 'FAKEGENE'], {}, 2),
+    ('UniProtKB_AC-ID', 'GeneID', ['P01308', 'P06213', 'AAAAA'], {}, 2),
+])
+def test_protein_id_mapper(from_db, to_db, ids, kwargs, expected_length,
+    core_config):
+    protein_id_mapper = ProteinIDMapper(core_config['url']['protein'])
+    reply = protein_id_mapper.get_uniprot_mapping(from_db, to_db, ids,
+        **kwargs)
+
+    assert type(reply) == pd.DataFrame
+    assert len(reply) == expected_length
 
 # JasparRetriever class
 from sponge.modules.motif_selector.jaspar_retriever import JasparRetriever
