@@ -202,7 +202,7 @@ class Sponge:
 
         motifs = MotifSelector(
             self.core_config,
-            self.user_config,
+            self.user_config['motif'],
             self.version_logger,
         )
         motifs.select_tfs()
