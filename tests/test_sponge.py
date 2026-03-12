@@ -637,15 +637,51 @@ def test_homology_retriever(unique, input, expected_lengths, core_config):
 from sponge.modules.motif_selector import MotifSelector
 
 @pytest.mark.network
-def test_motif_selector():
-    pass
+@pytest.mark.parametrize('config_update, expected_lengths', [
+    ({'matrix_ids': ['MA0143.1', 'MA1494.2', 'MA0461.3', 'MA1467.3',
+        'MA0677.2', 'MA0728.1']}, (4, 6)),
+    ({'matrix_ids': ['MA0143.1', 'MA1494.2', 'MA0461.3', 'MA1467.3',
+        'MA0677.2', 'MA0728.1'], 'jaspar_release': 'JASPAR2026'}, (4, 6)),
+    ({'unique_motifs': True, 'tf_names': ['MYC', 'Atoh1', 'HNF4A']},
+        (1, 3)),
+])
+def test_motif_selector(config_update, expected_lengths, default_user_config,
+    core_config):
+    if default_user_config['motif']['jaspar_release'] is None:
+        default_user_config['motif']['jaspar_release'] = 'JASPAR2024'
+    default_user_config.deep_update({'motif': config_update})
+    motif_selector = MotifSelector(core_config, default_user_config['motif'])
+    motif_selector.select_tfs()
+    motif_selector.find_homologs()
+
+    assert len(motif_selector.get_homolog_mapping()) == expected_lengths[0]
+    assert len(motif_selector.get_matrix_ids()) == expected_lengths[1]
+    assert len(motif_selector.get_tf_names()) == expected_lengths[1]
 
 # MatchFilter class
 from sponge.modules.match_filter import MatchFilter
 
 @pytest.mark.network
-def test_match_filter():
-    pass
+@pytest.mark.parametrize('setup_input, input, expected_length', [
+    ((
+        os.path.join('tests', 'sponge', 'chr19_subset.bb'),
+        os.path.join('tests', 'sponge', 'chr19_subset.tsv'),
+    ),
+    (['chr1', 'chr19'], ['MA0036.4', 'MA0030.2', 'MA0147.4']), 62),
+    ((
+        None,
+        os.path.join('tests', 'sponge', 'chr19_subset.tsv'),
+        'hg38',
+        'JASPAR2024',
+    ),
+    (['chr1', 'chr19'], ['MA0030.2'], ['FOXF2']), 38),
+])
+def test_match_filter(setup_input, input, expected_length, core_config):
+    match_filter = MatchFilter(*setup_input,
+        motif_url=core_config['url']['motif']['by_tf'])
+    match_filter.filter_matches(*input)
+
+    assert len(match_filter.get_all_edges()) == expected_length
 
 # PPIRetriever class
 @pytest.mark.network
