@@ -578,6 +578,7 @@ def test_protein_id_mapper(input, kwargs, expected_length, core_config):
     reply = protein_id_mapper.get_uniprot_mapping(*input, **kwargs)
 
     assert type(reply) == pd.DataFrame
+    assert not False in (reply.columns == ['from', 'to'])
     assert len(reply) == expected_length
 
 # JasparRetriever class
@@ -603,9 +604,34 @@ def test_jaspar_retriever(config_update, default_user_config,
 # HomologyRetriever class
 from sponge.modules.motif_selector.homology_retriever import HomologyRetriever
 
+def get_trial_data_homology(
+) -> Tuple[list, dict]:
+
+    jdb_obj = jaspardb(release='JASPAR2024')
+    motifs = [jdb_obj.fetch_motif_by_id(id) for id in ['MA0143.1', 'MA1494.2',
+        'MA0461.3', 'MA1467.3', 'MA0677.2', 'MA0728.1']]
+    tf_to_motif = {'Sox2': {'MA0143.1': 12.95}, 'Atoh1': {'MA0461.3': 10.81,
+        'MA1467.3': 10.96}, 'HNF4A': {'MA1494.2': 20.91},
+        'Nr2f6': {'MA0677.2': 18.03}, 'Nr2F6': {'MA0728.1': 25.04}}
+
+    return motifs, tf_to_motif
+
+trial_motifs, trial_tf_to_motif = get_trial_data_homology()
+
 @pytest.mark.network
-def test_homology_retriever():
-    pass
+@pytest.mark.parametrize('unique, input, expected_lengths', [
+    (True, ([], {}), (0, 0)),
+    (True, (trial_motifs, trial_tf_to_motif), (3, 5)),
+    (False, (trial_motifs, trial_tf_to_motif), (4, 6)),
+])
+def test_homology_retriever(unique, input, expected_lengths, core_config):
+    homology_retriever = HomologyRetriever(unique,
+        core_config['url']['protein'], core_config['url']['homology'])
+    homology_retriever.find_homologs(*input)
+
+    assert len(homology_retriever.get_homolog_mapping()) == expected_lengths[0]
+    assert len(homology_retriever.get_matrix_ids()) == expected_lengths[1]
+    assert len(homology_retriever.get_tf_names()) == expected_lengths[1]
 
 # MotifSelector class
 from sponge.modules.motif_selector import MotifSelector

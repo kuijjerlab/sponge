@@ -112,6 +112,7 @@ class HomologyRetriever:
 
         # Get the non-species motif names
         xeno_motif_names = [motif.name for motif in xeno_motifs]
+        xeno_motif_ids = [motif.matrix_id for motif in xeno_motifs]
         # Compare against NCBI homologs
         found_names = [adjust_gene_name(motif.name) for motif in xeno_motifs
             if not False in [acc in homologs for acc in motif.acc]]
@@ -129,7 +130,8 @@ class HomologyRetriever:
             for motif in xeno_motifs
             if not False in [acc in homologs for acc in motif.acc]
         }
-        corr_df = pd.DataFrame(xeno_motif_names, columns=['Original Name'])
+        corr_df = pd.DataFrame({'Original Name': xeno_motif_names,
+            'Matrix ID': xeno_motif_ids})
         corr_df['Adjusted Name'] = corr_df['Original Name'].apply(
             adjust_gene_name)
         corr_df['Species Name'] = corr_df['Original Name'].apply(
@@ -146,10 +148,11 @@ class HomologyRetriever:
                 print (f'{i}:', to_print.loc[i])
 
             # Calculate the information content for duplicates
-            duplicated['IC'] = duplicated['Original Name'].apply(lambda x:
-                max(tf_to_motif[x].values()))
+            duplicated['IC'] = duplicated.apply(lambda row:
+                tf_to_motif[row['Original Name']][row['Matrix ID']], axis=1,
+                result_type='reduce')
             # Keep the highest IC amongst the duplicates
-            to_drop = duplicated['Original Name'][duplicated.sort_values(
+            to_drop = duplicated['Matrix ID'][duplicated.sort_values(
                 'IC').duplicated('Species Name', keep='last')]
         else:
             to_drop = []
@@ -164,7 +167,7 @@ class HomologyRetriever:
         # homologs
         corr_df_final = corr_df[(corr_df['Duplicate'] == False) &
             (~corr_df['Species Name'].isna()) &
-            (corr_df['Original Name'].isin(to_drop) == False)]
+            (corr_df['Matrix ID'].isin(to_drop) == False)]
 
         # The mapping of out-species to in-species names
         # and the matrix IDs to be kept
