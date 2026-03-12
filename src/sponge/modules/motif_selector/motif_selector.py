@@ -16,7 +16,7 @@
 # with this library. If not, see <https://www.gnu.org/licenses/>.
 
 ### Imports ###
-from typing import List, Mapping
+from typing import List, Mapping, Optional
 
 from sponge.config_manager import ConfigManager
 from sponge.modules.version_logger import VersionLogger
@@ -30,8 +30,8 @@ class MotifSelector:
     def __init__(
         self,
         core_config: ConfigManager,
-        user_config: ConfigManager,
-        version_logger: VersionLogger,
+        motif_settings: dict,
+        version_logger: Optional[VersionLogger] = None,
     ):
         """
         Class that retrieves the TF motifs from JASPAR and homologs
@@ -43,12 +43,13 @@ class MotifSelector:
             Core configuration of SPONGE
         user_config : ConfigManager
             User-provided configuration of SPONGE
-        version_logger : VersionLogger
-            Version logger to keep track of the retrieved files
+        version_logger : Optional[VersionLogger], optional
+            Version logger to keep track of the retrieved data or None
+            to not use one, by default None
         """
 
         self.core_config = core_config
-        self.user_config = user_config
+        self.motif_settings = motif_settings
         self.version_logger = version_logger
         # To be overwritten once retrieved
         self.homolog_mapping = None
@@ -64,8 +65,9 @@ class MotifSelector:
         provided during initialisation.
         """
 
-        jaspar = JasparRetriever(self.user_config['motif'])
-        self.version_logger.register_class(jaspar)
+        jaspar = JasparRetriever(self.motif_settings)
+        if self.version_logger is not None:
+            self.version_logger.register_class(jaspar)
         jaspar.retrieve_tfs()
 
         self.motifs = jaspar.get_motifs()
@@ -81,11 +83,12 @@ class MotifSelector:
         """
 
         homologs = HomologyRetriever(
-            self.user_config['motif']['unique_motifs'],
+            self.motif_settings['unique_motifs'],
             self.core_config['url']['protein'],
             self.core_config['url']['homology'],
         )
-        self.version_logger.register_class(homologs)
+        if self.version_logger is not None:
+            self.version_logger.register_class(homologs)
         homologs.find_homologs(self.motifs, self.tf_to_motif)
 
         self.homolog_mapping = homologs.get_homolog_mapping()
