@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Ladislav Hovan <ladislav.hovan@ncmbm.uio.no>
+# Copyright (C) 2026 Ladislav Hovan <ladislav.hovan@ncmbm.uio.no>
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
@@ -47,7 +47,7 @@ def cli(
     """
 
     DESCRIPTION = """
-    SPONGE  Copyright (C) 2025  Ladislav Hovan  <ladislav.hovan@ncmbm.uio.no>
+    SPONGE  Copyright (C) 2026  Ladislav Hovan  <ladislav.hovan@ncmbm.uio.no>
     This program comes with ABSOLUTELY NO WARRANTY.
     This is free software, and you are welcome to redistribute it under certain conditions.
     Please refer to the GPL-3.0 license for more details.
