@@ -5,4 +5,5 @@ pandas
 pybbi
 pyjaspar
 scikit-learn
+setuptools-scm
 tqdm
