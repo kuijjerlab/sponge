@@ -25,6 +25,7 @@ dependencies = [
     "pybbi>=0.4.0,<0.5",
     "pyjaspar>=4.0.0,<5",
     "scikit-learn>=1.7.2,<2",
+    "setuptools-scm>=8.3.0,<9",
     "tqdm>=4.67.1,<5",
 ]
 

@@ -20,6 +20,7 @@ import bioframe
 import datetime
 import os
 import pytest
+import subprocess
 import yaml
 
 import pandas as pd
@@ -742,6 +743,14 @@ def test_file_writer(input, prior_frame, tmp_path):
     file_writer.write_network_file(prior_frame, *input, write_path)
 
     assert os.path.exists(write_path)
+
+### CLI tests ###
+def test_basic_cli(tmp_path):
+    subprocess.run(['netzoopy-sponge', '-h'], cwd=tmp_path)
+    subprocess.run(['netzoopy-sponge', '-v'], cwd=tmp_path)
+    subprocess.run(['netzoopy-sponge', '-e'], cwd=tmp_path)
+
+    assert os.path.exists(os.path.join(tmp_path, 'user_config.yaml'))
 
 ### Integration tests ###
 from sponge.sponge import Sponge

@@ -22,6 +22,7 @@ import shutil
 from argparse import (ArgumentDefaultsHelpFormatter, ArgumentParser,
     RawDescriptionHelpFormatter)
 from pathlib import Path
+from setuptools_scm import get_version
 
 from .sponge import Sponge
 
@@ -70,10 +71,15 @@ def cli(
         help='create an example config file with the default values called '
             'user_config.yaml and exit',
         action='store_true')
+    parser.add_argument('-v', '--version', dest='show_version',
+        help='show the current version and exit', action='store_true')
 
     args = parser.parse_args()
 
-    if args.example_config:
+    if args.show_version:
+        print (get_version(version_scheme='only-version',
+            local_scheme='no-local-version'))
+    elif args.example_config:
         file_dir = Path(__file__).parents[0]
         shutil.copy(os.path.join(file_dir, 'user_config.yaml'),
             'user_config.yaml')
