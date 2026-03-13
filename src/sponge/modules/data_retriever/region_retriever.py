@@ -131,7 +131,7 @@ class RegionRetriever(FileRetriever):
         # Convert the response into a DataFrame
         df = pd.read_table(buffer, dtype=dtype_dict)
 
-        print ('\nFiltering and modifying dataframe...\n')
+        print ('\nFiltering and modifying dataframe...')
         if self.settings['filter_basic']:
             # Filter only for GENCODE basic
             df = df[df['GENCODE basic annotation'] == 'GENCODE basic'].copy()
