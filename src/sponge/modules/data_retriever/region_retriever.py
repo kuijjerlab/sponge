@@ -1,4 +1,4 @@
-# Copyright (C) 2025 Ladislav Hovan <ladislav.hovan@ncmbm.uio.no>
+# Copyright (C) 2026 Ladislav Hovan <ladislav.hovan@ncmbm.uio.no>
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
