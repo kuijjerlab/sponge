@@ -263,7 +263,8 @@ The project is: _in progress_.
 
 ## Room for Improvement
 Room for improvement:
-- Better tests
+- More test cases
+- Tests with expected failure
 
 To do:
 - Support for more species
