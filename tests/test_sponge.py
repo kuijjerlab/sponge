@@ -784,14 +784,17 @@ def run_integration_test_common(
     settings['motif_output']['file_name'] = motif_output
     settings['ppi_output']['file_name'] = ppi_output
 
+    sponge_temp = os.path.join(tmp_path, '.sponge_temp')
     # Using the default user config file
-    _ = Sponge(
+    sponge_obj = Sponge(
         config=settings,
-        temp_folder=os.path.join(tmp_path, '.sponge_temp'),
+        temp_folder=sponge_temp,
     )
+    del sponge_obj
 
     assert os.path.exists(motif_output)
     assert os.path.exists(ppi_output)
+    assert os.path.exists(os.path.join(sponge_temp, 'fingerprint.yaml'))
 
     return (motif_output, ppi_output)
 
