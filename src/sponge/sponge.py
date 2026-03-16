@@ -21,6 +21,7 @@ import inspect
 from bioframe import assembly_info
 from functools import wraps
 from pathlib import Path
+from setuptools_scm import get_version
 from typing import Callable, Union
 
 from sponge.config_manager import ConfigManager
@@ -131,6 +132,8 @@ class Sponge:
         # Fill in the default values in the user config
         self.fill_default_values()
         self.version_logger = VersionLogger(temp_folder)
+        self.version_logger.write_retrieved('SPONGE', get_version(
+            version_scheme='only-version', local_scheme='no-local-version'))
         # Retrieve necessary files if required
         self.retrieve_data()
         # Run the default workflow if selected

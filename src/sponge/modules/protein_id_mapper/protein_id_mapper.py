@@ -102,8 +102,8 @@ class ProteinIDMapper:
             time.sleep(0.5)
         if 'results' not in uniprot_status.json():
             # Unable to retrieve the results within the given time
-            print ('No results have been retrieved in the given time')
-            return pd.DataFrame(columns=['from', 'to'])
+            raise ConnectionError('No results have been retrieved from UniProt'
+                'in the given time')
 
         # Retrieve the results
         uniprot_results = requests.get(self.mapping_url + f'stream/{job_id}')
