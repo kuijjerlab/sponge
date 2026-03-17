@@ -182,7 +182,7 @@ def retrieve_ensembl_data(
     xml_query = create_xml_query(dataset_name, requested_fields, filters)
     REQUEST_STRING = '/martservice?query='
     link = ensembl_url + REQUEST_STRING + xml_query
-    MAX_ITERATIONS = 5
+    MAX_ITERATIONS = 30
     for _ in range(MAX_ITERATIONS):
         r = requests.get(link, stream=True)
         r.raise_for_status()
