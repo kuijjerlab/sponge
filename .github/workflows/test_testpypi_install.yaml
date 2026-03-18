@@ -17,10 +17,10 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.10'
 
@@ -45,7 +45,7 @@ jobs:
         echo ${{ github.event.workflow_run.head_branch }} >> version.txt
     
     - name: Upload artifact with the version
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: version
         path: ./version.txt
