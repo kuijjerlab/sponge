@@ -133,7 +133,10 @@ class Sponge:
         self.fill_default_values()
         self.version_logger = VersionLogger(temp_folder)
         self.version_logger.write_retrieved('SPONGE', get_version(
-            version_scheme='only-version', local_scheme='no-local-version'))
+            Path(__file__).parents[2],
+            version_scheme='only-version',
+            local_scheme='no-local-version',
+        ))
         # Retrieve necessary files if required
         self.retrieve_data()
         # Run the default workflow if selected

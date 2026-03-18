@@ -77,8 +77,11 @@ def cli(
     args = parser.parse_args()
 
     if args.show_version:
-        print (get_version(version_scheme='only-version',
-            local_scheme='no-local-version'))
+        print (get_version(
+            Path(__file__).parents[2],
+            version_scheme='only-version',
+            local_scheme='no-local-version',
+        ))
     elif args.example_config:
         file_dir = Path(__file__).parents[0]
         shutil.copy(os.path.join(file_dir, 'user_config.yaml'),
