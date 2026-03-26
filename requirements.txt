@@ -1,9 +1,9 @@
-bioframe
-matplotlib
-numpy
-pandas
-pybbi
-pyjaspar
-scikit-learn
-setuptools-scm
-tqdm
+bioframe == 0.8.0
+matplotlib == 3.10.8
+numpy == 2.2.6
+pandas == 2.3.3
+pybbi == 0.4.2
+pyjaspar == 4.0.0
+scikit-learn == 1.7.2
+setuptools-scm == 8.3.1
+tqdm == 4.67.1

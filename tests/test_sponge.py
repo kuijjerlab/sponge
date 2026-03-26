@@ -746,9 +746,15 @@ def test_file_writer(input, prior_frame, tmp_path):
 
 ### CLI tests ###
 def test_basic_cli(tmp_path):
-    subprocess.run(['netzoopy-sponge', '-h'], cwd=tmp_path)
-    subprocess.run(['netzoopy-sponge', '-v'], cwd=tmp_path)
-    subprocess.run(['netzoopy-sponge', '-e'], cwd=tmp_path)
+    for flag in ['-h', '-v', '-e']:
+        result = subprocess.run(['netzoopy-sponge', flag], cwd=tmp_path,
+            capture_output=True, text=True)
+        # This ensures that if something went wrong, we will see the whole
+        # error message - check=True may only show a tiny part
+        stderr_output = result.stderr
+        if stderr_output:
+            print (stderr_output)
+        assert not stderr_output
 
     assert os.path.exists(os.path.join(tmp_path, 'user_config.yaml'))
 
