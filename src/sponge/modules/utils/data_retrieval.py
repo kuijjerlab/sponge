@@ -182,16 +182,17 @@ def retrieve_ensembl_data(
     xml_query = create_xml_query(dataset_name, requested_fields, filters)
     REQUEST_STRING = '/martservice?query='
     link = ensembl_url + REQUEST_STRING + xml_query
-    MAX_ITERATIONS = 30
+    MAX_ITERATIONS = 50
+    FAILURE = ['Query ERROR', 'Service unavailable']
     for _ in range(MAX_ITERATIONS):
         r = requests.get(link, stream=True)
         r.raise_for_status()
         bytes = download_with_progress(r)
-        if not 'Query ERROR' in bytes.getvalue().decode():
+        if not True in [x in bytes.getvalue().decode() for x in FAILURE]:
             break
         # Try every half a second
         time.sleep(0.5)
-    if 'Query ERROR' in bytes.getvalue().decode():
+    if True in [x in bytes.getvalue().decode() for x in FAILURE]:
         raise ConnectionError('No results have been retrieved from Ensembl in '
             'the given time')
 
