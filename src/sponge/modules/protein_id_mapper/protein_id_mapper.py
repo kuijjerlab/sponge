@@ -103,7 +103,7 @@ class ProteinIDMapper:
         if 'results' not in uniprot_status.json():
             # Unable to retrieve the results within the given time
             raise ConnectionError('No results have been retrieved from UniProt'
-                'in the given time')
+                ' in the given time')
 
         # Retrieve the results
         uniprot_results = requests.get(self.mapping_url + f'stream/{job_id}')
