@@ -5,5 +5,4 @@ pandas == 2.3.3
 pybbi == 0.4.2
 pyjaspar == 4.0.0
 scikit-learn == 1.7.2
-setuptools-scm == 8.3.1
 tqdm == 4.67.1
