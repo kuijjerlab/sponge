@@ -18,6 +18,7 @@
 ### Imports ###
 import bioframe
 import datetime
+import matplotlib
 import os
 import pytest
 import subprocess
@@ -33,6 +34,9 @@ from typing import Any, Iterable, Tuple
 from sponge.config_manager import ConfigManager
 from sponge.modules.match_aggregator import MatchAggregator
 from sponge.modules.ppi_retriever import PPIRetriever
+
+# Change plotting backend to avoid issues with headless environments
+matplotlib.use('Agg')
 
 ### Fixtures ###
 # Core config fixture
