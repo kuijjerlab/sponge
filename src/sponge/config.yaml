@@ -12,7 +12,7 @@ url:
     - "http://expdata.cmmt.ubc.ca/JASPAR/downloads/UCSC_tracks/{year}/\
        {genome_assembly}/"
   region:
-    xml: "http://www.ensembl.org/biomart"
+    xml: "http://jun2026.archive.ensembl.org/biomart"
     rest: "https://rest.ensembl.org"
   protein: "https://rest.uniprot.org/idmapping/"
   ppi: "https://string-db.org/api/tsv/"

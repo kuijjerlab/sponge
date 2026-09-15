@@ -26,7 +26,7 @@ import xml.etree.ElementTree as et
 from io import BytesIO
 from pathlib import Path
 from tqdm import tqdm
-from typing import Iterable, List, Optional, Tuple, Union
+from typing import Iterable, List, Optional, Union
 
 ### Functions ###
 def download_with_progress(
@@ -179,10 +179,14 @@ def retrieve_ensembl_data(
     BytesIO
         Bytes retrieved from the server
     """
+
+    # Formulate the XML query
     xml_query = create_xml_query(dataset_name, requested_fields, filters)
     REQUEST_STRING = '/martservice?query='
+    # Build a full link to the Ensembl BioMart service
     link = ensembl_url + REQUEST_STRING + xml_query
     MAX_ITERATIONS = 50
+    # Various failure messages that can be returned by Ensembl
     FAILURE = ['Query ERROR', 'Service unavailable']
     for _ in range(MAX_ITERATIONS):
         r = requests.get(link, stream=True)
