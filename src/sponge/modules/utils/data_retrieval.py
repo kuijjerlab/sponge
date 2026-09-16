@@ -106,6 +106,8 @@ def download_with_progress(
 
     if file_path is None:
         return BytesIO(stream.getvalue())
+    else:
+        stream.close()
 
 
 def create_xml_query(

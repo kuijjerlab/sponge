@@ -163,6 +163,7 @@ def iterate_chromosomes(
         results_list += edges_chrom_list
         elapsed_chr = time.time() - st_chr
         print (f'Done in: {elapsed_chr // 60:n} m {elapsed_chr % 60:.2f} s')
+    p.close()
 
     return results_list
 
@@ -254,6 +255,7 @@ def process_motif(
     result = p.starmap_async(process_chromosome, input_tuples,
         chunksize=n_processes)
     result_list = result.get()
+    p.close()
     # Merge the results
     df = pd.concat(result_list, ignore_index=True, copy=False)
 

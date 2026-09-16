@@ -58,8 +58,8 @@ class VersionLogger:
         self.data = defaultdict(dict)
         if os.path.exists(self.log_file):
             try:
-                self.data = defaultdict(dict,
-                    yaml.safe_load(open(self.log_file)))
+                with open(self.log_file, 'r', encoding='utf-8') as f:
+                    self.data = yaml.safe_load(f)
             except TypeError:
                 # Most likely means an empty log file, ignore
                 pass
@@ -80,8 +80,8 @@ class VersionLogger:
         """
 
         if len(self.data) > 0:
-            yaml.safe_dump(dict(self.data),
-                open(self.log_file, 'w', encoding='utf-8'))
+            with open(self.log_file, 'w', encoding='utf-8') as f:
+                yaml.safe_dump(dict(self.data), f)
 
 
     def __getitem__(

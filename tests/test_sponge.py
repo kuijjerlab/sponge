@@ -225,9 +225,11 @@ def test_download_with_progress(input, compare_to, tmp_path):
     else:
         file_path = os.path.join(tmp_path, input[1])
         data_f.download_with_progress(input[0], file_path)
-        data = open(file_path, 'r').read()
+        with open(file_path, 'r', encoding='utf-8') as f:
+            data = f.read()
 
-    comp_data = open(compare_to, 'r').read()
+    with open(compare_to, 'r', encoding='utf-8') as f:
+        comp_data = f.read()
 
     assert data == comp_data
 
@@ -440,7 +442,8 @@ def test_config_manager(c_path, input, expected_length, tmp_path):
 
     assert os.path.exists(config_file)
 
-    data = yaml.safe_load(open(config_file, 'r', encoding='utf-8'))
+    with open(config_file, 'r', encoding='utf-8') as f:
+        data = yaml.safe_load(f)
 
     assert len(data) == expected_length
 
@@ -471,7 +474,8 @@ def test_version_logger(input, expected_length, tmp_path):
 
     assert os.path.exists(fp_file)
 
-    data = yaml.safe_load(open(fp_file, 'r', encoding='utf-8'))
+    with open(fp_file, 'r', encoding='utf-8') as f:
+        data = yaml.safe_load(f)
 
     assert len(data) == expected_length
 
@@ -790,7 +794,8 @@ def run_integration_test_common(
     motif_output = os.path.join(tmp_path, 'motif_prior.tsv')
     ppi_output = os.path.join(tmp_path, 'ppi_prior.tsv')
 
-    settings = yaml.safe_load(open(config_file, 'r'))
+    with open(config_file, 'r', encoding='utf-8') as f:
+        settings = yaml.safe_load(f)
     settings['motif_output']['file_name'] = motif_output
     settings['ppi_output']['file_name'] = ppi_output
 
