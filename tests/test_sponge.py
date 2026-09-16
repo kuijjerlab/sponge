@@ -258,7 +258,7 @@ def test_create_xml_query(input):
 ])
 @pytest.mark.xfail(
     reason='Ensembl server may be down, so this test can fail',
-    raises=[ConnectionError, HTTPError],
+    raises=(ConnectionError, HTTPError),
     strict=False,
 )
 def test_retrieve_ensembl_data(dataset, fields, filters, core_config):
@@ -552,7 +552,7 @@ from sponge.modules.data_retriever.region_retriever import RegionRetriever
 ])
 @pytest.mark.xfail(
     reason='Ensembl server may be down, so this test can fail',
-    raises=[ConnectionError, HTTPError],
+    raises=(ConnectionError, HTTPError),
     strict=False,
 )
 def test_region_retriever(settings, assembly, core_config, default_user_config,
@@ -587,7 +587,7 @@ from sponge.modules.data_retriever import DataRetriever
 ])
 @pytest.mark.xfail(
     reason='Ensembl server may be down, so this test can fail',
-    raises=[ConnectionError, HTTPError],
+    raises=(ConnectionError, HTTPError),
     strict=False,
 )
 def test_data_retriever(config_update, core_config, default_user_config,
@@ -837,7 +837,7 @@ def run_integration_test_common(
 @pytest.mark.slow
 @pytest.mark.xfail(
     reason='Ensembl server may be down, so this test can fail',
-    raises=[ConnectionError, HTTPError],
+    raises=(ConnectionError, HTTPError),
     strict=False,
 )
 def test_full_default_workflow(tmp_path):
@@ -852,7 +852,7 @@ def test_full_default_workflow(tmp_path):
 @pytest.mark.network
 @pytest.mark.xfail(
     reason='Ensembl server may be down, so this test can fail',
-    raises=[ConnectionError, HTTPError],
+    raises=(ConnectionError, HTTPError),
     strict=False,
 )
 def test_small_workflow(tmp_path):
