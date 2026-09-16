@@ -29,6 +29,7 @@ import pandas as pd
 from Bio.motifs.jaspar import Motif
 from pathlib import Path
 from pyjaspar import jaspardb, JASPAR_LATEST_RELEASE
+from requests.exceptions import HTTPError
 from typing import Any, Iterable, Tuple
 
 from sponge.config_manager import ConfigManager
@@ -255,6 +256,11 @@ def test_create_xml_query(input):
     ('hsapiens_gene_ensembl', ['ensembl_transcript_id'],
         {'chromosome_name': ['chr19', 'chrX']}),
 ])
+@pytest.mark.xfail(
+    reason='Ensembl server may be down, so this test can fail',
+    raises=[ConnectionError, HTTPError],
+    strict=False,
+)
 def test_retrieve_ensembl_data(dataset, fields, filters, core_config):
     ensembl_url = core_config['url']['region']['xml']
     df = pd.read_table(data_f.retrieve_ensembl_data(dataset, fields,
@@ -544,6 +550,11 @@ from sponge.modules.data_retriever.region_retriever import RegionRetriever
     ({'region_file': 'LICENSE'}, 'hg38'),
     ({'chromosomes': ['chr19']}, 'random_assembly'),
 ])
+@pytest.mark.xfail(
+    reason='Ensembl server may be down, so this test can fail',
+    raises=[ConnectionError, HTTPError],
+    strict=False,
+)
 def test_region_retriever(settings, assembly, core_config, default_user_config,
     tmp_path):
     default_user_config.deep_update({'region': settings})
@@ -574,6 +585,11 @@ from sponge.modules.data_retriever import DataRetriever
     {'region': {'chromosomes': ['chr19']}},
     {'on_the_fly_processing': True, 'region': {'chromosomes': ['chr19']}},
 ])
+@pytest.mark.xfail(
+    reason='Ensembl server may be down, so this test can fail',
+    raises=[ConnectionError, HTTPError],
+    strict=False,
+)
 def test_data_retriever(config_update, core_config, default_user_config,
     tmp_path):
     # The full bigbed file is way too big, just a placeholder
@@ -819,6 +835,11 @@ def run_integration_test_common(
 @pytest.mark.integration
 @pytest.mark.network
 @pytest.mark.slow
+@pytest.mark.xfail(
+    reason='Ensembl server may be down, so this test can fail',
+    raises=[ConnectionError, HTTPError],
+    strict=False,
+)
 def test_full_default_workflow(tmp_path):
     _,_ = run_integration_test_common(
         tmp_path,
@@ -829,6 +850,11 @@ def test_full_default_workflow(tmp_path):
 
 @pytest.mark.integration
 @pytest.mark.network
+@pytest.mark.xfail(
+    reason='Ensembl server may be down, so this test can fail',
+    raises=[ConnectionError, HTTPError],
+    strict=False,
+)
 def test_small_workflow(tmp_path):
     motif_output,ppi_output = run_integration_test_common(
         tmp_path,
