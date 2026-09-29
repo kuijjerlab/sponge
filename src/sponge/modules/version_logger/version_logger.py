@@ -59,7 +59,9 @@ class VersionLogger:
         if os.path.exists(self.log_file):
             try:
                 with open(self.log_file, 'r', encoding='utf-8') as f:
-                    self.data = yaml.safe_load(f)
+                    old_data = yaml.safe_load(f)
+                    for k,v in old_data.items():
+                        self.data[k] = v
             except TypeError:
                 # Most likely means an empty log file, ignore
                 pass
