@@ -36,9 +36,13 @@ jobs:
       run: |
         pip install --index-url https://test.pypi.org/simple/ netzoopy-sponge
 
-    - name: Test basic functionality
+    - name: Test basic CLI functionality
       run: |
         netzoopy-sponge --help
+
+    - name: Run the small workflow test
+        pip install pytest
+        pytest -k "small_workflow"
 
     - name: Save release version
       run: |
