@@ -41,6 +41,7 @@ jobs:
         netzoopy-sponge --help
 
     - name: Run the small workflow test
+      run: |
         pip install pytest
         pytest -k "small_workflow"
 
